@@ -13,6 +13,9 @@ sudo apt -y install -t xenial-backports lxd lxd-client
 
 if ! grep \^rra /etc/passwd; then
     sudo useradd -U -s /bin/sh -G lxd,dialout,plugdev -m rra
+else
+    echo 'WARNING: `rra` user already exists.'
+    exit
 fi
 sudo usermod -L rra
 
