@@ -16,7 +16,6 @@
 """
 import argparse
 import sys
-import time
 
 
 def main(argv=None):
