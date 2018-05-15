@@ -44,6 +44,10 @@ setup(name='hardshare',
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6'],
       packages=['hardshare'],
-      install_requires=['aiohttp', 'pyjwt', 'requests'],
+      install_requires=[
+          'aiohttp',
+          'pyjwt',
+          'requests',
+      ],
       entry_points={'console_scripts': ['hardshare = hardshare.cli:main']}
       )
