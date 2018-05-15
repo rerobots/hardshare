@@ -8,6 +8,11 @@ Introduction
 through the rerobots infrastructure. It is in the early stages of development.
 Until the first released version, the API can change without warning.
 
+Because this project is new and because we have not yet identified the full set
+of substantial use-cases in the wild, there are two protocols. The first is
+based on an HTTP API and WebSockets, and the client is implemented in Python.
+The second is already in development, but has not been announced yet.
+
 
 Participating
 -------------
