@@ -13,6 +13,9 @@ of substantial use-cases in the wild, there are two protocols. The first is
 based on an HTTP API and WebSockets, and the client is implemented in Python.
 The second is already in development, but has not been announced yet.
 
+The official repository for this sourcetree is at
+https://github.com/rerobots/hardshare
+
 
 Participating
 -------------
