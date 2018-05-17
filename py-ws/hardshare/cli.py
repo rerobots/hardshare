@@ -52,6 +52,14 @@ def main(argv=None):
                                   help='detach from invoking terminal (i.e., run as daemon)',
                                   dest='become_daemon')
 
+    terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
+    terminate_parser = subparsers.add_parser('terminate',
+                                             description=terminate_commanddesc,
+                                             help=terminate_commanddesc)
+    terminate_parser.add_argument('-f', '--force', action='store_true', default=False,
+                                  help='if there is an active instance, then stop it without waiting',
+                                  dest='force_terminate')
+
     argv_parsed = argparser.parse_args(argv)
 
     if argv_parsed.print_version or argv_parsed.command == 'version':
