@@ -14,10 +14,13 @@
 # limitations under the License.
 """Routines for Workspace deployment management
 """
+from datetime import datetime
 import os
 import os.path
 
 import jwt
+
+from .err import Error
 
 
 def list_local_keys():
@@ -40,3 +43,30 @@ def list_local_keys():
         except:
             pass
     return likely_keys
+
+
+def get_config(create_if_empty=False):
+    base_path = '~/.rerobots'
+    base_path = os.path.expanduser(base_path)
+    if not os.path.exists(base_path):
+        if create_if_empty:
+            os.makedirs(os.path.join(base_path, 'keys'))
+        else:
+            raise Error('no configuration data found')
+    config = {
+        'keys': list_local_keys()
+    }
+    return config
+
+
+def add_key(path, create_if_empty=False):
+    base_path = '~/.rerobots'
+    base_path = os.path.expanduser(base_path)
+    config = get_config(create_if_empty=create_if_empty)
+    newkey_basename = os.path.basename(path)
+    existing_basenames = [os.path.basename(keypath) for keypath in config['keys']]
+    if newkey_basename in existing_basenames:
+        newkey_basename += '-' + datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+    assert not os.path.exists(os.path.join(base_path, 'keys', newkey_basename))
+    os.rename(os.path.join(os.path.dirname(path), newkey_basename),
+              os.path.join(base_path, 'keys', newkey_basename))

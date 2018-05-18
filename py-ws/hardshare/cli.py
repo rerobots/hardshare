@@ -17,7 +17,7 @@
 import argparse
 import sys
 
-from .mgmt import list_local_keys
+from .mgmt import get_config, add_key
 
 
 def main(argv=None):
@@ -48,6 +48,9 @@ def main(argv=None):
     config_parser.add_argument('-c', '--create', action='store_true', default=False,
                                dest='create_config',
                                help='if no local configuration is found, then create one')
+    config_parser.add_argument('--add-key', metavar='FILE',
+                               dest='new_api_token',
+                               help='add new account key')
     config_parser.add_argument('-l', '--list', action='store_true', default=False,
                                dest='list_config',
                                help='list configuration')
@@ -85,8 +88,23 @@ def main(argv=None):
 
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
+            try:
+                config = get_config(create_if_empty=argv_parsed.create_config)
+            except:
+                print('error loading configuration data. does it exist?')
+                return 1
             print('found keys:')
-            print('\t' + '\n\t'.join(list_local_keys()))
+            print('\t' + '\n\t'.join(config['keys']))
+
+        elif argv_parsed.new_api_token:
+            try:
+                add_key(argv_parsed.new_api_token)
+            except:
+                print('failed to add key')
+                return 1
+
+        elif argv_parsed.create_config:
+            get_config(create_if_empty=True)
 
     return 0
 
