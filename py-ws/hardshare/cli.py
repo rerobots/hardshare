@@ -17,6 +17,8 @@
 import argparse
 import sys
 
+from .mgmt import list_local_keys
+
 
 def main(argv=None):
     if argv is None:
@@ -38,6 +40,17 @@ def main(argv=None):
 
     subparsers.add_parser('version', help='print version number and exit.')
     subparsers.add_parser('help', help='print this help message and exit')
+
+    config_commanddesc = 'manage local configuration'
+    config_parser = subparsers.add_parser('config',
+                                          description=config_commanddesc,
+                                          help=config_commanddesc)
+    config_parser.add_argument('-c', '--create', action='store_true', default=False,
+                               dest='create_config',
+                               help='if no local configuration is found, then create one')
+    config_parser.add_argument('-l', '--list', action='store_true', default=False,
+                               dest='list_config',
+                               help='list configuration')
 
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
@@ -65,11 +78,15 @@ def main(argv=None):
     if argv_parsed.print_version or argv_parsed.command == 'version':
         from . import __version__ as hardshare_pkg_version
         print(hardshare_pkg_version)
-        return 0
 
-    if argv_parsed.command is None or argv_parsed.command == 'help':
+
+    elif argv_parsed.command is None or argv_parsed.command == 'help':
         argparser.print_help()
-        return 0
+
+    elif argv_parsed.command == 'config':
+        if argv_parsed.list_config:
+            print('found keys:')
+            print('\t' + '\n\t'.join(list_local_keys()))
 
     return 0
 
