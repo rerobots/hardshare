@@ -94,12 +94,16 @@ def main(argv=None):
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
             try:
-                config = get_config(create_if_empty=argv_parsed.create_config)
+                config = get_config(create_if_empty=argv_parsed.create_config, collect_errors=True)
             except:
                 print('error loading configuration data. does it exist?')
                 return 1
             print('found keys:')
             print('\t' + '\n\t'.join(config['keys']))
+            if len(config['err_keys']) > 0:
+                print('found possible keys with errors:')
+                for err_key_path, err in config['err_keys']:
+                    print('\t {}: {}'.format(err, err_key_path))
 
         elif argv_parsed.new_api_token:
             try:
