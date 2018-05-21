@@ -60,6 +60,11 @@ def main(argv=None):
                                             description=register_commanddesc,
                                             help=register_commanddesc)
 
+    check_commanddesc = 'check registration of this workspace deployment'
+    check_parser = subparsers.add_parser('check',
+                                         description=check_commanddesc,
+                                         help=check_commanddesc)
+
     advertise_commanddesc = 'advertise availability, accept new instances'
     advertise_parser = subparsers.add_parser('ad',
                                              description=advertise_commanddesc,
