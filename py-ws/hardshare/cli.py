@@ -15,9 +15,10 @@
 """Command-line interface
 """
 import argparse
+import os
 import sys
 
-from .mgmt import get_config, add_key
+from .mgmt import get_config, add_key, list_local_keys
 
 
 def main(argv=None):
@@ -51,6 +52,9 @@ def main(argv=None):
     config_parser.add_argument('--add-key', metavar='FILE',
                                dest='new_api_token',
                                help='add new account key')
+    config_parser.add_argument('-p', '--prune', action='store_true', default=False,
+                               dest='prune_err_keys',
+                               help='delete files in local key directory that are not valid; to get list of files with errors, try `--list`')
     config_parser.add_argument('-l', '--list', action='store_true', default=False,
                                dest='list_config',
                                help='list configuration')
@@ -104,6 +108,12 @@ def main(argv=None):
                 print('found possible keys with errors:')
                 for err_key_path, err in config['err_keys']:
                     print('\t {}: {}'.format(err, err_key_path))
+
+        elif argv_parsed.prune_err_keys:
+            _, errored_keys = list_local_keys(collect_errors=True)
+            for err_key_path, err in errored_keys:
+                print('deleting {}...'.format(err_key_path))
+                os.unlink(err_key_path)
 
         elif argv_parsed.new_api_token:
             try:
