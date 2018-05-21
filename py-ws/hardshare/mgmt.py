@@ -23,6 +23,10 @@ import jwt
 from .err import Error
 
 
+# TODO: this should eventually be placed in a public key store
+WEBUI_PUBLIC_KEY = """ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3ehAzPyTEsr1IKqwGAQY7uHIlsxYIwwTWghrnic32Z7uuvv89DuQh6xWtTYMk+cHm3jZQ/MqM1uj8D3EqN5QpjxGyYf1u2sxyNECYjpZD3qpcZlNxhCLJE/MsnLXzBjWBuF1IzItglcka3WURYY8vPkHuAedKd0OjB8jnWUlGGOHLLSnDlw78oJS8S8qB80vw5XGy2PfQnvz9AQrsn72E5egWabP3eGipWMsgOTEk830a1hOK+pu/5MvWI9TFl5Uq0UPEbQOqZTTy+ILChOwFimkxf3irIbfS1Gl9BJzwYnlxpQDVTlC5Gq3OgkWM6tbsUNPlhwgQiph84QRYsx2F scott@cero"""
+
+
 def list_local_keys():
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)
@@ -36,7 +40,11 @@ def list_local_keys():
         x = os.path.join(keys_dir, x)
         try:
             with open(x) as fp:
-                jwt.decode(fp.read(), verify=False)
+                jwt.decode(fp.read(),
+                           issuer='rerobots.net',
+                           audience='rerobots.net',
+                           key=WEBUI_PUBLIC_KEY,
+                           algorithm='RS256')
             x_perm = os.stat(x).st_mode & 511
             if x_perm == 0o600 or x_perm == 0o400:
                 likely_keys.append(x)
