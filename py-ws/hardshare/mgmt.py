@@ -15,6 +15,7 @@
 """Management routines for workspace deployments
 """
 from datetime import datetime
+import json
 import os
 import os.path
 
@@ -41,14 +42,20 @@ def list_local_keys(collect_errors=False):
     """
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)
-    if not os.path.exists(base_path):
-        return []
-    keys_dir = os.path.join(base_path, 'keys')
-    if not os.path.exists(keys_dir):
-        return []
     likely_keys = []
     if collect_errors:
         errored_keys = []
+    if not os.path.exists(base_path):
+        if collect_errors:
+            return likely_keys, errored_keys
+        else:
+            return likely_keys
+    keys_dir = os.path.join(base_path, 'keys')
+    if not os.path.exists(keys_dir):
+        if collect_errors:
+            return likely_keys, errored_keys
+        else:
+            return likely_keys
     for x in os.listdir(keys_dir):
         x = os.path.join(keys_dir, x)
         try:
@@ -93,11 +100,25 @@ def get_config(create_if_empty=False, collect_errors=False):
             os.makedirs(os.path.join(base_path, 'keys'))
         else:
             raise Error('no configuration data found')
-    keys, errored_keys = list_local_keys(collect_errors=collect_errors)
-    config = {
+    if not os.path.exists(os.path.join(base_path, 'main')):
+        if create_if_empty:
+            with open(os.path.join(base_path, 'main'), 'wt') as fp:
+                fp.write('{"version": 0, "wdeployments": []}')
+        else:
+            raise Error('no configuration data found')
+    with open(os.path.join(base_path, 'main')) as fp:
+        config = json.load(fp)
+    assert 'version' in config and config['version'] == 0
+    assert 'wdeployments' in config
+    if collect_errors:
+        keys, errored_keys = list_local_keys(collect_errors=True)
+    else:
+        keys = list_local_keys(collect_errors=False)
+    config.update({
         'keys': keys,
-        'err_keys': errored_keys,
-    }
+    })
+    if collect_errors:
+        config['err_keys'] = errored_keys
     return config
 
 
