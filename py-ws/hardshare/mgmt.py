@@ -18,6 +18,7 @@ from datetime import datetime
 import json
 import os
 import os.path
+import stat
 
 import jwt
 
@@ -68,6 +69,8 @@ def list_local_keys(collect_errors=False):
             x_perm = os.stat(x).st_mode & 511
             if x_perm == 0o600 or x_perm == 0o400:
                 likely_keys.append(x)
+            elif collect_errors:
+                errored_keys.append((x, 'unsafe file permissions'))
         except jwt.exceptions.DecodeError:
             if collect_errors:
                 errored_keys.append((x, 'coding error'))
@@ -92,7 +95,7 @@ def list_local_keys(collect_errors=False):
         return likely_keys
 
 
-def get_config(create_if_empty=False, collect_errors=False):
+def get_local_config(create_if_empty=False, collect_errors=False):
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)
     if not os.path.exists(base_path):
@@ -125,7 +128,7 @@ def get_config(create_if_empty=False, collect_errors=False):
 def add_key(path, create_if_empty=False):
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)
-    config = get_config(create_if_empty=create_if_empty)
+    config = get_local_config(create_if_empty=create_if_empty)
     newkey_basename = os.path.basename(path)
     existing_basenames = [os.path.basename(keypath) for keypath in config['keys']]
     if newkey_basename in existing_basenames:
@@ -133,3 +136,4 @@ def add_key(path, create_if_empty=False):
     assert not os.path.exists(os.path.join(base_path, 'keys', newkey_basename))
     os.rename(os.path.join(os.path.dirname(path), newkey_basename),
               os.path.join(base_path, 'keys', newkey_basename))
+    os.chmod(os.path.join(base_path, 'keys', newkey_basename), mode=stat.S_IRUSR|stat.S_IWUSR)

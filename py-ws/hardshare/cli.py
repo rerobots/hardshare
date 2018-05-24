@@ -18,7 +18,8 @@ import argparse
 import os
 import sys
 
-from .mgmt import get_config, add_key, list_local_keys
+from .mgmt import get_local_config, add_key, list_local_keys
+from .api import HSAPIClient
 
 
 def main(argv=None):
@@ -32,6 +33,9 @@ def main(argv=None):
     argparser.add_argument('-s', '--server-name', default='hs.rerobots.net',
                            help='name or IP address of hardshare server',
                            dest='server_name')
+    argparser.add_argument('--port', default=443,
+                           help='port number of hardshare server',
+                           dest='server_port')
     argparser.add_argument('-k', '--insecure', action='store_true', default=False,
                            help=('communications with hardshare servers always use TLS.'
                                  ' this switch causes certificates to not be verified.'),
@@ -42,7 +46,7 @@ def main(argv=None):
     subparsers.add_parser('version', help='print version number and exit.')
     subparsers.add_parser('help', help='print this help message and exit')
 
-    config_commanddesc = 'manage local configuration'
+    config_commanddesc = 'manage local and remote configuration'
     config_parser = subparsers.add_parser('config',
                                           description=config_commanddesc,
                                           help=config_commanddesc)
@@ -58,6 +62,9 @@ def main(argv=None):
     config_parser.add_argument('-l', '--list', action='store_true', default=False,
                                dest='list_config',
                                help='list configuration')
+    config_parser.add_argument('--local', action='store_true', default=False,
+                               dest='only_local_config',
+                               help='only show local configuration data')
 
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
@@ -87,10 +94,16 @@ def main(argv=None):
 
     argv_parsed = argparser.parse_args(argv)
 
+    try:
+        ac = HSAPIClient(server_name=argv_parsed.server_name,
+                         server_port=argv_parsed.server_port,
+                         verify_certs=(not argv_parsed.ignore_certs))
+    except:
+        ac = None
+
     if argv_parsed.print_version or argv_parsed.command == 'version':
         from . import __version__ as hardshare_pkg_version
         print(hardshare_pkg_version)
-
 
     elif argv_parsed.command is None or argv_parsed.command == 'help':
         argparser.print_help()
@@ -98,16 +111,34 @@ def main(argv=None):
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
             try:
-                config = get_config(create_if_empty=argv_parsed.create_config, collect_errors=True)
+                config = get_local_config(create_if_empty=argv_parsed.create_config, collect_errors=True)
             except:
-                print('error loading configuration data. does it exist?')
+                print('error loading configuration data. does it exist? is it broken?')
                 return 1
+
+            print('workspace deployments in configuration:')
+            if len(config['wdeployments']) == 0:
+                print('\t(none)')
+            else:
+                for wdeployment in config['wdeployments']:
+                    print('\t{} (owner: {})'.format(wdeployment['id'], wdeployment['owner']))
+
             print('found keys:')
-            print('\t' + '\n\t'.join(config['keys']))
-            if len(config['err_keys']) > 0:
+            if len(config['keys']) == 0:
+                print('\t(none)')
+            else:
+                print('\t' + '\n\t'.join(config['keys']))
+            if 'err_keys' in config and len(config['err_keys']) > 0:
                 print('found possible keys with errors:')
                 for err_key_path, err in config['err_keys']:
                     print('\t {}: {}'.format(err, err_key_path))
+
+            if not argv_parsed.only_local_config:
+                # Try to get remote config, given possibly new local config
+                ac = HSAPIClient(server_name=argv_parsed.server_name,
+                                 server_port=argv_parsed.server_port,
+                                 verify_certs=(not argv_parsed.ignore_certs))
+                print(ac.get_remote_config())
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
@@ -123,7 +154,7 @@ def main(argv=None):
                 return 1
 
         elif argv_parsed.create_config:
-            get_config(create_if_empty=True)
+            get_local_config(create_if_empty=True)
 
     return 0
 
