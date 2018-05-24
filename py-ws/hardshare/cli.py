@@ -116,7 +116,7 @@ def main(argv=None):
                 print('error loading configuration data. does it exist? is it broken?')
                 return 1
 
-            print('workspace deployments in configuration:')
+            print('workspace deployments defined in local configuration:')
             if len(config['wdeployments']) == 0:
                 print('\t(none)')
             else:
