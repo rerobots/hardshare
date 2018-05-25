@@ -114,6 +114,19 @@ def main(argv=None):
             return 1
         print(ac.register_new())
 
+    elif argv_parsed.command == 'check':
+        if ac is None:
+            print('no local configuration found. (try `hardshare config -h`)')
+            return 1
+        res = ac.check_registration()
+        if 'err' in res and res['err'] == 'not found':
+            print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
+            return 1
+        else:
+            print('summary of workspace deployment {}'.format(res['id']))
+            print('\tcreated: {}'.format(res['date_created']))
+            print('\torigin (address) of registration: {}'.format(res['origin']))
+
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
             try:
