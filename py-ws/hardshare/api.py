@@ -47,3 +47,33 @@ class HSAPIClient:
             return res.json()
         else:
             raise Error('error contacting hardshare server: {}'.format(res.status_code))
+
+    def sync_config(self):
+        mgmt.modify_local(self.local_config)
+
+    def register_new(self, at_most_one=True):
+        """register new workspace deployment
+
+        If at_most_one, then the local configuration can only declare
+        one workspace deployment, and calls to this function will fail
+        if there is already one.
+
+        Examples where setting at_most_one=False might be the right
+        choice: your local host is part of more than one robot, or it
+        is part of more than one significantly distinct testbed.
+        """
+        if at_most_one and len(self.local_config['wdeployments']) > 0:
+            raise Error('local configuration already declares a workspace deployment (and at_most_one=True)')
+        headers = self._add_key_header()
+        res = requests.post(self.base_uri + '/register', headers=headers, verify=self.verify_certs)
+        if res.ok:
+            payload = res.json()
+            assert 'id' in payload
+            self.local_config['wdeployments'].append({
+                'id': payload['id'],
+                'owner': payload['owner'],
+            })
+            self.sync_config()
+        else:
+            raise Error('error contacting hardshare server: {}'.format(res.status_code))
+        return payload['id']

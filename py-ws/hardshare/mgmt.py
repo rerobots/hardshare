@@ -125,6 +125,33 @@ def get_local_config(create_if_empty=False, collect_errors=False):
     return config
 
 
+def modify_local(config):
+    """update local (main) configuration
+
+    This function ignores unrecognized keys in the given dict. Any
+    such extra data are not saved.
+    """
+    assert 'version' in config and config['version'] == 0
+    assert 'wdeployments' in config
+    base_path = '~/.rerobots'
+    base_path = os.path.expanduser(base_path)
+    with open(os.path.join(base_path, 'main')) as fp:
+        prev_config = json.load(fp)
+    assert 'version' in prev_config and prev_config['version'] == 0
+    assert 'wdeployments' in prev_config
+    new_config = {
+        'version': 0,
+        'wdeployments': [],
+    }
+    for wd in config['wdeployments']:
+        new_config['wdeployments'].append({
+            'id': wd['id'],
+            'owner': wd['owner'],
+        })
+    with open(os.path.join(base_path, 'main'), 'wt') as fp:
+        json.dump(new_config, fp)
+
+
 def add_key(path, create_if_empty=False):
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)

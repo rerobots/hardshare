@@ -108,6 +108,12 @@ def main(argv=None):
     elif argv_parsed.command is None or argv_parsed.command == 'help':
         argparser.print_help()
 
+    elif argv_parsed.command == 'register':
+        if ac is None:
+            print('cannot register without initial local configuration. (try `hardshare config --create`)')
+            return 1
+        print(ac.register_new())
+
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
             try:
@@ -138,7 +144,15 @@ def main(argv=None):
                 ac = HSAPIClient(server_name=argv_parsed.server_name,
                                  server_port=argv_parsed.server_port,
                                  verify_certs=(not argv_parsed.ignore_certs))
-                print(ac.get_remote_config())
+                remote_config = ac.get_remote_config()
+                if len(remote_config['deployments']) == 0:
+                    print('no registered workspace deployments with this user account')
+                else:
+                    print('registered workspace deployments with this user account:')
+                    for wd in remote_config['deployments']:
+                        print('{}'.format(wd['id']))
+                        print('\tcreated: {}'.format(wd['date_created']))
+                        print('\torigin (address) of registration: {}'.format(wd['origin']))
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
