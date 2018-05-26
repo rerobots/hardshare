@@ -75,6 +75,8 @@ def main(argv=None):
     check_parser = subparsers.add_parser('check',
                                          description=check_commanddesc,
                                          help=check_commanddesc)
+    check_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                              help='id of workspace deployment to check (can be unique prefix)')
 
     advertise_commanddesc = 'advertise availability, accept new instances'
     advertise_parser = subparsers.add_parser('ad',
@@ -118,7 +120,7 @@ def main(argv=None):
         if ac is None:
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
-        res = ac.check_registration()
+        res = ac.check_registration(argv_parsed.id_prefix)
         if 'err' in res and res['err'] == 'not found':
             print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
             return 1
