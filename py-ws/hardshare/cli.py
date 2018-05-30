@@ -110,6 +110,12 @@ def main(argv=None):
     elif argv_parsed.command is None or argv_parsed.command == 'help':
         argparser.print_help()
 
+    elif argv_parsed.command == 'ad':
+        if ac is None:
+            print('cannot register without initial local configuration. (try `hardshare config --create`)')
+            return 1
+        ac.run_sync()
+
     elif argv_parsed.command == 'register':
         if ac is None:
             print('cannot register without initial local configuration. (try `hardshare config --create`)')
