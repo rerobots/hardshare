@@ -152,6 +152,7 @@ class HSAPIClient:
                         if current is None:
                             current = core.WorkspaceInstance()
                             self.loop.create_task(current.launch_instance(
+                                instance_id=payload['id'],
                                 ws_send=ws.send_str,
                                 conntype=payload['ct'],
                                 publickey=payload['pr']

@@ -21,10 +21,10 @@ import subprocess
 
 class WorkspaceInstance:
     def __init__(self):
-        self.status = None
+        self.status = 'INIT'
         self.container_name = 'rrc'
 
-    async def launch_instance(self, ws_send, conntype, publickey):
+    async def launch_instance(self, instance_id, ws_send, conntype, publickey):
         launch_args = ['docker', 'run', '-d',
                        '-h', self.container_name,
                        '--name', self.container_name,
@@ -32,6 +32,12 @@ class WorkspaceInstance:
                        '--cap-add=NET_ADMIN']
         launch_args += ['hs.rerobots.net/generic:latest']
         subprocess.check_call(launch_args)
+        self.status = 'READY'
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'INSTANCE_STATUS',
+            's': self.status
+        }))
 
     async def destroy_instance(self):
         destroy_args = ['docker', 'rm', '-f', self.container_name]
