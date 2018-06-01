@@ -16,8 +16,10 @@
 """
 import argparse
 import os
+import subprocess
 import sys
 
+from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, list_local_keys
 from .api import HSAPIClient
 
@@ -78,6 +80,11 @@ def main(argv=None):
     check_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
                               help='id of workspace deployment to check (can be unique prefix)')
 
+    status_commanddesc = 'get status of local instances and daemon'
+    status_parser = subparsers.add_parser('status',
+                                          description=status_commanddesc,
+                                          help=status_commanddesc)
+
     advertise_commanddesc = 'advertise availability, accept new instances'
     advertise_parser = subparsers.add_parser('ad',
                                              description=advertise_commanddesc,
@@ -93,6 +100,9 @@ def main(argv=None):
     terminate_parser.add_argument('-f', '--force', action='store_true', default=False,
                                   help='if there is an active instance, then stop it without waiting',
                                   dest='force_terminate')
+    terminate_parser.add_argument('--purge', action='store_true', default=False,
+                                  help='if the server thinks that there should be an instance active, but there is not one or it is otherwise in a non-recoverable state, then mark it remotely as terminated and attempt local clean-up; this command is a last resort. First, try `hardshare terminate` without --purge.',
+                                  dest='purge_supposed_instance')
 
     argv_parsed = argparser.parse_args(argv)
 
@@ -110,11 +120,38 @@ def main(argv=None):
     elif argv_parsed.command is None or argv_parsed.command == 'help':
         argparser.print_help()
 
+    elif argv_parsed.command == 'status':
+        try:
+            config = get_local_config(collect_errors=True)
+        except:
+            print('error loading configuration data. does it exist?')
+            return 1
+        findings = WorkspaceInstance.inspect_instance()
+        print(findings)
+
     elif argv_parsed.command == 'ad':
         if ac is None:
             print('cannot register without initial local configuration. (try `hardshare config --create`)')
             return 1
         ac.run_sync()
+
+    elif argv_parsed.command == 'terminate':
+        if argv_parsed.purge_supposed_instance:
+            findings = WorkspaceInstance.inspect_instance()
+            if 'container' in findings:
+                try:
+                    subprocess.check_call(['docker', 'rm', '-f',
+                                           findings['container']['name']])
+                except:
+                    print('failed to stop container `{}`'.format(findings['container']['name']))
+                    return 1
+                return 0
+            else:
+                print('failed to detect local instance')
+                return 1
+        else:
+            print('not implemented yet')  # TODO
+            return 1
 
     elif argv_parsed.command == 'register':
         if ac is None:

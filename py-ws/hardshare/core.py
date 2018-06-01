@@ -25,6 +25,27 @@ class WorkspaceInstance:
         self.container_name = 'rrc'
         self.instance_id = None
 
+    @classmethod
+    def inspect_instance(cls):
+        """detect whether local host is running a workspace instance
+
+        Return dict that describes findings.
+        """
+        findings = {
+            'daemon_found': False,  # TODO: try to communicate with daemon
+            'provider': 'docker',
+        }
+        empty_default = cls()
+        cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
+                            stdout=subprocess.PIPE,
+                            universal_newlines=True)
+        if cp.returncode == 0:
+            findings['container'] = {
+                'name': empty_default.container_name,
+            }
+        return findings
+
+
     async def launch_instance(self, instance_id, ws_send, conntype, publickey):
         self.instance_id = instance_id
         launch_args = ['docker', 'run', '-d',
