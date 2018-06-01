@@ -23,8 +23,10 @@ class WorkspaceInstance:
     def __init__(self):
         self.status = 'INIT'
         self.container_name = 'rrc'
+        self.instance_id = None
 
     async def launch_instance(self, instance_id, ws_send, conntype, publickey):
+        self.instance_id = instance_id
         launch_args = ['docker', 'run', '-d',
                        '-h', self.container_name,
                        '--name', self.container_name,
