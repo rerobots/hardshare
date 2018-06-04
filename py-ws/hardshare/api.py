@@ -16,6 +16,10 @@
 """
 import asyncio
 import json
+import os
+import queue
+import socket
+import threading
 
 import aiohttp
 import requests
@@ -41,6 +45,8 @@ class HSAPIClient:
         else:
             self.default_key_index = None
             self._cached_key = None
+        self.closing = threading.Event()
+        self.closing.clear()
 
     def _add_key_header(self, headers=None):
         if headers is None:
@@ -103,12 +109,37 @@ class HSAPIClient:
             raise Error('error contacting hardshare server: {}'.format(res.status_code))
         return res.json()
 
+    def handle_dsocket(self, cq):
+        base_path = '~/.rerobots'
+        base_path = os.path.expanduser(base_path)
+        hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+        hss.bind(os.path.join(base_path, 'hardshare.sock'))
+        hss.listen()
+        while not self.closing.is_set():
+            try:
+                conn, from_addr = hss.accept()
+            except:
+                continue
+            conn.settimeout(10)
+            try:
+                msg = conn.recv(1024)
+                if msg.decode() == 'STATUS\n':
+                    conn.send(b'OK\n')
+            except socket.timeout:
+                pass
+            finally:
+                conn.close()
+        hss.close()
+
     def run_sync(self, id_prefix=None):
         self.loop.create_task(self.run(id_prefix=id_prefix))
         self.loop.run_forever()
         self.loop.close()
 
     async def run(self, id_prefix=None):
+        cq = queue.Queue
+        dsocket_handler = threading.Thread(target=self.handle_dsocket, args=(cq,))
+        dsocket_handler.start()
         current = None
         if id_prefix is None:
             if len(self.local_config['wdeployments']) == 0:
@@ -207,3 +238,5 @@ class HSAPIClient:
 
         finally:
             await session.close()
+        self.closing.set()
+        dsocket_handler.join(timeout=10)

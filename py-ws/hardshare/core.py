@@ -16,6 +16,8 @@
 """
 import asyncio
 import json
+import os
+import socket
 import subprocess
 
 
@@ -32,9 +34,25 @@ class WorkspaceInstance:
         Return dict that describes findings.
         """
         findings = {
-            'daemon_found': False,  # TODO: try to communicate with daemon
+            'daemon_found': False,
             'provider': 'docker',
         }
+        base_path = '~/.rerobots'
+        base_path = os.path.expanduser(base_path)
+        to_addr = os.path.join(base_path, 'hardshare.sock')
+        hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+        hss.settimeout(10)
+        try:
+            hss.connect(to_addr)
+            hss.send(b'STATUS\n')
+            msg = hss.recv(1024)
+            findings['daemon_found'] = True
+        except socket.timeout:
+            pass
+        except BrokenPipeError:
+            pass
+        finally:
+            hss.close()
         empty_default = cls()
         cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
                             stdout=subprocess.PIPE,

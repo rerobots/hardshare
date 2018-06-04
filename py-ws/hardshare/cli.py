@@ -133,6 +133,9 @@ def main(argv=None):
         if ac is None:
             print('cannot register without initial local configuration. (try `hardshare config --create`)')
             return 1
+        if argv_parsed.become_daemon:
+            if os.fork() != 0:
+                return 0
         ac.run_sync()
 
     elif argv_parsed.command == 'terminate':
