@@ -15,11 +15,11 @@
 """hardshare API client
 """
 import asyncio
+from concurrent.futures import FIRST_COMPLETED
 import json
 import os
 import queue
 import socket
-import threading
 
 import aiohttp
 import requests
@@ -45,8 +45,6 @@ class HSAPIClient:
         else:
             self.default_key_index = None
             self._cached_key = None
-        self.closing = threading.Event()
-        self.closing.clear()
 
     def _add_key_header(self, headers=None):
         if headers is None:
@@ -109,38 +107,138 @@ class HSAPIClient:
             raise Error('error contacting hardshare server: {}'.format(res.status_code))
         return res.json()
 
-    def handle_dsocket(self, cq):
+    def terminate(self):
+        base_path = '~/.rerobots'
+        base_path = os.path.expanduser(base_path)
+        to_addr = os.path.join(base_path, 'hardshare.sock')
+        hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+        hss.setblocking(False)
+        try:
+            hss.connect(to_addr)
+            hss.send(b'TERMINATE\n')
+        except BrokenPipeError:
+            pass
+        finally:
+            hss.close()
+
+    async def handle_dsocket(self, cq):
         base_path = '~/.rerobots'
         base_path = os.path.expanduser(base_path)
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+        hss.setblocking(False)
         hss.bind(os.path.join(base_path, 'hardshare.sock'))
-        hss.listen()
-        while not self.closing.is_set():
-            try:
-                conn, from_addr = hss.accept()
-            except:
-                continue
-            conn.settimeout(10)
-            try:
-                msg = conn.recv(1024)
-                if msg.decode() == 'STATUS\n':
-                    conn.send(b'OK\n')
-            except socket.timeout:
-                pass
-            finally:
-                conn.close()
+        try:
+            hss.listen()
+            while True:
+                try:
+                    conn, from_addr = await self.loop.sock_accept(hss)
+                except:
+                    continue
+                conn.setblocking(False)
+                try:
+                    msg = await self.loop.sock_recv(conn, 1024)
+                    msg = msg.decode()
+                    if msg == 'STATUS\n':
+                        await self.loop.sock_sendall(conn, b'OK\n')
+
+                    elif msg == 'TERMINATE\n':
+                        print('received request: TERMINATE')
+                        await cq.put({'action': 'TERMINATE'})
+                        conn.close()
+                        break
+
+                except BrokenPipeError:
+                    pass
+                finally:
+                    conn.close()
+
+        except:
+            raise
         hss.close()
 
     def run_sync(self, id_prefix=None):
-        self.loop.create_task(self.run(id_prefix=id_prefix))
-        self.loop.run_forever()
-        self.loop.close()
+        try:
+            self.loop.create_task(self.run(id_prefix=id_prefix))
+            self.loop.run_forever()
+        except KeyboardInterrupt:
+            pass
+
+    async def handle_wsrecv(self, ws, msg):
+        if (msg.type == aiohttp.WSMsgType.CLOSED
+            or msg.type == aiohttp.WSMsgType.ERROR):
+            print('WebSocket CLOSED or ERROR')
+            return
+
+        try:
+            payload = json.loads(msg.data)
+            assert 'v' in payload and payload['v'] == 0
+            assert 'cmd' in payload
+        except:
+            await ws.close()
+            raise ValueError('ERROR: failed to parse message payload.')
+            return
+
+        if payload['cmd'] == 'INSTANCE_LAUNCH':
+            if self.current is None:
+                self.current = core.WorkspaceInstance()
+                self.loop.create_task(self.current.launch_instance(
+                    instance_id=payload['id'],
+                    ws_send=ws.send_str,
+                    conntype=payload['ct'],
+                    publickey=payload['pr']
+                ))
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'ACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+
+        elif payload['cmd'] == 'INSTANCE_DESTROY':
+            if self.current is None:
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'ACK',
+                    'mi': payload['mi'],
+                }))
+                await self.current.destroy_instance()
+                self.current = None
+
+        elif payload['cmd'] == 'INSTANCE_STATUS':
+            if self.current is None:
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'ACK',
+                    'mi': payload['mi'],
+                    's': self.current.status,
+                }))
+
+        else:
+            await ws.close()
+            raise ValueError('ERROR: unknown command: {}'.format(payload['cmd']))
+
 
     async def run(self, id_prefix=None):
-        cq = queue.Queue
-        dsocket_handler = threading.Thread(target=self.handle_dsocket, args=(cq,))
-        dsocket_handler.start()
-        current = None
+        cq = asyncio.Queue()
+        self.loop.create_task(self.handle_dsocket(cq))
+        self.current = None
         if id_prefix is None:
             if len(self.local_config['wdeployments']) == 0:
                 raise ValueError('no identifier given, and none in local config')
@@ -164,79 +262,28 @@ class HSAPIClient:
         uri = self.base_uri + '/ad/{}'.format(wdeployment_config['id'])
         try:
             async with session.ws_connect(uri) as ws:
-                async for msg in ws:
-                    if (msg.type == aiohttp.WSMsgType.CLOSED
-                          or msg.type == aiohttp.WSMsgType.ERROR):
-                        print('WebSocket CLOSED or ERROR')
-                        break
+                futures = {
+                    'ws.receive': self.loop.create_task(ws.receive()),
+                    'cq.get': self.loop.create_task(cq.get()),
+                }
+                _exit = False
+                while not _exit:
+                    done, pending = await asyncio.wait(futures.values(), loop=self.loop, return_when=FIRST_COMPLETED)
+                    for done_future in done:
+                        if done_future == futures['ws.receive']:
+                            futures['ws.receive'] = self.loop.create_task(ws.receive())
+                            await self.handle_wsrecv(ws, done_future.result())
 
-                    try:
-                        payload = json.loads(msg.data)
-                        assert 'v' in payload and payload['v'] == 0
-                        assert 'cmd' in payload
-                    except:
-                        print('ERROR: failed to parse message payload.')
-                        await ws.close()
-                        break
+                        else:  # done_future == futures['cq.get']
+                            futures['cq.get'] = self.loop.create_task(cq.get())
+                            msg = done_future.result()
+                            if msg['action'] == 'TERMINATE':
+                                _exit = True
+                                break
 
-                    if payload['cmd'] == 'INSTANCE_LAUNCH':
-                        if current is None:
-                            current = core.WorkspaceInstance()
-                            self.loop.create_task(current.launch_instance(
-                                instance_id=payload['id'],
-                                ws_send=ws.send_str,
-                                conntype=payload['ct'],
-                                publickey=payload['pr']
-                            ))
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'ACK',
-                                'mi': payload['mi'],
-                            }))
-                        else:
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'NACK',
-                                'mi': payload['mi'],
-                            }))
-
-                    elif payload['cmd'] == 'INSTANCE_DESTROY':
-                        if current is None:
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'NACK',
-                                'mi': payload['mi'],
-                            }))
-                        else:
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'ACK',
-                                'mi': payload['mi'],
-                            }))
-                            await current.destroy_instance()
-                            current = None
-
-                    elif payload['cmd'] == 'INSTANCE_STATUS':
-                        if current is None:
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'NACK',
-                                'mi': payload['mi'],
-                            }))
-                        else:
-                            await ws.send_str(json.dumps({
-                                'v': 0,
-                                'cmd': 'ACK',
-                                'mi': payload['mi'],
-                                's': current.status,
-                            }))
-
-                    else:
-                        print('ERROR: unknown command: {}'.format(payload['cmd']))
-                        await ws.close()
-                        break
+                for future in futures.values():
+                    future.cancel()
 
         finally:
             await session.close()
-        self.closing.set()
-        dsocket_handler.join(timeout=10)
+        self.loop.stop()

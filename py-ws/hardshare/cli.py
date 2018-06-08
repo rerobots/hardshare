@@ -153,8 +153,11 @@ def main(argv=None):
                 print('failed to detect local instance')
                 return 1
         else:
-            print('not implemented yet')  # TODO
-            return 1
+            if ac is None:
+                print('cannot terminate without valid API client')
+                return 1
+            ac.terminate()
+            return 0
 
     elif argv_parsed.command == 'register':
         if ac is None:
