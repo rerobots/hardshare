@@ -15,6 +15,7 @@
 """Command-line interface
 """
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -127,7 +128,7 @@ def main(argv=None):
             print('error loading configuration data. does it exist?')
             return 1
         findings = WorkspaceInstance.inspect_instance()
-        print(findings)
+        print(json.dumps(findings))
 
     elif argv_parsed.command == 'ad':
         if ac is None:
