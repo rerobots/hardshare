@@ -19,6 +19,7 @@ from concurrent.futures import FIRST_COMPLETED
 import json
 import os
 import queue
+import signal
 import socket
 
 import aiohttp
@@ -127,10 +128,7 @@ class HSAPIClient:
         try:
             hss.listen()
             while True:
-                try:
-                    conn, from_addr = await self.loop.sock_accept(hss)
-                except:
-                    continue
+                conn, from_addr = await self.loop.sock_accept(hss)
                 conn.setblocking(False)
                 try:
                     msg = await self.loop.sock_recv(conn, 1024)
@@ -149,17 +147,27 @@ class HSAPIClient:
                 finally:
                     conn.close()
 
-        except:
-            raise
-        hss.close()
-        os.unlink(socket_path)
+        except asyncio.CancelledError:
+            pass
+
+        finally:
+            hss.close()
+            os.unlink(socket_path)
+
+
+    def handle_sigterm(self, signum, frame):
+        self.main.cancel()
+
 
     def run_sync(self, id_prefix=None):
+        self.main = self.loop.create_task(self.run(id_prefix=id_prefix))
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
-            self.loop.create_task(self.run(id_prefix=id_prefix))
-            self.loop.run_forever()
+            self.loop.run_until_complete(self.main)
         except KeyboardInterrupt:
-            pass
+            self.main.cancel()
+            self.loop.run_until_complete(self.main)
+
 
     async def handle_wsrecv(self, ws, msg):
         if (msg.type == aiohttp.WSMsgType.CLOSED
@@ -235,7 +243,7 @@ class HSAPIClient:
 
     async def run(self, id_prefix=None):
         cq = asyncio.Queue()
-        self.loop.create_task(self.handle_dsocket(cq))
+        dsocket_handler = self.loop.create_task(self.handle_dsocket(cq))
         self.current = None
         if id_prefix is None:
             if len(self.local_config['wdeployments']) == 0:
@@ -282,6 +290,12 @@ class HSAPIClient:
                 for future in futures.values():
                     future.cancel()
 
+        except asyncio.CancelledError:
+            for future in futures.values():
+                future.cancel()
+
         finally:
             await session.close()
-        self.loop.stop()
+            dsocket_handler.cancel()
+
+        await asyncio.wait_for(dsocket_handler, timeout=None)
