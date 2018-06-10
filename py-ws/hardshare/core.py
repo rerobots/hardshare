@@ -56,6 +56,7 @@ class WorkspaceInstance:
         empty_default = cls()
         cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
                             stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
                             universal_newlines=True)
         if cp.returncode == 0:
             findings['container'] = {
