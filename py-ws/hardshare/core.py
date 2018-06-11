@@ -51,6 +51,8 @@ class WorkspaceInstance:
             pass
         except BrokenPipeError:
             pass
+        except FileNotFoundError:
+            pass
         finally:
             hss.close()
         empty_default = cls()
