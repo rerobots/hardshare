@@ -59,9 +59,16 @@ class WorkspaceInstance:
                             stderr=subprocess.STDOUT,
                             universal_newlines=True)
         if cp.returncode == 0:
+            findings['has_instance'] = True
+            cinfo = json.loads(cp.stdout)[0]
             findings['container'] = {
                 'name': empty_default.container_name,
+                'id': cinfo['Id'],
+                'created': cinfo['Created'],
+                'image_id': cinfo['Image'],
             }
+        else:
+            findings['has_instance'] = False
         return findings
 
 
