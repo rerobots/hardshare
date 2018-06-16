@@ -16,6 +16,7 @@
 """
 import argparse
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -23,6 +24,14 @@ import sys
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, list_local_keys
 from .api import HSAPIClient
+
+
+logger = logging.getLogger('hardshare')
+logger.setLevel(logging.INFO)
+loghandler = logging.StreamHandler()
+loghandler.setLevel(logging.DEBUG)
+loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {}); %(asctime)s ; %(message)s'.format(os.getpid())))
+logger.addHandler(loghandler)
 
 
 def main(argv=None):
