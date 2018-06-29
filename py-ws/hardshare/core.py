@@ -16,16 +16,29 @@
 """
 import asyncio
 import json
+import logging
 import os
 import socket
 import subprocess
+import tempfile
+import time
+import uuid
+
+
+logger = logging.getLogger(__name__)
 
 
 class WorkspaceInstance:
-    def __init__(self):
+    def __init__(self, event_loop=None):
+        if event_loop is None:
+            self.loop = asyncio.get_event_loop()
+        else:
+            self.loop = event_loop
         self.status = 'INIT'
         self.container_name = 'rrc'
         self.instance_id = None
+        self.publickey = None
+        self.tunnelhub = None
 
     @classmethod
     def inspect_instance(cls):
@@ -81,21 +94,217 @@ class WorkspaceInstance:
         return findings
 
 
-    async def launch_instance(self, instance_id, ws_send, conntype, publickey):
+    async def get_container_addr(self, timeout=60):
+        logger.info('attempting to get IPv4 address of container... (entered get_container_addr())')
+        docker_inspect = await asyncio.create_subprocess_exec(
+            'docker', 'inspect', self.container_name,
+            stdout=subprocess.PIPE
+        )
+        stdout_data, stderr_data = await docker_inspect.communicate()
+        cdata = json.loads(str(stdout_data, encoding='utf-8'))
+        if len(cdata) < 1 or 'NetworkSettings' not in cdata[0] or 'IPAddress' not in cdata[0]['NetworkSettings']:
+            logger.info('did not find IPv4 or IPv6 address before timeout of {} s'.format(timeout))
+            return None
+        else:
+            logger.info('found address: {}'.format(cdata[0]['NetworkSettings']['IPAddress']))
+            return cdata[0]['NetworkSettings']['IPAddress']
+
+
+    async def get_container_hostkey(self, timeout=120):
+        logger.info('attempting to get hostkey from container... (entered get_container_hostkey())')
+        hostkey_filename = 'ssh_host_ecdsa_key.pub'
+        gethostkey_command = ['docker', 'cp', self.container_name + ':/etc/ssh/' + hostkey_filename, '.']
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            c_gethostkey = await asyncio.create_subprocess_exec(
+                *gethostkey_command,
+                stdout=subprocess.PIPE
+            )
+            rt = await c_gethostkey.wait()
+            if rt != 0:
+                await asyncio.sleep(1)
+                continue
+            logger.info('found hostkey!')
+            with open(hostkey_filename, 'rt', encoding='utf-8') as fp:
+                return fp.read().strip()
+        logger.info('did not find hostkey before timeout of {} s'.format(timeout))
+        return None
+
+
+    async def find_tunnelhub(self, ws_send, ws_recv):
+        assert self.tunnelhub is None
+        logger.debug('sending TH_SEARCH')
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'TH_SEARCH',
+            'id': self.instance_id,
+        }))
+        res = await ws_recv.get()
+        assert res['v'] == 0
+        assert res['id'] == self.instance_id
+        assert res['cmd'] == 'TH_ACCEPT'
+        logger.debug('received TH_ACCEPT for th {} at {}'.format(
+            res['thid'],
+            res['ipv4']
+        ))
+        self.tunnelhub = {
+            'id': res['thid'],
+            'ipv4': res['ipv4'],
+            'hostkey': res['hostkey'],
+            'listen_port': res['port'],
+            'connect_port': res['thport'],
+            'connect_user': res['thuser'],
+        }
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'ACK',
+            'mi': res['mi'],
+        }))
+
+
+    async def start_vpn(self, ws_send, ws_recv):
+        try:
+            while self.container_addr is None:
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            return
+
+        if self.tunnelhub is None:
+            logger.info('attempting to associate with a tunnel hub')
+            await self.find_tunnelhub(ws_send, ws_recv)
+            assert self.tunnelhub is not None
+            logger.info('associated with tunnel hub {}'.format(self.tunnelhub['id']))
+
+        mi = str(uuid.uuid4())
+        logger.debug('sending VPN_CREATE (mi: {})'.format(mi))
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'VPN_CREATE',
+            'id': self.instance_id,
+            'mi': mi,
+        }))
+        res = await ws_recv.get()
+        assert res['v'] == 0
+        assert res['mi'] == mi
+        assert res['cmd'] == 'ACK'
+        assert res['id'] == self.instance_id
+
+        mi = str(uuid.uuid4())
+        logger.debug('sending VPN_NEWCLIENT (mi: {})'.format(mi))
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'VPN_NEWCLIENT',
+            'id': self.instance_id,
+            'mi': mi,
+        }))
+        res = await ws_recv.get()
+        assert res['v'] == 0
+        assert res['mi'] == mi
+        assert res['cmd'] == 'ACK'
+        assert res['id'] == self.instance_id
+        ovpn_config = res['ovpn']
+
+        try:
+            # Copy OVPN file into container
+            fd, fname = tempfile.mkstemp()
+            fp = os.fdopen(fd, 'wt')
+            fp.write(ovpn_config)
+            fp.close()
+            subprocess.check_call(['docker', 'cp',
+                                   fname,
+                                   self.container_name + ':/etc/' + self.container_name + '_client.ovpn'])
+            os.unlink(fname)
+
+            # Start client
+            # ASSUME images for Docker provider already have
+            # openvpn and avahi-daemon installed.
+            pre_commands = [
+                ['docker', 'exec', self.container_name, '/etc/init.d/dbus', 'start'],
+                ['docker', 'exec', '-d', self.container_name, 'avahi-daemon']
+            ]
+            vpnclient_command = ('docker exec '
+                                 + self.container_name
+                                 + ' openvpn '
+                                 '/etc/' + self.container_name + '_client.ovpn')
+
+            for pre_cmd in pre_commands:
+                subprocess.check_call(pre_cmd)
+
+            vpnclient = await asyncio.create_subprocess_exec(*(vpnclient_command.split()))
+
+            self.status = 'READY'
+            logger.info('marked instance as {}'.format(self.status))
+            await ws_send(json.dumps({
+                'v': 0,
+                'cmd': 'INSTANCE_STATUS',
+                's': self.status
+            }))
+
+        except:
+            self.status = 'INIT_FAIL'
+            logger.info('marked instance as {}'.format(self.status))
+            await ws_send(json.dumps({
+                'v': 0,
+                'cmd': 'INSTANCE_STATUS',
+                's': self.status
+            }))
+            return
+
+        try:
+            while True:
+                if vpnclient.returncode is None:
+                    await asyncio.sleep(5)
+                else:
+                    vpnclient = await asyncio.create_subprocess_exec(*(vpnclient_command.split()))
+
+        except asyncio.CancelledError:
+            logger.debug('sending VPN_DELETE')
+            await ws_send(json.dumps({
+                'v': 0,
+                'cmd': 'VPN_DELETE',
+                'id': self.instance_id,
+            }))
+
+
+    async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, publickey):
+        assert conntype == 'vpn'  # TODO: support `sshtun` connections
+        self.conntype = conntype
         self.instance_id = instance_id
+        self.publickey = publickey
+
+        fd, fname = tempfile.mkstemp()
+        fp = os.fdopen(fd, 'wt')
+        fp.write(publickey)
+        fp.close()
+
         launch_args = ['docker', 'run', '-d',
                        '-h', self.container_name,
                        '--name', self.container_name,
                        '--device=/dev/net/tun:/dev/net/tun',
                        '--cap-add=NET_ADMIN']
         launch_args += ['hs.rerobots.net/generic:latest']
+        logger.debug('subprocess: {}'.format(launch_args))
         subprocess.check_call(launch_args)
-        self.status = 'READY'
+
+        self.container_addr = await self.get_container_addr(timeout=10)
+        self.hostkey = await self.get_container_hostkey(timeout=45)
+        assert self.container_addr is not None
+
+        movekey_commands = [['docker', 'exec', self.container_name, '/bin/mkdir', '-p', '/root/.ssh'],
+                            ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys']]
+        for command in movekey_commands:
+            logger.debug('subprocess: {}'.format(command))
+            subprocess.check_call(command)
+
+        os.unlink(fname)
+
         await ws_send(json.dumps({
             'v': 0,
             'cmd': 'INSTANCE_STATUS',
             's': self.status
         }))
+        self.tunnel_task = self.loop.create_task(self.start_vpn(ws_send, ws_recv))
+
 
     async def destroy_instance(self):
         destroy_args = ['docker', 'rm', '-f', self.container_name]

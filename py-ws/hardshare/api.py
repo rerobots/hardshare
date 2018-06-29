@@ -17,8 +17,8 @@
 import asyncio
 from concurrent.futures import FIRST_COMPLETED
 import json
+import logging
 import os
-import queue
 import signal
 import socket
 
@@ -30,6 +30,9 @@ from . import mgmt
 from .err import Error
 
 
+logger = logging.getLogger(__name__)
+
+
 class HSAPIClient:
     def __init__(self, server_name='hs.rerobots.net', server_port=443, verify_certs=True, event_loop=None):
         if event_loop is None:
@@ -38,6 +41,7 @@ class HSAPIClient:
             self.loop = event_loop
         self.base_uri = 'https://{}:{}'.format(server_name, server_port)
         self.verify_certs = verify_certs
+        self.ws_recvmap = dict()
         self.local_config = mgmt.get_local_config()
         if len(self.local_config['keys']) > 0:
             self.default_key_index = 0
@@ -46,6 +50,7 @@ class HSAPIClient:
         else:
             self.default_key_index = None
             self._cached_key = None
+        self.current_wdeployment = None
 
     def _add_key_header(self, headers=None):
         if headers is None:
@@ -160,7 +165,9 @@ class HSAPIClient:
 
 
     def run_sync(self, id_prefix=None):
+        logger.debug('entered run_sync()')
         self.main = self.loop.create_task(self.run(id_prefix=id_prefix))
+        logger.debug('started async run()')
         signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
             self.loop.run_until_complete(self.main)
@@ -170,11 +177,14 @@ class HSAPIClient:
 
 
     async def handle_wsrecv(self, ws, msg):
-        if (msg.type == aiohttp.WSMsgType.CLOSED
-            or msg.type == aiohttp.WSMsgType.ERROR):
-            print('WebSocket CLOSED or ERROR')
-            return
+        if msg.type == aiohttp.WSMsgType.CLOSED:
+            logger.info('WebSocket CLOSED')
+            return False
+        elif msg.type == aiohttp.WSMsgType.ERROR:
+            logger.error('WebSocket ERROR')
+            return False
 
+        logger.debug('WebSocket: received {}'.format(msg.data))
         try:
             payload = json.loads(msg.data)
             assert 'v' in payload and payload['v'] == 0
@@ -182,23 +192,26 @@ class HSAPIClient:
         except:
             await ws.close()
             raise ValueError('ERROR: failed to parse message payload.')
-            return
 
         if payload['cmd'] == 'INSTANCE_LAUNCH':
             if self.current is None:
+                self.ws_recvmap[payload['id']] = asyncio.Queue()
                 self.current = core.WorkspaceInstance()
                 self.loop.create_task(self.current.launch_instance(
                     instance_id=payload['id'],
                     ws_send=ws.send_str,
+                    ws_recv=self.ws_recvmap[payload['id']],
                     conntype=payload['ct'],
                     publickey=payload['pr']
                 ))
+                logger.debug('in response to INSTANCE_LAUNCH, sending ACK')
                 await ws.send_str(json.dumps({
                     'v': 0,
                     'cmd': 'ACK',
                     'mi': payload['mi'],
                 }))
             else:
+                logger.debug('in response to INSTANCE_LAUNCH, sending NACK')
                 await ws.send_str(json.dumps({
                     'v': 0,
                     'cmd': 'NACK',
@@ -223,12 +236,14 @@ class HSAPIClient:
 
         elif payload['cmd'] == 'INSTANCE_STATUS':
             if self.current is None:
+                logger.debug('in response to INSTANCE_STATUS, sending NACK')
                 await ws.send_str(json.dumps({
                     'v': 0,
                     'cmd': 'NACK',
                     'mi': payload['mi'],
                 }))
             else:
+                logger.debug('in response to INSTANCE_LAUNCH, sending status: {}'.format(self.current.status))
                 await ws.send_str(json.dumps({
                     'v': 0,
                     'cmd': 'ACK',
@@ -236,9 +251,61 @@ class HSAPIClient:
                     's': self.current.status,
                 }))
 
+        elif payload['cmd'] == 'TH_ACCEPT':
+            if (self.current is None or 'id' not in payload
+                or self.current.instance_id != payload['id']):
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await self.ws_recvmap[self.current.instance_id].put(payload)
+
+        elif payload['cmd'] == 'TH_PING':
+            resp = {
+                'v': 0,
+                'thid': payload['thid'],
+                'id': self.current_wdeployment['id'],
+                'mi': payload['mi'],
+            }
+            if (self.current is None or 'id' not in payload
+                or self.current_wdeployment['id'] != payload['id']
+                or self.current.tunnelhub is None
+                or self.current.tunnelhub['id'] != payload['thid']):
+                resp['cmd'] = 'NACK'
+            else:
+                resp['cmd'] = 'ACK'
+            await ws.send_str(json.dumps(resp))
+            logger.debug('WebSocket: sent response: {}'.format(resp))
+
+        elif payload['cmd'] == 'VPN_CREATE':
+            if (self.current is None or 'id' not in payload
+                or self.current.instance_id != payload['id']):
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await self.ws_recvmap[self.current.instance_id].put(payload)
+
+        elif payload['cmd'] == 'VPN_NEWCLIENT':
+            if (self.current is None or 'id' not in payload
+                or self.current.instance_id != payload['id']):
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await self.ws_recvmap[self.current.instance_id].put(payload)
+
         else:
             await ws.close()
             raise ValueError('ERROR: unknown command: {}'.format(payload['cmd']))
+
+        return True
 
 
     async def run(self, id_prefix=None):
@@ -259,6 +326,7 @@ class HSAPIClient:
             if wdeployment_config is None:
                 raise ValueError('workspace deployment {} not declared '
                                  'in local config'.format(id_prefix))
+        self.current_wdeployment = wdeployment_config
         headers = self._add_key_header()
         if self.verify_certs:
             session = aiohttp.ClientSession(headers=headers)
@@ -278,7 +346,9 @@ class HSAPIClient:
                     for done_future in done:
                         if done_future == futures['ws.receive']:
                             futures['ws.receive'] = self.loop.create_task(ws.receive())
-                            await self.handle_wsrecv(ws, done_future.result())
+                            _exit = not (await self.handle_wsrecv(ws, done_future.result()))
+                            if _exit:
+                                break
 
                         else:  # done_future == futures['cq.get']
                             futures['cq.get'] = self.loop.create_task(cq.get())

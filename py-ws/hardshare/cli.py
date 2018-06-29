@@ -27,7 +27,7 @@ from .api import HSAPIClient
 
 
 logger = logging.getLogger('hardshare')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 loghandler = logging.StreamHandler()
 loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {}); %(asctime)s ; %(message)s'.format(os.getpid())))
