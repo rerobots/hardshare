@@ -155,6 +155,11 @@ def modify_local(config):
 
 
 def add_key(path, create_if_empty=False):
+    """save rerobots API token into local configuration
+
+    If successful, this function moves the file into the local
+    configuration directory (default: ~/.rerobots).
+    """
     base_path = '~/.rerobots'
     base_path = os.path.expanduser(base_path)
     config = get_local_config(create_if_empty=create_if_empty)
@@ -169,6 +174,26 @@ def add_key(path, create_if_empty=False):
 
 
 def add_ssh_path(path, create_if_empty=False):
+    """save path to SSH private key for SSH tunnel based instances
+
+    This function checks that the path exists and has appropriate file
+    permissions for use as a private key with SSH. However, the file
+    itself is never read by the hardshare client; only the path to it
+    is saved in the local hardshare configuration.
+
+    This function also checks that a file with path obtained by
+    appending ".pub" exists. It is used as the public key.
+
+    For SSH tunnel based instances (also referred to as `sshtun`),
+
+    1. the public key is sent to rerobots-operated tunnel hubs,
+       through which users are routed if they access an instance
+       running on your hardware;
+
+    2. the private key is read by the system `ssh` program, which is
+       invoked as a subprocess. (Usage is entirely similar to calling
+       `ssh -i PATH` from the command-line.)
+    """
     path = os.path.expanduser(path)
     assert os.path.exists(path)
     permissions = os.stat(path).st_mode & 511
