@@ -143,6 +143,8 @@ def modify_local(config):
         'version': 0,
         'wdeployments': [],
     }
+    if 'ssh_key' in config:
+        new_config['ssh_key'] = config['ssh_key']
     for wd in config['wdeployments']:
         new_config['wdeployments'].append({
             'id': wd['id'],
@@ -164,3 +166,13 @@ def add_key(path, create_if_empty=False):
     os.rename(os.path.join(os.path.dirname(path), newkey_basename),
               os.path.join(base_path, 'keys', newkey_basename))
     os.chmod(os.path.join(base_path, 'keys', newkey_basename), mode=stat.S_IRUSR|stat.S_IWUSR)
+
+
+def add_ssh_path(path, create_if_empty=False):
+    path = os.path.expanduser(path)
+    assert os.path.exists(path)
+    permissions = os.stat(path).st_mode & 511
+    assert permissions == 0o600 or permissions == 0o400
+    config = get_local_config(create_if_empty=create_if_empty)
+    config['ssh_key'] = path
+    modify_local(config)

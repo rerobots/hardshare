@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 from .core import WorkspaceInstance
-from .mgmt import get_local_config, add_key, list_local_keys
+from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
 from .api import HSAPIClient
 
 
@@ -68,6 +68,9 @@ def main(argv=None):
     config_parser.add_argument('--add-key', metavar='FILE',
                                dest='new_api_token',
                                help='add new account key')
+    config_parser.add_argument('--add-ssh-path', metavar='PATH',
+                               dest='new_ssh_path',
+                               help='add path to SSH key pair (does NOT copy the key)')
     config_parser.add_argument('-p', '--prune', action='store_true', default=False,
                                dest='prune_err_keys',
                                help='delete files in local key directory that are not valid; to get list of files with errors, try `--list`')
@@ -239,6 +242,13 @@ def main(argv=None):
                 add_key(argv_parsed.new_api_token)
             except:
                 print('failed to add key')
+                return 1
+
+        elif argv_parsed.new_ssh_path:
+            try:
+                add_ssh_path(argv_parsed.new_ssh_path)
+            except:
+                print('ERROR: The file does not exist or has the wrong permissions.')
                 return 1
 
         elif argv_parsed.create_config:
