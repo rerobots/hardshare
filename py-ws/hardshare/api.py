@@ -202,7 +202,8 @@ class HSAPIClient:
                     ws_send=ws.send_str,
                     ws_recv=self.ws_recvmap[payload['id']],
                     conntype=payload['ct'],
-                    publickey=payload['pr']
+                    initial_publickey=payload['pr'],
+                    tunnelkey_path=self.local_config.get('ssh_key', None)
                 ))
                 logger.debug('in response to INSTANCE_LAUNCH, sending ACK')
                 await ws.send_str(json.dumps({

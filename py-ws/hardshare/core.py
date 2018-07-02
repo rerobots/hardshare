@@ -37,7 +37,6 @@ class WorkspaceInstance:
         self.status = 'INIT'
         self.container_name = 'rrc'
         self.instance_id = None
-        self.publickey = None
         self.tunnelhub = None
 
     @classmethod
@@ -134,11 +133,15 @@ class WorkspaceInstance:
     async def find_tunnelhub(self, ws_send, ws_recv):
         assert self.tunnelhub is None
         logger.debug('sending TH_SEARCH')
-        await ws_send(json.dumps({
+        payload = {
             'v': 0,
             'cmd': 'TH_SEARCH',
             'id': self.instance_id,
-        }))
+            'mo': self.conntype,
+        }
+        if self.tunnelkey_public:
+            payload['key'] = self.tunnelkey_public
+        await ws_send(json.dumps(payload))
         res = await ws_recv.get()
         assert res['v'] == 0
         assert res['id'] == self.instance_id
@@ -160,6 +163,62 @@ class WorkspaceInstance:
             'cmd': 'ACK',
             'mi': res['mi'],
         }))
+
+
+    async def maintain_tunnel(self, ws_send, ws_recv):
+        try:
+            while self.container_addr is None:
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            return
+
+        sshtunnel = None
+
+        if self.tunnelhub is None:
+            logger.info('attempting to associate with a tunnel hub')
+            await self.find_tunnelhub(ws_send, ws_recv)
+            assert self.tunnelhub is not None
+            logger.info('associated with tunnel hub {}'.format(self.tunnelhub['id']))
+
+        tunnel_command = ('ssh -o StrictHostKeyChecking=no '
+                          '-o ExitOnForwardFailure=yes '
+                          '-T -N '
+                          '-R :{THPORT}:{CONTAINER}:22 '
+                          '-i {TUNNELKEY_PATH} '
+                          '-p {TH_INFRA_PORT} '
+                          '{THUSER}@{THADDR}'.format(
+                              THADDR=self.tunnelhub['ipv4'],
+                              THPORT=self.tunnelhub['listen_port'],
+                              TUNNELKEY_PATH=self.tunnelkey_path,
+                              TH_INFRA_PORT=self.tunnelhub['connect_port'],
+                              CONTAINER=self.container_addr,
+                              THUSER=self.tunnelhub['connect_user'])).split()
+
+        logger.info('opening ssh tunnel from port {THPORT} '
+                    'of {THADDR} to container '
+                    'at {CONTAINER}'.format(THADDR=self.tunnelhub['ipv4'],
+                                            THPORT=self.tunnelhub['listen_port'],
+                                            CONTAINER=self.container_addr))
+
+        sshtunnel = await asyncio.create_subprocess_exec(*tunnel_command)
+        self.status = 'READY'
+        logger.info('marked instance as {}'.format(self.status))
+        await ws_send(json.dumps({
+            'v': 0,
+            'cmd': 'INSTANCE_STATUS',
+            's': self.status
+        }))
+
+        try:
+            while True:
+                if sshtunnel.returncode is None:
+                    await asyncio.sleep(5)
+                else:
+                    logger.warning('tunnel process unexpectedly exited with returncode {}'.format(sshtunnel.returncode))
+                    sshtunnel = await asyncio.create_subprocess_exec(*tunnel_command)
+
+        except asyncio.CancelledError:
+            pass
 
 
     async def start_vpn(self, ws_send, ws_recv):
@@ -266,15 +325,20 @@ class WorkspaceInstance:
             }))
 
 
-    async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, publickey):
-        assert conntype == 'vpn'  # TODO: support `sshtun` connections
+    async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, tunnelkey_path=None):
         self.conntype = conntype
         self.instance_id = instance_id
-        self.publickey = publickey
+
+        self.tunnelkey_path = tunnelkey_path
+        if self.tunnelkey_path:
+            with open(self.tunnelkey_path + '.pub', 'r') as fp:
+                self.tunnelkey_public = fp.read()
+        else:
+            self.tunnelkey_public = None
 
         fd, fname = tempfile.mkstemp()
         fp = os.fdopen(fd, 'wt')
-        fp.write(publickey)
+        fp.write(initial_publickey)
         fp.close()
 
         launch_args = ['docker', 'run', '-d',
@@ -291,7 +355,8 @@ class WorkspaceInstance:
         assert self.container_addr is not None
 
         movekey_commands = [['docker', 'exec', self.container_name, '/bin/mkdir', '-p', '/root/.ssh'],
-                            ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys']]
+                            ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
+                            ['docker', 'exec', self.container_name, '/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
         for command in movekey_commands:
             logger.debug('subprocess: {}'.format(command))
             subprocess.check_call(command)
@@ -303,7 +368,10 @@ class WorkspaceInstance:
             'cmd': 'INSTANCE_STATUS',
             's': self.status
         }))
-        self.tunnel_task = self.loop.create_task(self.start_vpn(ws_send, ws_recv))
+        if self.conntype == 'vpn':
+            self.tunnel_task = self.loop.create_task(self.start_vpn(ws_send, ws_recv))
+        else:  # self.conntype == 'sshtun'
+            self.tunnel_task = self.loop.create_task(self.maintain_tunnel(ws_send, ws_recv))
 
 
     async def destroy_instance(self):
