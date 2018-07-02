@@ -196,6 +196,7 @@ def add_ssh_path(path, create_if_empty=False):
     """
     path = os.path.expanduser(path)
     assert os.path.exists(path)
+    assert os.path.exists(path + '.pub')
     permissions = os.stat(path).st_mode & 511
     assert permissions == 0o600 or permissions == 0o400
     config = get_local_config(create_if_empty=create_if_empty)

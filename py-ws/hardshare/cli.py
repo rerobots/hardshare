@@ -248,7 +248,11 @@ def main(argv=None):
             try:
                 add_ssh_path(argv_parsed.new_ssh_path)
             except:
-                print('ERROR: The file does not exist or has the wrong permissions.')
+                print('ERROR: {} or {} does not exist or '
+                      'has the wrong permissions.'.format(
+                          argv_parsed.new_ssh_path,
+                          argv_parsed.new_ssh_path + '.pub'
+                      ))
                 return 1
 
         elif argv_parsed.create_config:
