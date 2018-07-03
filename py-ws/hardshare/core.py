@@ -354,10 +354,13 @@ class WorkspaceInstance:
         self.hostkey = await self.get_container_hostkey(timeout=45)
         assert self.container_addr is not None
 
+        prepare_commands = [['docker', 'exec', self.container_name, '/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
+                            ['docker', 'exec', self.container_name, '/usr/bin/ssh-keygen', '-A']]
+
         movekey_commands = [['docker', 'exec', self.container_name, '/bin/mkdir', '-p', '/root/.ssh'],
                             ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
                             ['docker', 'exec', self.container_name, '/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
-        for command in movekey_commands:
+        for command in prepare_commands + movekey_commands:
             logger.debug('subprocess: {}'.format(command))
             subprocess.check_call(command)
 
