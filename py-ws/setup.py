@@ -22,7 +22,7 @@ with open('README.rst') as fp:
 MAJOR=0
 MINOR=0
 PATCH=0
-devel=True
+devel=False
 
 version = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 if devel:
