@@ -2,8 +2,11 @@ project = 'hardshare'
 copyright = '2018 rerobots, Inc.'
 author = 'rerobots, Inc.'
 
-version = ''
-release = ''
+import os.path
+import sys
+sys.path.insert(0, os.path.join(os.getcwd(), '..', 'py-ws'))
+from setup import version
+release = version
 
 extensions = [
     'sphinx.ext.mathjax',
