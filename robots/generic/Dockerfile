@@ -16,4 +16,6 @@ RUN apt-get update \
        nano \
     && mkdir -p /var/run/sshd
 
-CMD ["/usr/sbin/sshd", "-D"]
+COPY init.sh /sbin/rerobots-hs-init.sh
+
+CMD ["/sbin/rerobots-hs-init.sh"]
