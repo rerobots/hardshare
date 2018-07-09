@@ -17,6 +17,20 @@ The official repository for this sourcetree is at
 https://github.com/rerobots/hardshare
 
 
+Navigating the sourcetree
+-------------------------
+
+Besides the root README (you are reading it), the sourcetree contains more
+README files in subdirectories that describe contents therein.
+
+Summary:
+
+* doc - source of the user guide. To build, go in that directory and `make`.
+* robots - code and configuration data for particular robots.
+* py-ws - source code for the main daemon and CLI program. Releases can be installed directly from PyPI at https://pypi.org/project/hardshare/
+* bootstrapping - scripts for configuring new hosts on which to install hardshare clients.
+
+
 Participating
 -------------
 
