@@ -56,7 +56,8 @@ def main(argv=None):
     subparsers = argparser.add_subparsers(dest='command')
 
     subparsers.add_parser('version', help='print version number and exit.')
-    subparsers.add_parser('help', help='print this help message and exit')
+    help_parser = subparsers.add_parser('help', help='print this help message and exit')
+    help_parser.add_argument('help_target_command', metavar='COMMAND', type=str, nargs='?')
 
     config_commanddesc = 'manage local and remote configuration'
     config_parser = subparsers.add_parser('config',
@@ -131,7 +132,23 @@ def main(argv=None):
         print(hardshare_pkg_version)
 
     elif argv_parsed.command is None or argv_parsed.command == 'help':
-        argparser.print_help()
+        if argv_parsed.help_target_command is not None:
+            if argv_parsed.help_target_command == 'config':
+                config_parser.print_help()
+            elif argv_parsed.help_target_command == 'register':
+                register_parser.print_help()
+            elif argv_parsed.help_target_command == 'check':
+                check_parser.print_help()
+            elif argv_parsed.help_target_command == 'status':
+                status_parser.print_help()
+            elif argv_parsed.help_target_command == 'ad':
+                advertise_parser.print_help()
+            elif argv_parsed.help_target_command == 'terminate':
+                terminate_parser.print_help()
+            else:
+                argparser.print_help()
+        else:
+            argparser.print_help()
 
     elif argv_parsed.command == 'status':
         try:
