@@ -183,8 +183,13 @@ def main(argv=None):
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
         res = ac.check_registration(argv_parsed.id_prefix)
-        if 'err' in res and res['err'] == 'not found':
-            print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
+        if 'err' in res:
+            if res['err'] == 'not found':
+                print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
+            elif res['err'] == 'wrong authorization token':
+                print('wrong API token. Did it expire?')
+            else:
+                print(res['err'])
             return 1
         else:
             print('summary of workspace deployment {}'.format(res['id']))

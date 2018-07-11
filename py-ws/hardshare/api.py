@@ -109,6 +109,8 @@ class HSAPIClient:
             pass
         elif res.status_code == 404:
             return {'err': 'not found', 'id_prefix': id_prefix}
+        elif res.status_code == 400:
+            return {'err': res.json()['error_message'], 'id_prefix': id_prefix}
         else:
             raise Error('error contacting hardshare server: {}'.format(res.status_code))
         return res.json()
