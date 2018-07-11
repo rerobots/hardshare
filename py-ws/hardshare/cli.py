@@ -227,6 +227,13 @@ def main(argv=None):
                                  server_port=argv_parsed.server_port,
                                  verify_certs=(not argv_parsed.ignore_certs))
                 remote_config = ac.get_remote_config()
+                if 'err' in remote_config:
+                    print('Error occurred while contacting remote server.')
+                    if remote_config['err'] == 'wrong authorization token':
+                        print('wrong API token. Did it expire?')
+                    else:
+                        print(remote_config['err'])
+                    return 1
                 if len(remote_config['deployments']) == 0:
                     print('no registered workspace deployments with this user account')
                 else:

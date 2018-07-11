@@ -64,6 +64,8 @@ class HSAPIClient:
         res = requests.get(self.base_uri + '/list', headers=headers, verify=self.verify_certs)
         if res.ok:
             return res.json()
+        elif res.status_code == 400:
+            return {'err': res.json()['error_message']}
         else:
             raise Error('error contacting hardshare server: {}'.format(res.status_code))
 
