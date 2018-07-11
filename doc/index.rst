@@ -2,7 +2,7 @@ hardshare
 =========
 
 **hardshare** is the client part of a system for sharing your robot hardware
-through the rerobots infrastructure. It is in the early stages of development.
+through the rerobots_ infrastructure. It is in the early stages of development.
 Until the first released version, the API can change without warning.
 
 The official repository is at https://github.com/rerobots/hardshare
@@ -12,3 +12,5 @@ The official repository is at https://github.com/rerobots/hardshare
    :maxdepth: 1
 
    quickstart
+
+.. _rerobots: https://help.rerobots.net/
