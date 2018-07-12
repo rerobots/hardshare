@@ -199,7 +199,12 @@ def main(argv=None):
         if ac is None:
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
-        res = ac.check_registration(argv_parsed.id_prefix)
+        try:
+            res = ac.check_registration(argv_parsed.id_prefix)
+        except:
+            print('Error occurred while contacting remote server '
+                  'at {}'.format(ac.base_uri))
+            return 1
         if 'err' in res:
             if res['err'] == 'not found':
                 print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
@@ -243,7 +248,12 @@ def main(argv=None):
                 ac = HSAPIClient(server_name=argv_parsed.server_name,
                                  server_port=argv_parsed.server_port,
                                  verify_certs=(not argv_parsed.ignore_certs))
-                remote_config = ac.get_remote_config()
+                try:
+                    remote_config = ac.get_remote_config()
+                except:
+                    print('Error occurred while contacting remote server '
+                          'at {}'.format(ac.base_uri))
+                    return 1
                 if 'err' in remote_config:
                     print('Error occurred while contacting remote server.')
                     if remote_config['err'] == 'wrong authorization token':
