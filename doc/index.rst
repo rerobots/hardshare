@@ -12,5 +12,6 @@ The official repository is at https://github.com/rerobots/hardshare
    :maxdepth: 1
 
    quickstart
+   install
 
 .. _rerobots: https://help.rerobots.net/
