@@ -6,7 +6,7 @@ Introduction
 
 **hardshare** is the client part of a system for sharing your robot hardware
 through the rerobots infrastructure. It is in the early stages of development.
-Until the first released version, the API can change without warning.
+Until version 1.0.0, the API can change without warning.
 
 Because this project is new and because we have not yet identified the full set
 of substantial use-cases in the wild, there are two protocols. The first is
