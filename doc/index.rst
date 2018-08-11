@@ -7,6 +7,9 @@ Until version 1.0.0, the API can change without warning.
 
 The official repository is at https://github.com/rerobots/hardshare
 
+Recent releases of this documentation are available at
+https://hardshare.readthedocs.io/
+
 .. toctree::
    :numbered:
    :maxdepth: 1

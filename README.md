@@ -16,6 +16,9 @@ The second is already in development, but has not been announced yet.
 The official repository for this sourcetree is at
 https://github.com/rerobots/hardshare
 
+Recent releases of the full documentation are available at
+https://hardshare.readthedocs.io/
+
 
 Navigating the sourcetree
 -------------------------
