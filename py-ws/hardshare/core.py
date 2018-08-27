@@ -180,7 +180,8 @@ class WorkspaceInstance:
             assert self.tunnelhub is not None
             logger.info('associated with tunnel hub {}'.format(self.tunnelhub['id']))
 
-        tunnel_command = ('ssh -o StrictHostKeyChecking=no '
+        tunnel_command = ('ssh -o ServerAliveInterval=10 '
+                          '-o StrictHostKeyChecking=no '
                           '-o ExitOnForwardFailure=yes '
                           '-T -N '
                           '-R :{THPORT}:{CONTAINER}:22 '
@@ -218,7 +219,13 @@ class WorkspaceInstance:
                     sshtunnel = await asyncio.create_subprocess_exec(*tunnel_command)
 
         except asyncio.CancelledError:
-            pass
+            if sshtunnel is not None:
+                if sshtunnel.returncode is None:
+                    sshtunnel.terminate()
+                    await sshtunnel.wait()
+                if sshtunnel.returncode != 0:
+                    logger.warning('tunnel subprocess failed '
+                                    'with nonzero exit code: {}'.format(sshtunnel.returncode))
 
 
     async def start_vpn(self, ws_send, ws_recv):
