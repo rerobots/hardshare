@@ -329,42 +329,47 @@ class WorkspaceInstance:
         self.conntype = conntype
         self.instance_id = instance_id
 
-        self.tunnelkey_path = tunnelkey_path
-        if self.tunnelkey_path:
-            with open(self.tunnelkey_path + '.pub', 'r') as fp:
-                self.tunnelkey_public = fp.read()
-        else:
-            self.tunnelkey_public = None
+        try:
+            self.tunnelkey_path = tunnelkey_path
+            if self.tunnelkey_path:
+                with open(self.tunnelkey_path + '.pub', 'r') as fp:
+                    self.tunnelkey_public = fp.read()
+            else:
+                self.tunnelkey_public = None
 
-        fd, fname = tempfile.mkstemp()
-        fp = os.fdopen(fd, 'wt')
-        fp.write(initial_publickey)
-        fp.close()
+            fd, fname = tempfile.mkstemp()
+            fp = os.fdopen(fd, 'wt')
+            fp.write(initial_publickey)
+            fp.close()
 
-        launch_args = ['docker', 'run', '-d',
-                       '-h', self.container_name,
-                       '--name', self.container_name,
-                       '--device=/dev/net/tun:/dev/net/tun',
-                       '--cap-add=NET_ADMIN']
-        launch_args += ['hs.rerobots.net/generic:latest']
-        logger.debug('subprocess: {}'.format(launch_args))
-        subprocess.check_call(launch_args)
+            launch_args = ['docker', 'run', '-d',
+                           '-h', self.container_name,
+                           '--name', self.container_name,
+                           '--device=/dev/net/tun:/dev/net/tun',
+                           '--cap-add=NET_ADMIN']
+            launch_args += ['hs.rerobots.net/generic:latest']
+            logger.debug('subprocess: {}'.format(launch_args))
+            subprocess.check_call(launch_args)
 
-        self.container_addr = await self.get_container_addr(timeout=10)
-        self.hostkey = await self.get_container_hostkey(timeout=45)
-        assert self.container_addr is not None
+            self.container_addr = await self.get_container_addr(timeout=10)
+            self.hostkey = await self.get_container_hostkey(timeout=45)
+            assert self.container_addr is not None
 
-        prepare_commands = [['docker', 'exec', self.container_name, '/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
-                            ['docker', 'exec', self.container_name, '/usr/bin/ssh-keygen', '-A']]
+            prepare_commands = [['docker', 'exec', self.container_name, '/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
+                                ['docker', 'exec', self.container_name, '/usr/bin/ssh-keygen', '-A']]
 
-        movekey_commands = [['docker', 'exec', self.container_name, '/bin/mkdir', '-p', '/root/.ssh'],
-                            ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
-                            ['docker', 'exec', self.container_name, '/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
-        for command in prepare_commands + movekey_commands:
-            logger.debug('subprocess: {}'.format(command))
-            subprocess.check_call(command)
+            movekey_commands = [['docker', 'exec', self.container_name, '/bin/mkdir', '-p', '/root/.ssh'],
+                                ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
+                                ['docker', 'exec', self.container_name, '/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
+            for command in prepare_commands + movekey_commands:
+                logger.debug('subprocess: {}'.format(command))
+                subprocess.check_call(command)
 
-        os.unlink(fname)
+            os.unlink(fname)
+
+        except:
+            logger.error('exception caught in WorkspaceInstance.launch_instance()')
+            self.status = 'INIT_FAIL'
 
         await ws_send(json.dumps({
             'v': 0,
