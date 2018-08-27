@@ -17,6 +17,7 @@
 import argparse
 import json
 import logging
+import logging.handlers
 import os
 import subprocess
 import sys
@@ -28,7 +29,7 @@ from .api import HSAPIClient
 
 logger = logging.getLogger('hardshare')
 logger.setLevel(logging.DEBUG)
-loghandler = logging.StreamHandler()
+loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log')
 loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {}); %(asctime)s ; %(message)s'.format(os.getpid())))
 logger.addHandler(loghandler)
@@ -166,6 +167,8 @@ def main(argv=None):
         if argv_parsed.become_daemon:
             if os.fork() != 0:
                 return 0
+            sys.stdout = open('/dev/null', 'w')
+            sys.stderr = open('/dev/null', 'w')
         ac.run_sync()
 
     elif argv_parsed.command == 'terminate':
@@ -174,7 +177,9 @@ def main(argv=None):
             if 'container' in findings:
                 try:
                     subprocess.check_call(['docker', 'rm', '-f',
-                                           findings['container']['name']])
+                                           findings['container']['name']],
+                                          stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.DEVNULL)
                 except:
                     print('failed to stop container `{}`'.format(findings['container']['name']))
                     return 1

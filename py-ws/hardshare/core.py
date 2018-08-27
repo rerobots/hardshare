@@ -349,7 +349,9 @@ class WorkspaceInstance:
                            '--cap-add=NET_ADMIN']
             launch_args += ['hs.rerobots.net/generic:latest']
             logger.debug('subprocess: {}'.format(launch_args))
-            subprocess.check_call(launch_args)
+            subprocess.check_call(launch_args,
+                                  stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL)
 
             self.container_addr = await self.get_container_addr(timeout=10)
             self.hostkey = await self.get_container_hostkey(timeout=45)
@@ -363,7 +365,9 @@ class WorkspaceInstance:
                                 ['docker', 'exec', self.container_name, '/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
             for command in prepare_commands + movekey_commands:
                 logger.debug('subprocess: {}'.format(command))
-                subprocess.check_call(command)
+                subprocess.check_call(command,
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
 
             os.unlink(fname)
 
@@ -384,4 +388,6 @@ class WorkspaceInstance:
 
     async def destroy_instance(self):
         destroy_args = ['docker', 'rm', '-f', self.container_name]
-        subprocess.check_call(destroy_args)
+        subprocess.check_call(destroy_args,
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
