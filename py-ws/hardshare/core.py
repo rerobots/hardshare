@@ -38,6 +38,7 @@ class WorkspaceInstance:
         self.container_name = 'rrc'
         self.instance_id = None
         self.tunnelhub = None
+        self.tunnel_task = None
 
     @classmethod
     def inspect_instance(cls):
@@ -398,3 +399,8 @@ class WorkspaceInstance:
         subprocess.check_call(destroy_args,
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL)
+        if self.tunnel_task is not None:
+            self.tunnel_task.cancel()
+            while not self.tunnel_task.done():
+                await asyncio.sleep(0.5)
+            self.tunnel_task = None
