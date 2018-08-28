@@ -227,6 +227,10 @@ class WorkspaceInstance:
                 if sshtunnel.returncode != 0:
                     logger.warning('tunnel subprocess failed '
                                     'with nonzero exit code: {}'.format(sshtunnel.returncode))
+            await ws_send(json.dumps({
+                'v': 0,
+                'cmd': 'SSHTUN_DELETE',
+            }))
 
 
     async def start_vpn(self, ws_send, ws_recv):
