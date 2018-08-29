@@ -124,16 +124,10 @@ def main(argv=None):
 
     argv_parsed = argparser.parse_args(argv)
 
-    try:
-        ac = HSAPIClient(server_name=argv_parsed.server_name,
-                         server_port=argv_parsed.server_port,
-                         verify_certs=(not argv_parsed.ignore_certs))
-    except:
-        ac = None
-
     if argv_parsed.print_version or argv_parsed.command == 'version':
         from . import __version__ as hardshare_pkg_version
         print(hardshare_pkg_version)
+        return 0
 
     elif argv_parsed.command is None or argv_parsed.command == 'help':
         if argv_parsed.help_target_command is not None:
@@ -153,8 +147,16 @@ def main(argv=None):
                 argparser.print_help()
         else:
             argparser.print_help()
+        return 0
 
-    elif argv_parsed.command == 'status':
+    try:
+        ac = HSAPIClient(server_name=argv_parsed.server_name,
+                         server_port=argv_parsed.server_port,
+                         verify_certs=(not argv_parsed.ignore_certs))
+    except:
+        ac = None
+
+    if argv_parsed.command == 'status':
         try:
             config = get_local_config(collect_errors=True)
         except:
