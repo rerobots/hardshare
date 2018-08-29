@@ -33,10 +33,8 @@ Summary:
 * py-ws - source code for the main daemon and CLI program. Releases can be installed directly from PyPI at https://pypi.org/project/hardshare/
 * bootstrapping - scripts for configuring new hosts on which to install hardshare clients.
 
-Current testing status for ``master`` branch: |build-status| (for details, visit
-`the page on Travis CI <https://travis-ci.org/rerobots/hardshare>`_).
-
-.. |build-status| image:: https://travis-ci.org/rerobots/hardshare.svg?branch=master
+Current testing status for ``master`` branch on Travis CI:
+[![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
 
 
 Participating
