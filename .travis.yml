@@ -6,7 +6,7 @@ python:
 install:
   - cd py-ws && pip install . && cd ..
 
-script: cd tests && nosetests -v
+script: make check
 
 notifications:
   email: false
