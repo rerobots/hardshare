@@ -28,7 +28,7 @@ from .api import HSAPIClient
 
 
 logger = logging.getLogger('hardshare')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a')
 loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {}); %(asctime)s ; %(message)s'.format(os.getpid())))
@@ -148,6 +148,9 @@ def main(argv=None):
         else:
             argparser.print_help()
         return 0
+
+    if argv_parsed.verbose:
+        logger.setLevel(logging.DEBUG)
 
     try:
         ac = HSAPIClient(server_name=argv_parsed.server_name,
