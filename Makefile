@@ -9,3 +9,4 @@
 check:
 	pylint -j 4 -E `find py-ws/hardshare -name \*.py`
 	pylint -j 4 -E `find tests -name \*.py`
+	cd tests && nosetests -v
