@@ -4,6 +4,7 @@ python:
   - "3.6"
 
 install:
+  - pip install -r py-ws/devel-requirements.txt
   - cd py-ws && pip install . && cd ..
 
 script: make check
