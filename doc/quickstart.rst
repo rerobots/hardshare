@@ -23,6 +23,7 @@ of the hardshare sourcetree (available for `browsing on GitHub
   <https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_.)
 * hardshare config -c
   hardshare config --add-key path/to/your/jwt.txt
+  hardshare config --add-ssh-path path/to/your/ssh_key (e.g., ~/.ssh/id_rsa)
   hardshare register
   hardshare check
 
