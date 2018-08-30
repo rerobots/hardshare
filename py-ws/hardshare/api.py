@@ -41,7 +41,8 @@ class HSAPIClient:
         else:
             self.loop = event_loop
         self.base_uri = 'https://{}:{}'.format(server_name, server_port)
-        logger.debug('instantiating client object for hardshare server at {}'.format(self.base_uri))
+        logger.debug('instantiating client object for hardshare server at {}'
+                     .format(self.base_uri))
         self.verify_certs = verify_certs
         self.ws_recvmap = dict()
         self.local_config = mgmt.get_local_config()
@@ -51,7 +52,8 @@ class HSAPIClient:
                 self._cached_key = fp.read().strip()
             if logger.isEnabledFor(logging.DEBUG):
                 md5 = hashlib.md5(self._cached_key.encode()).hexdigest()
-                logger.debug('local API keys available. using the first one, with MD5 hash {}'.format(md5))
+                logger.debug('local API keys available. using the first one,'
+                             ' with MD5 hash {}'.format(md5))
         else:
             self.default_key_index = None
             self._cached_key = None
@@ -66,13 +68,15 @@ class HSAPIClient:
 
     def get_remote_config(self):
         headers = self._add_key_header()
-        res = requests.get(self.base_uri + '/list', headers=headers, verify=self.verify_certs)
+        res = requests.get(self.base_uri + '/list',
+                           headers=headers, verify=self.verify_certs)
         if res.ok:
             return res.json()
         elif res.status_code == 400:
             return {'err': res.json()['error_message']}
         else:
-            raise Error('error contacting hardshare server: {}'.format(res.status_code))
+            raise Error('error contacting hardshare server: {}'
+                        .format(res.status_code))
 
     def sync_config(self):
         mgmt.modify_local(self.local_config)
@@ -89,9 +93,11 @@ class HSAPIClient:
         is part of more than one significantly distinct testbed.
         """
         if at_most_one and len(self.local_config['wdeployments']) > 0:
-            raise Error('local configuration already declares a workspace deployment (and at_most_one=True)')
+            raise Error('local configuration already declares a'
+                        ' workspace deployment (and at_most_one=True)')
         headers = self._add_key_header()
-        res = requests.post(self.base_uri + '/register', headers=headers, verify=self.verify_certs)
+        res = requests.post(self.base_uri + '/register',
+                            headers=headers, verify=self.verify_certs)
         if res.ok:
             payload = res.json()
             assert 'id' in payload
@@ -101,7 +107,8 @@ class HSAPIClient:
             })
             self.sync_config()
         else:
-            raise Error('error contacting hardshare server: {}'.format(res.status_code))
+            raise Error('error contacting hardshare server: {}'
+                        .format(res.status_code))
         return payload['id']
 
     def check_registration(self, id_prefix=None):
@@ -111,7 +118,8 @@ class HSAPIClient:
             else:
                 id_prefix = self.local_config['wdeployments'][0]['id']
         headers = self._add_key_header()
-        res = requests.get(self.base_uri + '/check/{}'.format(id_prefix), headers=headers, verify=self.verify_certs)
+        res = requests.get(self.base_uri + '/check/{}'.format(id_prefix),
+                           headers=headers, verify=self.verify_certs)
         if res.ok:
             pass
         elif res.status_code == 404:
@@ -119,7 +127,8 @@ class HSAPIClient:
         elif res.status_code == 400:
             return {'err': res.json()['error_message'], 'id_prefix': id_prefix}
         else:
-            raise Error('error contacting hardshare server: {}'.format(res.status_code))
+            raise Error('error contacting hardshare server: {}'
+                        .format(res.status_code))
         return res.json()
 
     def terminate(self):
@@ -253,7 +262,8 @@ class HSAPIClient:
                     'mi': payload['mi'],
                 }))
             else:
-                logger.debug('in response to INSTANCE_LAUNCH, sending status: {}'.format(self.current.status))
+                logger.debug('in response to INSTANCE_LAUNCH,'
+                             ' sending status: {}'.format(self.current.status))
                 await ws.send_str(json.dumps({
                     'v': 0,
                     'cmd': 'ACK',
@@ -352,7 +362,9 @@ class HSAPIClient:
                 }
                 _exit = False
                 while not _exit:
-                    done, pending = await asyncio.wait(futures.values(), loop=self.loop, return_when=FIRST_COMPLETED)
+                    done, pending = await asyncio.wait(futures.values(),
+                                                       loop=self.loop,
+                                                       return_when=FIRST_COMPLETED)
                     for done_future in done:
                         if done_future == futures['ws.receive']:
                             futures['ws.receive'] = self.loop.create_task(ws.receive())

@@ -95,7 +95,8 @@ class WorkspaceInstance:
 
 
     async def get_container_addr(self, timeout=60):
-        logger.info('attempting to get IPv4 address of container... (entered get_container_addr())')
+        logger.info('attempting to get IPv4 address of container...'
+                    ' (entered get_container_addr())')
         docker_inspect = await asyncio.create_subprocess_exec(
             'docker', 'inspect', self.container_name,
             stdout=subprocess.PIPE
@@ -111,7 +112,8 @@ class WorkspaceInstance:
 
 
     async def get_container_hostkey(self, timeout=120):
-        logger.info('attempting to get hostkey from container... (entered get_container_hostkey())')
+        logger.info('attempting to get hostkey from container...'
+                    ' (entered get_container_hostkey())')
         hostkey_filename = 'ssh_host_ecdsa_key.pub'
         gethostkey_command = ['docker', 'cp', self.container_name + ':/etc/ssh/' + hostkey_filename, '.']
         start_time = time.time()
@@ -216,7 +218,9 @@ class WorkspaceInstance:
                 if sshtunnel.returncode is None:
                     await asyncio.sleep(5)
                 else:
-                    logger.warning('tunnel process unexpectedly exited with returncode {}'.format(sshtunnel.returncode))
+                    logger.warning('tunnel process unexpectedly exited'
+                                   ' with returncode {}'
+                                   .format(sshtunnel.returncode))
                     sshtunnel = await asyncio.create_subprocess_exec(*tunnel_command)
 
         except asyncio.CancelledError:
@@ -226,7 +230,8 @@ class WorkspaceInstance:
                     await sshtunnel.wait()
                 if sshtunnel.returncode != 0:
                     logger.warning('tunnel subprocess failed '
-                                    'with nonzero exit code: {}'.format(sshtunnel.returncode))
+                                   'with nonzero exit code: {}'
+                                   .format(sshtunnel.returncode))
             await ws_send(json.dumps({
                 'v': 0,
                 'cmd': 'SSHTUN_DELETE',

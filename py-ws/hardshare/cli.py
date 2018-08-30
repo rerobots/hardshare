@@ -31,7 +31,9 @@ logger = logging.getLogger('hardshare')
 logger.setLevel(logging.WARNING)
 loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a')
 loghandler.setLevel(logging.DEBUG)
-loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {}); %(asctime)s ; %(message)s'.format(os.getpid())))
+loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {});'
+                                          ' %(asctime)s ; %(message)s'
+                                          .format(os.getpid())))
 logger.addHandler(loghandler)
 
 
@@ -78,7 +80,9 @@ def main(argv=None):
                                help='add path to SSH key pair (does NOT copy the key)')
     config_parser.add_argument('-p', '--prune', action='store_true', default=False,
                                dest='prune_err_keys',
-                               help='delete files in local key directory that are not valid; to get list of files with errors, try `--list`')
+                               help=('delete files in local key directory that'
+                                     ' are not valid; to get list of'
+                                     ' files with errors, try `--list`'))
     config_parser.add_argument('-l', '--list', action='store_true', default=False,
                                dest='list_config',
                                help='list configuration')
@@ -96,7 +100,8 @@ def main(argv=None):
                                          description=check_commanddesc,
                                          help=check_commanddesc)
     check_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
-                              help='id of workspace deployment to check (can be unique prefix)')
+                              help=('id of workspace deployment to check'
+                                    ' (can be unique prefix)'))
 
     status_commanddesc = 'get status of local instances and daemon'
     status_parser = subparsers.add_parser('status',
@@ -116,10 +121,17 @@ def main(argv=None):
                                              description=terminate_commanddesc,
                                              help=terminate_commanddesc)
     terminate_parser.add_argument('-f', '--force', action='store_true', default=False,
-                                  help='if there is an active instance, then stop it without waiting',
+                                  help=('if there is an active instance, then'
+                                        ' stop it without waiting'),
                                   dest='force_terminate')
+    help_message_purge = ('if the server indicates that an instance is active,'
+                          ' but there is not one or it is otherwise in a'
+                          ' non-recoverable state, then mark it remotely as'
+                          ' terminated and attempt local clean-up; this'
+                          ' command is a last resort. First, try `hardshare'
+                          ' terminate` without --purge.')
     terminate_parser.add_argument('--purge', action='store_true', default=False,
-                                  help='if the server thinks that there should be an instance active, but there is not one or it is otherwise in a non-recoverable state, then mark it remotely as terminated and attempt local clean-up; this command is a last resort. First, try `hardshare terminate` without --purge.',
+                                  help=help_message_purge,
                                   dest='purge_supposed_instance')
 
     argv_parsed = argparser.parse_args(argv)
@@ -170,7 +182,8 @@ def main(argv=None):
 
     elif argv_parsed.command == 'ad':
         if ac is None:
-            print('cannot register without initial local configuration. (try `hardshare config --create`)')
+            print('cannot register without initial local configuration.'
+                  ' (try `hardshare config --create`)')
             return 1
         if argv_parsed.become_daemon:
             if os.fork() != 0:
@@ -204,7 +217,8 @@ def main(argv=None):
 
     elif argv_parsed.command == 'register':
         if ac is None:
-            print('cannot register without initial local configuration. (try `hardshare config --create`)')
+            print('cannot register without initial local configuration.'
+                  ' (try `hardshare config --create`)')
             return 1
         print(ac.register_new())
 
@@ -220,7 +234,8 @@ def main(argv=None):
             return 1
         if 'err' in res:
             if res['err'] == 'not found':
-                print('not found: workspace deployment with id prefix {}'.format(res['id_prefix']))
+                print('not found: workspace deployment with id prefix {}'
+                      .format(res['id_prefix']))
             elif res['err'] == 'wrong authorization token':
                 print('wrong API token. Did it expire?')
             else:
@@ -234,9 +249,11 @@ def main(argv=None):
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
             try:
-                config = get_local_config(create_if_empty=argv_parsed.create_config, collect_errors=True)
+                config = get_local_config(create_if_empty=argv_parsed.create_config,
+                                          collect_errors=True)
             except:
-                print('error loading configuration data. does it exist? is it broken?')
+                print('error loading configuration data.'
+                      ' does it exist? is it broken?')
                 return 1
 
             print('workspace deployments defined in local configuration:')
@@ -244,7 +261,10 @@ def main(argv=None):
                 print('\t(none)')
             else:
                 for wdeployment in config['wdeployments']:
-                    print('\t{} (owner: {})'.format(wdeployment['id'], wdeployment['owner']))
+                    print('\t{} (owner: {})'.format(
+                        wdeployment['id'],
+                        wdeployment['owner'])
+                    )
 
             print('found keys:')
             if len(config['keys']) == 0:
@@ -281,7 +301,8 @@ def main(argv=None):
                     for wd in remote_config['deployments']:
                         print('{}'.format(wd['id']))
                         print('\tcreated: {}'.format(wd['date_created']))
-                        print('\torigin (address) of registration: {}'.format(wd['origin']))
+                        print('\torigin (address) of registration: {}'
+                              .format(wd['origin']))
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
