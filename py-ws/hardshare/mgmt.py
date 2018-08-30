@@ -16,6 +16,7 @@
 """
 from datetime import datetime
 import json
+import logging
 import os
 import os.path
 import stat
@@ -23,6 +24,9 @@ import stat
 import jwt
 
 from .err import Error
+
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: this should eventually be placed in a public key store
@@ -103,13 +107,18 @@ def get_local_config(create_if_empty=False, collect_errors=False):
             os.makedirs(os.path.join(base_path, 'keys'))
         else:
             raise Error('no configuration data found')
-    if not os.path.exists(os.path.join(base_path, 'main')):
+    path = os.path.join(base_path, 'main')
+    logger.debug('full path to local config file: {}'.format(path))
+    if not os.path.exists(path):
         if create_if_empty:
-            with open(os.path.join(base_path, 'main'), 'wt') as fp:
+            logger.debug('local config file not found. creating new one...')
+            with open(path, 'wt') as fp:
                 fp.write('{"version": 0, "wdeployments": []}')
         else:
-            raise Error('no configuration data found')
-    with open(os.path.join(base_path, 'main')) as fp:
+            msg = 'get_local_config(): no configuration data found'
+            logger.error(msg)
+            raise Error(msg)
+    with open(path) as fp:
         config = json.load(fp)
     assert 'version' in config and config['version'] == 0
     assert 'wdeployments' in config
