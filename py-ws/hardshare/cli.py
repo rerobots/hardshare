@@ -46,7 +46,7 @@ def main(argv=None):
                            help='print version of hardshare (this) package.',
                            dest='print_version')
     argparser.add_argument('-v', '--verbose', action='store_true', default=False,
-                           help='print messages about actions by the hardshare client',
+                           help='print verbose messages about actions by the hardshare client',
                            dest='verbose')
     argparser.add_argument('-s', '--server-name', default='hs.rerobots.net',
                            help='name or IP address of hardshare server',
