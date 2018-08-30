@@ -111,10 +111,39 @@ class HSAPIClient:
                         .format(res.status_code))
         return payload['id']
 
+    def declare_existing(self, id_prefix):
+        headers = self._add_key_header()
+        res = requests.get(self.base_uri + '/list',
+                           headers=headers, verify=self.verify_certs)
+        if res.ok:
+            payload = res.json()
+        elif res.status_code == 400:
+            return {'err': res.json()['error_message']}
+        else:
+            raise Error('error contacting hardshare server: {}'
+                        .format(res.status_code))
+        for wd in payload['deployments']:
+            if wd['id'].startswith(id_prefix):
+                id_prefix = wd['id']
+                for wd_local in self.local_config['wdeployments']:
+                    if id_prefix == wd_local['id']:
+                        logger.warning('attempted to declare workspace deployment that is already declared in local configuration')
+                        return
+                self.local_config['wdeployments'].append({
+                    'owner': payload['owner'],
+                    'id': id_prefix,
+                })
+                return
+        msg = 'no previously registered workspace deployments found with id prefix {}'.format(id_prefix)
+        logger.error(msg)
+        raise Error(msg)
+
     def check_registration(self, id_prefix=None):
         if id_prefix is None:
             if len(self.local_config['wdeployments']) == 0:
-                raise ValueError('no identifier given, and none in local config')
+                msg = 'no identifier given, and none in local config'
+                logger.error('HSAPIClient.check_registration(): {}'.format(msg))
+                raise ValueError(msg)
             else:
                 id_prefix = self.local_config['wdeployments'][0]['id']
         headers = self._add_key_header()

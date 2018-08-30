@@ -89,6 +89,12 @@ def main(argv=None):
     config_parser.add_argument('--local', action='store_true', default=False,
                                dest='only_local_config',
                                help='only show local configuration data')
+    config_parser.add_argument('--declare', metavar='ID',
+                               dest='declared_wdeployment_id', default=None,
+                               help=('declare that workspace deployment is'
+                                     ' hosted here. (this only works if it'
+                                     ' has been previously registered under'
+                                     ' the same user account.'))
 
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
@@ -278,10 +284,8 @@ def main(argv=None):
 
             if not argv_parsed.only_local_config:
                 # Try to get remote config, given possibly new local config
-                ac = HSAPIClient(server_name=argv_parsed.server_name,
-                                 server_port=argv_parsed.server_port,
-                                 verify_certs=(not argv_parsed.ignore_certs))
                 try:
+                    assert ac is not None
                     remote_config = ac.get_remote_config()
                 except:
                     print('Error occurred while contacting remote server '
@@ -330,6 +334,11 @@ def main(argv=None):
 
         elif argv_parsed.create_config:
             get_local_config(create_if_empty=True)
+
+        elif argv_parsed.declared_wdeployment_id is not None:
+            assert ac is not None
+            ac.declare_existing(argv_parsed.declared_wdeployment_id)
+            ac.sync_config()
 
     return 0
 
