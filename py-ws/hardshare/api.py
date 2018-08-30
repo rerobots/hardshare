@@ -16,6 +16,7 @@
 """
 import asyncio
 from concurrent.futures import FIRST_COMPLETED
+import hashlib
 import json
 import logging
 import os
@@ -40,6 +41,7 @@ class HSAPIClient:
         else:
             self.loop = event_loop
         self.base_uri = 'https://{}:{}'.format(server_name, server_port)
+        logger.debug('instantiating client object for hardshare server at {}'.format(self.base_uri))
         self.verify_certs = verify_certs
         self.ws_recvmap = dict()
         self.local_config = mgmt.get_local_config()
@@ -47,6 +49,9 @@ class HSAPIClient:
             self.default_key_index = 0
             with open(self.local_config['keys'][self.default_key_index]) as fp:
                 self._cached_key = fp.read().strip()
+            if logger.isEnabledFor(logging.DEBUG):
+                md5 = hashlib.md5(self._cached_key.encode()).hexdigest()
+                logger.debug('local API keys available. using the first one, with MD5 hash {}'.format(md5))
         else:
             self.default_key_index = None
             self._cached_key = None
