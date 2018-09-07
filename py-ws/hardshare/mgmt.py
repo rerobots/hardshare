@@ -158,6 +158,9 @@ def modify_local(config):
         new_config['wdeployments'].append({
             'id': wd['id'],
             'owner': wd['owner'],
+            'provider': 'docker',
+            'image': "hs.rerobots.net/generic",
+            "container_name": "rrc",
         })
     with open(os.path.join(base_path, 'main'), 'wt') as fp:
         json.dump(new_config, fp)
