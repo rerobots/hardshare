@@ -51,6 +51,7 @@ __version__ = '{}'
               'aiohttp',
               'pyjwt',
               'requests',
+              'PyYAML'
           ],
           entry_points={'console_scripts': ['hardshare = hardshare.cli:main']}
           )

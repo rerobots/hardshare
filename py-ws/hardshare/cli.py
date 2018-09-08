@@ -109,6 +109,16 @@ def main(argv=None):
                               help=('id of workspace deployment to check'
                                     ' (can be unique prefix)'))
 
+    dissolve_commanddesc = ('dissolve this workspace deployment, making it'
+                            ' unavailable for any future use'
+                            ' (THIS CANNOT BE UNDONE)')
+    dissolve_parser = subparsers.add_parser('dissolve',
+                                            description=dissolve_commanddesc,
+                                            help=dissolve_commanddesc)
+    dissolve_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                 help=('id of workspace deployment to dissolve'
+                                       ' (can be unique prefix)'))
+
     status_commanddesc = 'get status of local instances and daemon'
     status_parser = subparsers.add_parser('status',
                                           description=status_commanddesc,
@@ -155,6 +165,8 @@ def main(argv=None):
                 register_parser.print_help()
             elif argv_parsed.help_target_command == 'check':
                 check_parser.print_help()
+            elif argv_parsed.help_target_command == 'dissolve':
+                dissolve_parser.print_help()
             elif argv_parsed.help_target_command == 'status':
                 status_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
@@ -251,6 +263,28 @@ def main(argv=None):
             print('summary of workspace deployment {}'.format(res['id']))
             print('\tcreated: {}'.format(res['date_created']))
             print('\torigin (address) of registration: {}'.format(res['origin']))
+            if 'date_dissolved' in res:
+                print('\tdissolved: {}'.format(res['origin']))
+
+    elif argv_parsed.command == 'dissolve':
+        if ac is None:
+            print('no local configuration found. (try `hardshare config -h`)')
+            return 1
+        try:
+            res = ac.dissolve_registration(argv_parsed.id_prefix)
+        except:
+            print('Error occurred while contacting remote server '
+                  'at {}'.format(ac.base_uri))
+            return 1
+        if 'err' in res:
+            if res['err'] == 'not found':
+                print('not found: workspace deployment with id prefix {}'
+                      .format(res['id_prefix']))
+            elif res['err'] == 'wrong authorization token':
+                print('wrong API token. Did it expire?')
+            else:
+                print(res['err'])
+            return 1
 
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:

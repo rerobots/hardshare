@@ -160,6 +160,28 @@ class HSAPIClient:
                         .format(res.status_code))
         return res.json()
 
+    def dissolve_registration(self, id_prefix=None):
+        if id_prefix is None:
+            if len(self.local_config['wdeployments']) == 0:
+                msg = 'no identifier given, and none in local config'
+                logger.error('HSAPIClient.check_registration(): {}'.format(msg))
+                raise ValueError(msg)
+            else:
+                id_prefix = self.local_config['wdeployments'][0]['id']
+        headers = self._add_key_header()
+        res = requests.post(self.base_uri + '/dis/{}'.format(id_prefix),
+                           headers=headers, verify=self.verify_certs)
+        if res.ok:
+            pass
+        elif res.status_code == 404:
+            return {'err': 'not found', 'id_prefix': id_prefix}
+        elif res.status_code == 400:
+            return {'err': res.json()['error_message'], 'id_prefix': id_prefix}
+        else:
+            raise Error('error contacting hardshare server: {}'
+                        .format(res.status_code))
+        return res.json()
+
     def terminate(self):
         to_addr = os.path.join(os.path.expanduser('~/.rerobots'), 'hardshare.sock')
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
