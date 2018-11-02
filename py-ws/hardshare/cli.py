@@ -206,8 +206,9 @@ def main(argv=None):
         if argv_parsed.become_daemon:
             if os.fork() != 0:
                 return 0
-            sys.stdout = open('/dev/null', 'w')
-            sys.stderr = open('/dev/null', 'w')
+            os.close(0)
+            os.close(1)
+            os.close(2)
         ac.run_sync()
 
     elif argv_parsed.command == 'terminate':
