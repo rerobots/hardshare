@@ -50,10 +50,10 @@ tracker at https://github.com/rerobots/hardshare/issues
 If your observations are indeed new, please [open a new issue](
 https://github.com/rerobots/hardshare/issues/new)
 
-Security disclosures are given the highest priority and should be sent to Scott
-<scott@rerobots.net>, optionally encrypted using his [public key](
-http://pgp.mit.edu/pks/lookup?op=get&search=0x79239591A03E2274). Please do so
-before opening a public issue to allow us an opportunity to find a fix.
+Reports of security flaws are given the highest priority and should be sent to
+<security@rerobots.net>, optionally encrypted with the public key available at
+https://rerobots.net/contact Please do so before opening a public issue to allow
+us an opportunity to find a fix.
 
 ### Contributing changes or new code
 
