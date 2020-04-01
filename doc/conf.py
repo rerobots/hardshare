@@ -1,5 +1,5 @@
 project = 'hardshare'
-copyright = '2018 rerobots, Inc.'
+copyright = '2018-2020 rerobots, Inc.'
 author = 'rerobots, Inc.'
 
 import os.path
