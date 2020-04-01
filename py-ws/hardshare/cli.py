@@ -31,7 +31,7 @@ logger = logging.getLogger('hardshare')
 logger.setLevel(logging.WARNING)
 loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a')
 loghandler.setLevel(logging.DEBUG)
-loghandler.setFormatter(logging.Formatter('%(name)s (%(levelname)s) (pid: {});'
+loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s) (pid: {});'
                                           ' %(asctime)s ; %(message)s'
                                           .format(os.getpid())))
 logger.addHandler(loghandler)
