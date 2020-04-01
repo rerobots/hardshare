@@ -17,7 +17,7 @@ from setuptools import setup
 # Version of this package
 MAJOR=0
 MINOR=1
-PATCH=1
+PATCH=2
 devel=False
 
 version = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
@@ -51,6 +51,7 @@ __version__ = '{}'
           packages=['hardshare'],
           install_requires=[
               'aiohttp',
+              'cryptography',
               'pyjwt',
               'requests',
               'PyYAML'
