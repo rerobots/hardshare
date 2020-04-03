@@ -69,28 +69,32 @@ class WorkspaceInstance:
         finally:
             hss.close()
         empty_default = cls()
-        cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            universal_newlines=True)
-        if cp.returncode == 0:
-            findings['has_instance'] = True
-            cinfo = json.loads(cp.stdout)[0]
-            findings['container'] = {
-                'name': empty_default.container_name,
-                'id': cinfo['Id'],
-                'created': cinfo['Created'],
-                'image_id': cinfo['Image'],
-            }
-            cp = subprocess.run(['docker', 'image', 'inspect', cinfo['Image']],
+        try:
+            cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT,
                                 universal_newlines=True)
             if cp.returncode == 0:
-                iminfo = json.loads(cp.stdout)[0]
-                findings['container']['image_tags'] = iminfo['RepoTags']
-        else:
+                findings['has_instance'] = True
+                cinfo = json.loads(cp.stdout)[0]
+                findings['container'] = {
+                    'name': empty_default.container_name,
+                    'id': cinfo['Id'],
+                    'created': cinfo['Created'],
+                    'image_id': cinfo['Image'],
+                }
+                cp = subprocess.run(['docker', 'image', 'inspect', cinfo['Image']],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    universal_newlines=True)
+                if cp.returncode == 0:
+                    iminfo = json.loads(cp.stdout)[0]
+                    findings['container']['image_tags'] = iminfo['RepoTags']
+            else:
+                findings['has_instance'] = False
+        except FileNotFoundError:
             findings['has_instance'] = False
+            findings['warnings'] = 'Docker not found. Is it installed?'
         return findings
 
 
