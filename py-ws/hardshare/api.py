@@ -194,7 +194,7 @@ class HSAPIClient:
         finally:
             hss.close()
 
-    async def handle_dsocket(self, cq):
+    async def handle_dsocket(self, main):
         socket_path = os.path.join(os.path.expanduser('~/.rerobots'), 'hardshare.sock')
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.setblocking(False)
@@ -212,7 +212,7 @@ class HSAPIClient:
 
                     elif msg == 'TERMINATE\n':
                         print('received request: TERMINATE')
-                        await cq.put({'action': 'TERMINATE'})
+                        main.cancel()
                         conn.close()
                         break
 
@@ -236,6 +236,7 @@ class HSAPIClient:
     def run_sync(self, id_prefix=None):
         logger.debug('entered run_sync()')
         self.main = self.loop.create_task(self.run(id_prefix=id_prefix))
+        self.loop.create_task(self.handle_dsocket(self.main))
         logger.debug('started async run()')
         signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
@@ -380,8 +381,6 @@ class HSAPIClient:
 
 
     async def run(self, id_prefix=None):
-        cq = asyncio.Queue()
-        dsocket_handler = self.loop.create_task(self.handle_dsocket(cq))
         self.current = None
         if id_prefix is None:
             if len(self.local_config['wdeployments']) == 0:
@@ -406,39 +405,13 @@ class HSAPIClient:
             session = aiohttp.ClientSession(connector=conn, headers=headers)
         uri = self.base_uri + '/ad/{}'.format(wdeployment_config['id'])
         try:
-            async with session.ws_connect(uri) as ws:
-                futures = {
-                    'ws.receive': self.loop.create_task(ws.receive()),
-                    'cq.get': self.loop.create_task(cq.get()),
-                }
-                _exit = False
-                while not _exit:
-                    done, pending = await asyncio.wait(futures.values(),
-                                                       loop=self.loop,
-                                                       return_when=FIRST_COMPLETED)
-                    for done_future in done:
-                        if done_future == futures['ws.receive']:
-                            futures['ws.receive'] = self.loop.create_task(ws.receive())
-                            _exit = not (await self.handle_wsrecv(ws, done_future.result()))
-                            if _exit:
-                                break
-
-                        else:  # done_future == futures['cq.get']
-                            futures['cq.get'] = self.loop.create_task(cq.get())
-                            msg = done_future.result()
-                            if msg['action'] == 'TERMINATE':
-                                _exit = True
-                                break
-
-                for future in futures.values():
-                    future.cancel()
+            async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
+                async for msg in ws:
+                    if not (await self.handle_wsrecv(ws, msg)):
+                        break
 
         except asyncio.CancelledError:
-            for future in futures.values():
-                future.cancel()
+            pass
 
         finally:
             await session.close()
-            dsocket_handler.cancel()
-
-        await asyncio.wait_for(dsocket_handler, timeout=None)
