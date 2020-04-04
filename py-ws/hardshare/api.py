@@ -183,7 +183,7 @@ class HSAPIClient:
         return res.json()
 
     def terminate(self):
-        to_addr = os.path.join(os.path.expanduser('~/.rerobots'), 'hardshare.sock')
+        to_addr = os.path.join(os.path.expanduser('~'), '.rerobots', 'hardshare.sock')
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.setblocking(False)
         try:
@@ -195,7 +195,7 @@ class HSAPIClient:
             hss.close()
 
     async def handle_dsocket(self, main):
-        socket_path = os.path.join(os.path.expanduser('~/.rerobots'), 'hardshare.sock')
+        socket_path = os.path.join(os.path.expanduser('~'), '.rerobots', 'hardshare.sock')
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.setblocking(False)
         hss.bind(socket_path)
