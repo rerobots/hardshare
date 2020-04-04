@@ -244,6 +244,10 @@ class HSAPIClient:
         except KeyboardInterrupt:
             self.main.cancel()
             self.loop.run_until_complete(self.main)
+        except ValueError as e:
+            print(e)
+            return 1
+        return 0
 
 
     async def handle_wsrecv(self, ws, msg):

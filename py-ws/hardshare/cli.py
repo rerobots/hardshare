@@ -209,7 +209,7 @@ def main(argv=None):
             os.close(0)
             os.close(1)
             os.close(2)
-        ac.run_sync()
+        return ac.run_sync()
 
     elif argv_parsed.command == 'terminate':
         if argv_parsed.purge_supposed_instance:
