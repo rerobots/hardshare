@@ -236,7 +236,7 @@ class HSAPIClient:
     def run_sync(self, id_prefix=None):
         logger.debug('entered run_sync()')
         self.main = self.loop.create_task(self.run(id_prefix=id_prefix))
-        self.loop.create_task(self.handle_dsocket(self.main))
+        self.dsocket = self.loop.create_task(self.handle_dsocket(self.main))
         logger.debug('started async run()')
         signal.signal(signal.SIGTERM, self.handle_sigterm)
         try:
@@ -247,6 +247,8 @@ class HSAPIClient:
         except ValueError as e:
             print(e)
             return 1
+        self.dsocket.cancel()
+        self.loop.run_until_complete(self.dsocket)
         return 0
 
 
