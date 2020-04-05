@@ -170,7 +170,7 @@ class HSAPIClient:
                 id_prefix = self.local_config['wdeployments'][0]['id']
         headers = self._add_key_header()
         res = requests.post(self.base_uri + '/dis/{}'.format(id_prefix),
-                           headers=headers, verify=self.verify_certs)
+                            headers=headers, verify=self.verify_certs)
         if res.ok:
             pass
         elif res.status_code == 404:
