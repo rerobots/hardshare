@@ -45,8 +45,7 @@ def list_local_keys(collect_errors=False):
     stale keys and other noise in the local keys directory, which can
     be cleaned via `hardshare config -p`
     """
-    base_path = '~/.rerobots'
-    base_path = os.path.expanduser(base_path)
+    base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
     likely_keys = []
     if collect_errors:
         errored_keys = []
@@ -100,8 +99,7 @@ def list_local_keys(collect_errors=False):
 
 
 def get_local_config(create_if_empty=False, collect_errors=False):
-    base_path = '~/.rerobots'
-    base_path = os.path.expanduser(base_path)
+    base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
     if not os.path.exists(base_path):
         if create_if_empty:
             os.makedirs(os.path.join(base_path, 'keys'))
@@ -142,8 +140,7 @@ def modify_local(config):
     """
     assert 'version' in config and config['version'] == 0
     assert 'wdeployments' in config
-    base_path = '~/.rerobots'
-    base_path = os.path.expanduser(base_path)
+    base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
     with open(os.path.join(base_path, 'main')) as fp:
         prev_config = json.load(fp)
     assert 'version' in prev_config and prev_config['version'] == 0
@@ -172,8 +169,7 @@ def add_key(path, create_if_empty=False):
     If successful, this function moves the file into the local
     configuration directory (default: ~/.rerobots).
     """
-    base_path = '~/.rerobots'
-    base_path = os.path.expanduser(base_path)
+    base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
     config = get_local_config(create_if_empty=create_if_empty)
     newkey_basename = os.path.basename(path)
     existing_basenames = [os.path.basename(keypath) for keypath in config['keys']]

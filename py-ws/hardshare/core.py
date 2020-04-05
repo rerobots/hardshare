@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import os
+import os.path
 import socket
 import subprocess
 import tempfile
@@ -50,8 +51,7 @@ class WorkspaceInstance:
             'daemon_found': False,
             'provider': 'docker',
         }
-        base_path = '~/.rerobots'
-        base_path = os.path.expanduser(base_path)
+        base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
         to_addr = os.path.join(base_path, 'hardshare.sock')
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.settimeout(10)
