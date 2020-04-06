@@ -111,7 +111,7 @@ class WorkspaceInstance:
         logger.info('attempting to get IPv4 address of container...'
                     ' (entered get_container_addr())')
         if self.cprovider not in ['docker', 'podman']:
-            raise ValueError('unknown cprovider: {}'.format(cprovider))
+            raise ValueError('unknown cprovider: {}'.format(self.cprovider))
         container_inspect = await asyncio.create_subprocess_exec(
             self.cprovider, 'inspect', self.container_name,
             stdout=subprocess.PIPE
@@ -129,7 +129,7 @@ class WorkspaceInstance:
     async def get_container_sshport(self, timeout=60):
         logger.info('attempting to get SSH port of container...')
         if self.cprovider not in ['docker', 'podman']:
-            raise ValueError('unknown cprovider: {}'.format(cprovider))
+            raise ValueError('unknown cprovider: {}'.format(self.cprovider))
         start_time = time.time()
         while time.time() - start_time < timeout:
             container_inspect = await asyncio.create_subprocess_exec(
@@ -150,7 +150,7 @@ class WorkspaceInstance:
         logger.info('attempting to get hostkey from container...'
                     ' (entered get_container_hostkey())')
         if self.cprovider not in ['docker', 'podman']:
-            raise ValueError('unknown cprovider: {}'.format(cprovider))
+            raise ValueError('unknown cprovider: {}'.format(self.cprovider))
         hostkey_filename = 'ssh_host_ecdsa_key.pub'
         gethostkey_command = [self.cprovider, 'cp', self.container_name + ':/etc/ssh/' + hostkey_filename, '.']
         start_time = time.time()
@@ -278,7 +278,7 @@ class WorkspaceInstance:
 
     async def start_vpn(self, ws_send, ws_recv):
         if self.cprovider not in ['docker', 'podman']:
-            raise ValueError('unknown cprovider: {}'.format(cprovider))
+            raise ValueError('unknown cprovider: {}'.format(self.cprovider))
         try:
             while self.container_addr is None:
                 await asyncio.sleep(1)
@@ -384,7 +384,7 @@ class WorkspaceInstance:
 
     async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, tunnelkey_path=None):
         if self.cprovider not in ['docker', 'podman']:
-            raise ValueError('unknown cprovider: {}'.format(cprovider))
+            raise ValueError('unknown cprovider: {}'.format(self.cprovider))
 
         self.conntype = conntype
         self.instance_id = instance_id
