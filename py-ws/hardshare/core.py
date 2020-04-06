@@ -30,11 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceInstance:
-    def __init__(self, event_loop=None):
+    def __init__(self, cprovider=None, event_loop=None):
         if event_loop is None:
             self.loop = asyncio.get_event_loop()
         else:
             self.loop = event_loop
+        self.cprovider = cprovider
         self.status = 'INIT'
         self.container_name = 'rrc'
         self.instance_id = None
@@ -42,14 +43,18 @@ class WorkspaceInstance:
         self.tunnel_task = None
 
     @classmethod
-    def inspect_instance(cls):
+    def inspect_instance(cls, config=None):
         """detect whether local host is running a workspace instance
 
         Return dict that describes findings.
         """
+        if config is None:
+            cprovider = 'docker'  # TODO: reasonable default?
+        else:
+            cprovider = config['cprovider']
         findings = {
             'daemon_found': False,
-            'provider': 'docker',
+            'provider': cprovider,
         }
         base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
         to_addr = os.path.join(base_path, 'hardshare.sock')
@@ -69,43 +74,49 @@ class WorkspaceInstance:
         finally:
             hss.close()
         empty_default = cls()
-        try:
-            cp = subprocess.run(['docker', 'inspect', empty_default.container_name],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                universal_newlines=True)
-            if cp.returncode == 0:
-                findings['has_instance'] = True
-                cinfo = json.loads(cp.stdout)[0]
-                findings['container'] = {
-                    'name': empty_default.container_name,
-                    'id': cinfo['Id'],
-                    'created': cinfo['Created'],
-                    'image_id': cinfo['Image'],
-                }
-                cp = subprocess.run(['docker', 'image', 'inspect', cinfo['Image']],
+        if cprovider in ['docker', 'podman']:
+            try:
+                cp = subprocess.run([cprovider, 'inspect', empty_default.container_name],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT,
                                     universal_newlines=True)
                 if cp.returncode == 0:
-                    iminfo = json.loads(cp.stdout)[0]
-                    findings['container']['image_tags'] = iminfo['RepoTags']
-            else:
+                    findings['has_instance'] = True
+                    cinfo = json.loads(cp.stdout)[0]
+                    findings['container'] = {
+                        'name': empty_default.container_name,
+                        'id': cinfo['Id'],
+                        'created': cinfo['Created'],
+                        'image_id': cinfo['Image'],
+                    }
+                    cp = subprocess.run([cprovider, 'image', 'inspect', cinfo['Image']],
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        universal_newlines=True)
+                    if cp.returncode == 0:
+                        iminfo = json.loads(cp.stdout)[0]
+                        findings['container']['image_tags'] = iminfo['RepoTags']
+                else:
+                    findings['has_instance'] = False
+            except FileNotFoundError:
                 findings['has_instance'] = False
-        except FileNotFoundError:
+                findings['warnings'] = 'cprovider {} not found. Is it installed?'.format(cprovider)
+        else:
             findings['has_instance'] = False
-            findings['warnings'] = 'Docker not found. Is it installed?'
+            findings['warnings'] = 'cprovider "{}" not known'.format(cprovider)
         return findings
 
 
     async def get_container_addr(self, timeout=60):
         logger.info('attempting to get IPv4 address of container...'
                     ' (entered get_container_addr())')
-        docker_inspect = await asyncio.create_subprocess_exec(
-            'docker', 'inspect', self.container_name,
+        if self.cprovider not in ['docker', 'podman']:
+            raise ValueError('unknown cprovider: {}'.format(cprovider))
+        container_inspect = await asyncio.create_subprocess_exec(
+            self.cprovider, 'inspect', self.container_name,
             stdout=subprocess.PIPE
         )
-        stdout_data, stderr_data = await docker_inspect.communicate()
+        stdout_data, stderr_data = await container_inspect.communicate()
         cdata = json.loads(str(stdout_data, encoding='utf-8'))
         if len(cdata) < 1 or 'NetworkSettings' not in cdata[0] or 'IPAddress' not in cdata[0]['NetworkSettings']:
             logger.info('did not find IPv4 or IPv6 address before timeout of {} s'.format(timeout))
@@ -115,11 +126,33 @@ class WorkspaceInstance:
             return cdata[0]['NetworkSettings']['IPAddress']
 
 
+    async def get_container_sshport(self, timeout=60):
+        logger.info('attempting to get SSH port of container...')
+        if self.cprovider not in ['docker', 'podman']:
+            raise ValueError('unknown cprovider: {}'.format(cprovider))
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            container_inspect = await asyncio.create_subprocess_exec(
+                self.cprovider, 'port', self.container_name, '22',
+                stdout=subprocess.PIPE
+            )
+            stdout_data, stderr_data = await container_inspect.communicate()
+            if container_inspect.returncode == 0:
+                fwdaddrport = str(stdout_data, encoding='utf-8')
+                fwdaddr, fwdport = fwdaddrport.split(':')
+                return int(fwdport)
+            await asyncio.sleep(1)
+        logger.info('did not find SSH port before timeout of {} s'.format(timeout))
+        return None
+
+
     async def get_container_hostkey(self, timeout=120):
         logger.info('attempting to get hostkey from container...'
                     ' (entered get_container_hostkey())')
+        if self.cprovider not in ['docker', 'podman']:
+            raise ValueError('unknown cprovider: {}'.format(cprovider))
         hostkey_filename = 'ssh_host_ecdsa_key.pub'
-        gethostkey_command = ['docker', 'cp', self.container_name + ':/etc/ssh/' + hostkey_filename, '.']
+        gethostkey_command = [self.cprovider, 'cp', self.container_name + ':/etc/ssh/' + hostkey_filename, '.']
         start_time = time.time()
         while time.time() - start_time < timeout:
             c_gethostkey = await asyncio.create_subprocess_exec(
@@ -191,7 +224,7 @@ class WorkspaceInstance:
                           '-o StrictHostKeyChecking=no '
                           '-o ExitOnForwardFailure=yes '
                           '-T -N '
-                          '-R :{THPORT}:{CONTAINER}:22 '
+                          '-R :{THPORT}:{CONTAINERADDR}:{CONTAINERPORT} '
                           '-i {TUNNELKEY_PATH} '
                           '-p {TH_INFRA_PORT} '
                           '{THUSER}@{THADDR}'.format(
@@ -199,7 +232,8 @@ class WorkspaceInstance:
                               THPORT=self.tunnelhub['listen_port'],
                               TUNNELKEY_PATH=self.tunnelkey_path,
                               TH_INFRA_PORT=self.tunnelhub['connect_port'],
-                              CONTAINER=self.container_addr,
+                              CONTAINERADDR=self.container_addr,
+                              CONTAINERPORT=self.container_port_ssh,
                               THUSER=self.tunnelhub['connect_user'])).split()
 
         logger.info('opening ssh tunnel from port {THPORT} '
@@ -243,6 +277,8 @@ class WorkspaceInstance:
 
 
     async def start_vpn(self, ws_send, ws_recv):
+        if self.cprovider not in ['docker', 'podman']:
+            raise ValueError('unknown cprovider: {}'.format(cprovider))
         try:
             while self.container_addr is None:
                 await asyncio.sleep(1)
@@ -290,7 +326,7 @@ class WorkspaceInstance:
             fp = os.fdopen(fd, 'wt')
             fp.write(ovpn_config)
             fp.close()
-            subprocess.check_call(['docker', 'cp',
+            subprocess.check_call([self.cprovider, 'cp',
                                    fname,
                                    self.container_name + ':/etc/' + self.container_name + '_client.ovpn'])
             os.unlink(fname)
@@ -299,10 +335,10 @@ class WorkspaceInstance:
             # ASSUME images for Docker provider already have
             # openvpn and avahi-daemon installed.
             pre_commands = [
-                ['docker', 'exec', self.container_name, '/etc/init.d/dbus', 'start'],
-                ['docker', 'exec', '-d', self.container_name, 'avahi-daemon']
+                [self.cprovider, 'exec', self.container_name, '/etc/init.d/dbus', 'start'],
+                [self.cprovider, 'exec', '-d', self.container_name, 'avahi-daemon']
             ]
-            vpnclient_command = ('docker exec '
+            vpnclient_command = (self.cprovider + ' exec '
                                  + self.container_name
                                  + ' openvpn '
                                  '/etc/' + self.container_name + '_client.ovpn')
@@ -347,6 +383,9 @@ class WorkspaceInstance:
 
 
     async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, tunnelkey_path=None):
+        if self.cprovider not in ['docker', 'podman']:
+            raise ValueError('unknown cprovider: {}'.format(cprovider))
+
         self.conntype = conntype
         self.instance_id = instance_id
 
@@ -363,27 +402,35 @@ class WorkspaceInstance:
             fp.write(initial_publickey)
             fp.close()
 
-            launch_args = ['docker', 'run', '-d',
+            launch_args = [self.cprovider, 'run', '-d',
                            '-h', self.container_name,
                            '--name', self.container_name,
                            '--device=/dev/net/tun:/dev/net/tun',
                            '--cap-add=NET_ADMIN']
+            if self.cprovider == 'podman':
+                launch_args.extend(['-p', '127.0.0.1::22'])
             launch_args += ['hs.rerobots.net/generic:latest']
             logger.debug('subprocess: {}'.format(launch_args))
             subprocess.check_call(launch_args,
                                   stdout=subprocess.DEVNULL,
                                   stderr=subprocess.DEVNULL)
 
-            self.container_addr = await self.get_container_addr(timeout=10)
+            if self.cprovider == 'docker':
+                self.container_addr = await self.get_container_addr(timeout=10)
+                self.container_port_ssh = 22
+            elif self.cprovider == 'podman':
+                self.container_addr = '127.0.0.1'
+                self.container_port_ssh = await self.get_container_sshport(timeout=10)
+
             self.hostkey = await self.get_container_hostkey(timeout=45)
             assert self.container_addr is not None
 
-            cexec = ['docker', 'exec', self.container_name]
+            cexec = [self.cprovider, 'exec', self.container_name]
             prepare_commands = [cexec + ['/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
                                 cexec + ['/usr/bin/ssh-keygen', '-A']]
 
             movekey_commands = [cexec + ['/bin/mkdir', '-p', '/root/.ssh'],
-                                ['docker', 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
+                                [self.cprovider, 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
                                 cexec + ['/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
             for command in prepare_commands + movekey_commands:
                 logger.debug('subprocess: {}'.format(command))
@@ -393,8 +440,8 @@ class WorkspaceInstance:
 
             os.unlink(fname)
 
-        except:
-            logger.error('exception caught in WorkspaceInstance.launch_instance()')
+        except Exception as e:
+            logger.error('caught exception {}: {}'.format(type(e), e))
             self.status = 'INIT_FAIL'
 
         await ws_send(json.dumps({
@@ -409,7 +456,7 @@ class WorkspaceInstance:
 
 
     async def destroy_instance(self):
-        destroy_args = ['docker', 'rm', '-f', self.container_name]
+        destroy_args = [self.cprovider, 'rm', '-f', self.container_name]
         subprocess.check_call(destroy_args,
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL)
