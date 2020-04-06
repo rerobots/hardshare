@@ -195,7 +195,10 @@ def main(argv=None):
         except:
             print('error loading configuration data. does it exist?')
             return 1
-        findings = WorkspaceInstance.inspect_instance()
+        if len(config['wdeployments']) == 0:
+            findings = WorkspaceInstance.inspect_instance()
+        else:
+            findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
         print(json.dumps(findings))
 
     elif argv_parsed.command == 'ad':

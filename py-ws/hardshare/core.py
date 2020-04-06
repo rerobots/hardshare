@@ -43,15 +43,15 @@ class WorkspaceInstance:
         self.tunnel_task = None
 
     @classmethod
-    def inspect_instance(cls, config=None):
+    def inspect_instance(cls, wdeployment=None):
         """detect whether local host is running a workspace instance
 
         Return dict that describes findings.
         """
-        if config is None:
+        if wdeployment is None:
             cprovider = 'docker'  # TODO: reasonable default?
         else:
-            cprovider = config['cprovider']
+            cprovider = wdeployment['cprovider']
         findings = {
             'daemon_found': False,
             'provider': cprovider,
