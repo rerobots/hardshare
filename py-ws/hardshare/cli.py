@@ -216,10 +216,22 @@ def main(argv=None):
 
     elif argv_parsed.command == 'terminate':
         if argv_parsed.purge_supposed_instance:
-            findings = WorkspaceInstance.inspect_instance()
+            try:
+                config = get_local_config()
+            except:
+                print('error loading configuration data. does it exist?')
+                return 1
+            if len(config['wdeployments']) == 0:
+                print('ERROR: no workspace deployment defined! Try: hardshare check')
+                return 1
+            cprovider = config['wdeployments'][0]['cprovider']
+            if cprovider not in ['docker', 'podman']:
+                print('unknown cprovider: {}'.format(cprovider))
+                return 1
+            findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
             if 'container' in findings:
                 try:
-                    subprocess.check_call(['docker', 'rm', '-f',
+                    subprocess.check_call([cprovider, 'rm', '-f',
                                            findings['container']['name']],
                                           stdout=subprocess.DEVNULL,
                                           stderr=subprocess.DEVNULL)
