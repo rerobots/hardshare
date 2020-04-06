@@ -155,7 +155,7 @@ def modify_local(config):
         new_config['wdeployments'].append({
             'id': wd['id'],
             'owner': wd['owner'],
-            'provider': 'docker',
+            'cprovider': 'docker',
             'image': "hs.rerobots.net/generic",
             "container_name": "rrc",
         })

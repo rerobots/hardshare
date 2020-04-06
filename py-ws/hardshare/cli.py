@@ -302,12 +302,13 @@ def main(argv=None):
                 print('\t(none)')
             else:
                 for wdeployment in config['wdeployments']:
-                    print('\t{} (owner: {})'.format(
+                    print('{}\n\towner: {}\n\tcprovider: {}'.format(
                         wdeployment['id'],
-                        wdeployment['owner'])
-                    )
+                        wdeployment['owner'],
+                        wdeployment['cprovider']
+                    ))
 
-            print('found keys:')
+            print('\nfound keys:')
             if len(config['keys']) == 0:
                 print('\t(none)')
             else:
@@ -334,9 +335,9 @@ def main(argv=None):
                         print(remote_config['err'])
                     return 1
                 if len(remote_config['deployments']) == 0:
-                    print('no registered workspace deployments with this user account')
+                    print('\nno registered workspace deployments with this user account')
                 else:
-                    print('registered workspace deployments with this user account:')
+                    print('\nregistered workspace deployments with this user account:')
                     for wd in remote_config['deployments']:
                         print('{}'.format(wd['id']))
                         print('\tcreated: {}'.format(wd['date_created']))
