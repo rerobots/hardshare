@@ -159,7 +159,7 @@ def modify_local(config):
             'id': wd['id'],
             'owner': wd['owner'],
             'cprovider': 'docker',
-            'cargs': [],
+            'cargs': wd['cargs'] if 'cargs' in wd else [],
             'image': "rerobots/hs-generic",
             "container_name": "rrc",
         })
