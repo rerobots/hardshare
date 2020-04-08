@@ -317,10 +317,11 @@ def main(argv=None):
                 print('\t(none)')
             else:
                 for wdeployment in config['wdeployments']:
-                    print('{}\n\towner: {}\n\tcprovider: {}'.format(
+                    print('{}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}'.format(
                         wdeployment['id'],
                         wdeployment['owner'],
-                        wdeployment['cprovider']
+                        wdeployment['cprovider'],
+                        wdeployment['cargs']
                     ))
 
             print('\nfound keys:')

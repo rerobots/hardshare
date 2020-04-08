@@ -120,6 +120,9 @@ def get_local_config(create_if_empty=False, collect_errors=False):
         config = json.load(fp)
     assert 'version' in config and config['version'] == 0
     assert 'wdeployments' in config
+    for wdi, wd in enumerate(config['wdeployments']):
+        if 'cargs' not in config['wdeployments'][wdi]:
+            config['wdeployments'][wdi]['cargs'] = []
     if collect_errors:
         keys, errored_keys = list_local_keys(collect_errors=True)
     else:
@@ -156,6 +159,7 @@ def modify_local(config):
             'id': wd['id'],
             'owner': wd['owner'],
             'cprovider': 'docker',
+            'cargs': [],
             'image': "hs.rerobots.net/generic",
             "container_name": "rrc",
         })

@@ -30,12 +30,16 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceInstance:
-    def __init__(self, cprovider=None, event_loop=None):
+    def __init__(self, cprovider=None, cargs=None, event_loop=None):
         if event_loop is None:
             self.loop = asyncio.get_event_loop()
         else:
             self.loop = event_loop
         self.cprovider = cprovider
+        if cargs is None:
+            self.cargs = []
+        else:
+            self.cargs = cargs
         self.status = 'INIT'
         self.container_name = 'rrc'
         self.instance_id = None
@@ -407,6 +411,8 @@ class WorkspaceInstance:
                            '--name', self.container_name,
                            '--device=/dev/net/tun:/dev/net/tun',
                            '--cap-add=NET_ADMIN']
+            if self.cargs:
+                launch_args.extend(self.cargs)
             if self.cprovider == 'podman':
                 launch_args.extend(['-p', '127.0.0.1::22'])
             launch_args += ['hs.rerobots.net/generic:latest']
