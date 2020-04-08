@@ -160,7 +160,7 @@ def modify_local(config):
             'owner': wd['owner'],
             'cprovider': wd['cprovider'] if 'cprovider' in wd else 'docker',
             'cargs': wd['cargs'] if 'cargs' in wd else [],
-            'image': "rerobots/hs-generic",
+            'image': wd.get('image', 'rerobots/hs-generic'),
             "container_name": "rrc",
         })
     with open(os.path.join(base_path, 'main'), 'wt') as fp:

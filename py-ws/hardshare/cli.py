@@ -325,11 +325,12 @@ def main(argv=None):
                 print('\t(none)')
             else:
                 for wdeployment in config['wdeployments']:
-                    print('{}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}'.format(
+                    print('{}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
                         wdeployment['id'],
                         wdeployment['owner'],
                         wdeployment['cprovider'],
-                        wdeployment['cargs']
+                        wdeployment['cargs'],
+                        wdeployment['image'],
                     ))
 
             print('\nfound keys:')
