@@ -6,7 +6,7 @@
 # SCL <scott@rerobots.net>
 # Copyright (C) 2018 rerobots, Inc.
 
-FROM ubuntu:xenial
+FROM ubuntu:18.04
 
 RUN apt-get update \
     && apt-get -y install \
