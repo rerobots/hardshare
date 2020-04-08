@@ -13,9 +13,11 @@ should be able to get the version from the command-line interface (CLI)::
 
   hardshare version
 
-To prepare your robot hardware for sharing, look for it in the robots/ directory
-of the hardshare sourcetree (available for `browsing on GitHub
-<https://github.com/rerobots/hardshare/tree/master/robots>`_).
+A container provider must be installed before ``hardshare`` can create
+instances. The default is `Docker <https://www.docker.com/get-started>`_. To
+check that you have it::
+
+  docker version
 
 * If you do not already have one, create your user account at https://rerobots.net/
 * Create an `API token <https://rerobots.net/tokens>`_ for your hardshare client
