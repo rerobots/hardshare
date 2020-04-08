@@ -94,7 +94,7 @@ def main(argv=None):
                                help=('declare that workspace deployment is'
                                      ' hosted here. (this only works if it'
                                      ' has been previously registered under'
-                                     ' the same user account.'))
+                                     ' the same user account.)'))
 
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
