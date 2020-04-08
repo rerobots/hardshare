@@ -17,4 +17,4 @@ https://hardshare.readthedocs.io/
    quickstart
    install
 
-.. _rerobots: https://help.rerobots.net/
+.. _rerobots: https://rerobots.net/
