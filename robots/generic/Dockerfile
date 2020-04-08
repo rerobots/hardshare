@@ -1,4 +1,4 @@
-# Base image using Ubuntu 16.04
+# Base image using Ubuntu 18.04
 #
 #     docker build -t hs.rerobots.net/generic:latest -f Dockerfile .
 #
