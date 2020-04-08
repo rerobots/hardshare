@@ -415,7 +415,7 @@ class WorkspaceInstance:
                 launch_args.extend(self.cargs)
             if self.cprovider == 'podman':
                 launch_args.extend(['-p', '127.0.0.1::22'])
-            launch_args += ['hs.rerobots.net/generic:latest']
+            launch_args += ['rerobots/hs-generic']
             logger.debug('subprocess: {}'.format(launch_args))
             subprocess.check_call(launch_args,
                                   stdout=subprocess.DEVNULL,

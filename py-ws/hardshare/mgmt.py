@@ -160,7 +160,7 @@ def modify_local(config):
             'owner': wd['owner'],
             'cprovider': 'docker',
             'cargs': [],
-            'image': "hs.rerobots.net/generic",
+            'image': "rerobots/hs-generic",
             "container_name": "rrc",
         })
     with open(os.path.join(base_path, 'main'), 'wt') as fp:
