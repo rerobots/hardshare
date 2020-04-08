@@ -158,7 +158,7 @@ def modify_local(config):
         new_config['wdeployments'].append({
             'id': wd['id'],
             'owner': wd['owner'],
-            'cprovider': 'docker',
+            'cprovider': wd['cprovider'] if 'cprovider' in wd else 'docker',
             'cargs': wd['cargs'] if 'cargs' in wd else [],
             'image': "rerobots/hs-generic",
             "container_name": "rrc",
