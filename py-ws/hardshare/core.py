@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceInstance:
-    def __init__(self, cprovider=None, cargs=None, event_loop=None):
+    def __init__(self, cprovider=None, cargs=None, image=None, event_loop=None):
         if event_loop is None:
             self.loop = asyncio.get_event_loop()
         else:
@@ -40,6 +40,10 @@ class WorkspaceInstance:
             self.cargs = []
         else:
             self.cargs = cargs
+        if image is None:
+            self.img = 'rerobots/hs-generic'
+        else:
+            self.img = image
         self.status = 'INIT'
         self.container_name = 'rrc'
         self.instance_id = None
@@ -415,7 +419,7 @@ class WorkspaceInstance:
                 launch_args.extend(self.cargs)
             if self.cprovider == 'podman':
                 launch_args.extend(['-p', '127.0.0.1::22'])
-            launch_args += ['rerobots/hs-generic']
+            launch_args += [self.img]
             logger.debug('subprocess: {}'.format(launch_args))
             subprocess.check_call(launch_args,
                                   stdout=subprocess.DEVNULL,
