@@ -272,7 +272,9 @@ class HSAPIClient:
         if payload['cmd'] == 'INSTANCE_LAUNCH':
             if self.current is None:
                 self.ws_recvmap[payload['id']] = asyncio.Queue()
-                self.current = core.WorkspaceInstance(cprovider=self.current_wdeployment['cprovider'])
+                cprovider = self.current_wdeployment['cprovider']
+                cargs = self.current_wdeployment.get('cargs', None)
+                self.current = core.WorkspaceInstance(cprovider=cprovider, cargs=cargs)
                 self.loop.create_task(self.current.launch_instance(
                     instance_id=payload['id'],
                     ws_send=ws.send_str,
