@@ -325,8 +325,9 @@ def main(argv=None):
                 print('\t(none)')
             else:
                 for wdeployment in config['wdeployments']:
-                    print('{}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
+                    print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
                         wdeployment['id'],
+                        'https://rerobots.net/workspace/{}'.format(wdeployment['id']),
                         wdeployment['owner'],
                         wdeployment['cprovider'],
                         wdeployment['cargs'],
