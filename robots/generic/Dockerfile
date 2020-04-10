@@ -1,6 +1,6 @@
 # Base image using Ubuntu 18.04
 #
-#     docker build -t hs.rerobots.net/generic:latest -f Dockerfile .
+#     docker build -t rerobots/hs-generic:latest -f Dockerfile .
 #
 #
 # SCL <scott@rerobots.net>
