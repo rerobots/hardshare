@@ -207,7 +207,9 @@ def main(argv=None):
             findings = WorkspaceInstance.inspect_instance()
         else:
             findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
-        print(json.dumps(findings, indent=4))
+
+        for k, v in findings.items():
+            print('{}: {}'.format(k, v))
 
     elif argv_parsed.command == 'ad':
         if ac is None:
