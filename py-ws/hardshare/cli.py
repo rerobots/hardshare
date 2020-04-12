@@ -354,7 +354,7 @@ def main(argv=None):
                 print('\t' + '\n\t'.join(config['keys']))
             if 'err_keys' in config and len(config['err_keys']) > 0:
                 print('found possible keys with errors:')
-                for err_key_path, err in config['err_keys']:
+                for err_key_path, err in config['err_keys'].items():
                     print('\t {}: {}'.format(err, err_key_path))
 
             if not argv_parsed.only_local_config:

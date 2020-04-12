@@ -48,7 +48,7 @@ def list_local_keys(collect_errors=False):
     base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
     likely_keys = []
     if collect_errors:
-        errored_keys = []
+        errored_keys = dict()
     if not os.path.exists(base_path):
         if collect_errors:
             return likely_keys, errored_keys
@@ -73,25 +73,25 @@ def list_local_keys(collect_errors=False):
             if x_perm == 0o600 or x_perm == 0o400:
                 likely_keys.append(x)
             elif collect_errors:
-                errored_keys.append((x, 'unsafe file permissions'))
+                errored_keys[x] = 'unsafe file permissions'
         except jwt.exceptions.DecodeError:
             if collect_errors:
-                errored_keys.append((x, 'coding error'))
+                errored_keys[x] = 'coding error'
         except jwt.exceptions.ImmatureSignatureError:
             if collect_errors:
-                errored_keys.append((x, 'immature signature'))
+                errored_keys[x] = 'immature signature'
         except jwt.exceptions.InvalidIssuerError:
             if collect_errors:
-                errored_keys.append((x, 'invalid issuer'))
+                errored_keys[x] = 'invalid issuer'
         except jwt.exceptions.InvalidAudienceError:
             if collect_errors:
-                errored_keys.append((x, 'invalid audience'))
+                errored_keys[x] = 'invalid audience'
         except jwt.exceptions.ExpiredSignatureError:
             if collect_errors:
-                errored_keys.append((x, 'expired signature'))
+                errored_keys[x] = 'expired signature'
         except:
             if collect_errors:
-                errored_keys.append((x, 'unknown error'))
+                errored_keys[x] = 'unknown error'
     if collect_errors:
         return likely_keys, errored_keys
     else:
