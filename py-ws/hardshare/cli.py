@@ -50,6 +50,9 @@ def main(argv=None):
     argparser.add_argument('-v', '--verbose', action='store_true', default=False,
                            help='print verbose messages about actions by the hardshare client',
                            dest='verbose')
+    argparser.add_argument('--format', default='YAML', metavar='FORMAT',
+                           help='output formatting; options: YAML (default), JSON',
+                           dest='output_format')
     argparser.add_argument('-s', '--server-name', default='hs.rerobots.net',
                            help='name or IP address of hardshare server',
                            dest='server_name')
@@ -190,6 +193,11 @@ def main(argv=None):
     if argv_parsed.verbose:
         logger.setLevel(logging.DEBUG)
 
+    output_format = argv_parsed.output_format.lower()
+    if output_format not in ['yaml', 'json']:
+        print('output format unrecognized: {}'.format(argv_parsed.output_format))
+        return 1
+
     try:
         ac = HSAPIClient(server_name=argv_parsed.server_name,
                          server_port=argv_parsed.server_port,
@@ -208,8 +216,11 @@ def main(argv=None):
         else:
             findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
 
-        for k, v in findings.items():
-            print('{}: {}'.format(k, v))
+        if output_format == 'json':
+            print(json.dumps(findings))
+        else:
+            for k, v in findings.items():
+                print('{}: {}'.format(k, v))
 
     elif argv_parsed.command == 'ad':
         if ac is None:
