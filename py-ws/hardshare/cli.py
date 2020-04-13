@@ -341,30 +341,6 @@ def main(argv=None):
                       ' does it exist? is it broken?')
                 return 1
 
-            print('workspace deployments defined in local configuration:')
-            if len(config['wdeployments']) == 0:
-                print('\t(none)')
-            else:
-                for wdeployment in config['wdeployments']:
-                    print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
-                        wdeployment['id'],
-                        'https://rerobots.net/workspace/{}'.format(wdeployment['id']),
-                        wdeployment['owner'],
-                        wdeployment['cprovider'],
-                        wdeployment['cargs'],
-                        wdeployment['image'],
-                    ))
-
-            print('\nfound keys:')
-            if len(config['keys']) == 0:
-                print('\t(none)')
-            else:
-                print('\t' + '\n\t'.join(config['keys']))
-            if 'err_keys' in config and len(config['err_keys']) > 0:
-                print('found possible keys with errors:')
-                for err_key_path, err in config['err_keys'].items():
-                    print('\t {}: {}'.format(err, err_key_path))
-
             if not argv_parsed.only_local_config:
                 # Try to get remote config, given possibly new local config
                 try:
@@ -374,22 +350,65 @@ def main(argv=None):
                     print('Error occurred while contacting remote server '
                           'at {}'.format(ac.base_uri))
                     return 1
-                if 'err' in remote_config:
-                    print('Error occurred while contacting remote server.')
-                    if remote_config['err'] == 'wrong authorization token':
-                        print('wrong API token. Did it expire?')
-                    else:
-                        print(remote_config['err'])
-                    return 1
-                if len(remote_config['deployments']) == 0:
-                    print('\nno registered workspace deployments with this user account')
+
+                config = {
+                    'local': config,
+                    'remote': remote_config,
+                }
+
+            if output_format == 'json':
+                print(json.dumps(config))
+
+            elif output_format == 'yaml':
+                print(yaml.dump(config, default_flow_style=False))
+
+            else:
+                if 'local' not in config:
+                    config = {
+                        'local': config,
+                        'remote': None,
+                    }
+                print('workspace deployments defined in local configuration:')
+                if len(config['local']['wdeployments']) == 0:
+                    print('\t(none)')
                 else:
-                    print('\nregistered workspace deployments with this user account:')
-                    for wd in remote_config['deployments']:
-                        print('{}'.format(wd['id']))
-                        print('\tcreated: {}'.format(wd['date_created']))
-                        print('\torigin (address) of registration: {}'
-                              .format(wd['origin']))
+                    for wdeployment in config['local']['wdeployments']:
+                        print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
+                            wdeployment['id'],
+                            'https://rerobots.net/workspace/{}'.format(wdeployment['id']),
+                            wdeployment['owner'],
+                            wdeployment['cprovider'],
+                            wdeployment['cargs'],
+                            wdeployment['image'],
+                        ))
+
+                print('\nfound keys:')
+                if len(config['local']['keys']) == 0:
+                    print('\t(none)')
+                else:
+                    print('\t' + '\n\t'.join(config['local']['keys']))
+                if 'err_keys' in config['local'] and len(config['local']['err_keys']) > 0:
+                    print('found possible keys with errors:')
+                    for err_key_path, err in config['local']['err_keys'].items():
+                        print('\t {}: {}'.format(err, err_key_path))
+
+                if config['remote']:
+                    if 'err' in config['remote']:
+                        print('Error occurred while contacting remote server.')
+                        if config['remote']['err'] == 'wrong authorization token':
+                            print('wrong API token. Did it expire?')
+                        else:
+                            print(config['remote']['err'])
+                        return 1
+                    if len(config['remote']['deployments']) == 0:
+                        print('\nno registered workspace deployments with this user account')
+                    else:
+                        print('\nregistered workspace deployments with this user account:')
+                        for wd in config['remote']['deployments']:
+                            print('{}'.format(wd['id']))
+                            print('\tcreated: {}'.format(wd['date_created']))
+                            print('\torigin (address) of registration: {}'
+                                  .format(wd['origin']))
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
