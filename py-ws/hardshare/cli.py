@@ -90,6 +90,9 @@ def main(argv=None):
     config_parser.add_argument('--add-raw-device', metavar='PATH', type=str,
                                dest='raw_device_path', default=None,
                                help='add device file to present in container')
+    config_parser.add_argument('--assign-image', metavar='IMG', type=str,
+                               dest='cprovider_img', default=None,
+                               help='assign image for cprovider to use (advanced option)')
     config_parser.add_argument('--rm-raw-device', metavar='PATH', type=str,
                                dest='remove_raw_device_path', default=None,
                                help='remove device previously marked for inclusion in container')
@@ -473,6 +476,25 @@ def main(argv=None):
                 return 1
             carg = '--device={D}:{D}'.format(D=argv_parsed.remove_raw_device_path)
             config['wdeployments'][0]['cargs'].remove(carg)
+            modify_local(config)
+
+        elif argv_parsed.cprovider_img is not None:
+            config = get_local_config()
+            if len(config['wdeployments']) == 0:
+                print('ERROR: no workspace deployment in local configuration.')
+                return 1
+            elif len(config['wdeployments']) > 1:
+                print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
+                return 1
+            cprovider = config['wdeployments'][0]['cprovider']
+            if cprovider not in ['docker', 'podman']:
+                print('unknown cprovider: {}'.format(cprovider))
+                return 1
+            cp_images = subprocess.run([cprovider, 'image', 'exists', argv_parsed.cprovider_img])
+            if cp_images.returncode != 0:
+                print('ERROR: given image name is not recognized by cprovider')
+                return 1
+            config['wdeployments'][0]['image'] = argv_parsed.cprovider_img
             modify_local(config)
 
         else:
