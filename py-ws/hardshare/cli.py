@@ -475,6 +475,11 @@ def main(argv=None):
             config['wdeployments'][0]['cargs'].remove(carg)
             modify_local(config)
 
+        else:
+            print('Use `hardshare config` with a switch. For example, `hardshare config -l`')
+            print('or to get a help message, enter\n\n    hardshare help config')
+            return 1
+
     return 0
 
 
