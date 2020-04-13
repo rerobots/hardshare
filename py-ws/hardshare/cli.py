@@ -23,6 +23,8 @@ import os.path
 import subprocess
 import sys
 
+import yaml
+
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
 from .mgmt import modify_local
@@ -50,8 +52,10 @@ def main(argv=None):
     argparser.add_argument('-v', '--verbose', action='store_true', default=False,
                            help='print verbose messages about actions by the hardshare client',
                            dest='verbose')
-    argparser.add_argument('--format', default='YAML', metavar='FORMAT',
-                           help='output formatting; options: YAML (default), JSON',
+    argparser.add_argument('--format', metavar='FORMAT',
+                           default=None, type=str,
+                           help=('special output formatting (default is no special formatting); '
+                                 'options: YAML , JSON'),
                            dest='output_format')
     argparser.add_argument('-s', '--server-name', default='hs.rerobots.net',
                            help='name or IP address of hardshare server',
@@ -193,10 +197,13 @@ def main(argv=None):
     if argv_parsed.verbose:
         logger.setLevel(logging.DEBUG)
 
-    output_format = argv_parsed.output_format.lower()
-    if output_format not in ['yaml', 'json']:
-        print('output format unrecognized: {}'.format(argv_parsed.output_format))
-        return 1
+    if argv_parsed.output_format is not None:
+        output_format = argv_parsed.output_format.lower()
+        if output_format not in ['yaml', 'json']:
+            print('output format unrecognized: {}'.format(argv_parsed.output_format))
+            return 1
+    else:
+        output_format = None
 
     try:
         ac = HSAPIClient(server_name=argv_parsed.server_name,
@@ -219,6 +226,7 @@ def main(argv=None):
         if output_format == 'json':
             print(json.dumps(findings))
         else:
+            # This output is already YAML, so no need for branch output_format == 'yaml'
             for k, v in findings.items():
                 print('{}: {}'.format(k, v))
 
