@@ -412,7 +412,7 @@ def main(argv=None):
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
-            for err_key_path, err in errored_keys:
+            for err_key_path, err in errored_keys.items():
                 print('deleting {}...'.format(err_key_path))
                 os.unlink(err_key_path)
 
