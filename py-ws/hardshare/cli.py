@@ -27,7 +27,7 @@ import yaml
 
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
-from .mgmt import modify_local
+from .mgmt import find_wd, modify_local
 from .api import HSAPIClient
 
 
@@ -39,6 +39,25 @@ loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s)
                                           ' %(asctime)s ; %(message)s'
                                           .format(os.getpid())))
 logger.addHandler(loghandler)
+
+
+def get_config_with_index(id_prefix=None):
+    config = get_local_config()
+    if len(config['wdeployments']) == 0:
+        print(('ERROR: Cannot add device because '
+               'no workspace deployment in local configuration.'))
+        return config, None, 1
+    if id_prefix:
+        index = find_wd(config, id_prefix)
+        if index is None:
+            print('ERROR: given prefix does not match precisely 1 workspace deployment')
+            return config, None, 1
+    else:
+        if len(config['wdeployments']) > 1:
+            print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
+            return config, None, 1
+        index = 0
+    return config, index, 0
 
 
 def main(argv=None):
@@ -78,6 +97,11 @@ def main(argv=None):
     config_parser = subparsers.add_parser('config',
                                           description=config_commanddesc,
                                           help=config_commanddesc)
+    config_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                               help=('id of workspace deployment for configuration changes'
+                                     ' (can be unique prefix); '
+                                     'this argument is not required '
+                                     'if there is only 1 workspace deployment'))
     config_parser.add_argument('-c', '--create', action='store_true', default=False,
                                dest='create_config',
                                help='if no local configuration is found, then create one')
@@ -446,16 +470,10 @@ def main(argv=None):
             ac.sync_config()
 
         elif argv_parsed.raw_device_path is not None:
-            config = get_local_config()
-            if len(config['wdeployments']) == 0:
-                print(('ERROR: Cannot add device because '
-                       'no workspace deployment in local configuration.'))
-                return 1
-            elif len(config['wdeployments']) > 1:
-                print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
-                print('Future versions of hardshare client will better support this case.')
-                return 1
-            cprovider = config['wdeployments'][0]['cprovider']
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+            cprovider = config['wdeployments'][index]['cprovider']
             if cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
@@ -463,30 +481,22 @@ def main(argv=None):
                 print('ERROR: given device file does not exist')
                 return 1
             carg = '--device={D}:{D}'.format(D=argv_parsed.raw_device_path)
-            config['wdeployments'][0]['cargs'].append(carg)
+            config['wdeployments'][index]['cargs'].append(carg)
             modify_local(config)
 
         elif argv_parsed.remove_raw_device_path is not None:
-            config = get_local_config()
-            if len(config['wdeployments']) == 0:
-                print('ERROR: no workspace deployment in local configuration.')
-                return 1
-            elif len(config['wdeployments']) > 1:
-                print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
-                return 1
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
             carg = '--device={D}:{D}'.format(D=argv_parsed.remove_raw_device_path)
-            config['wdeployments'][0]['cargs'].remove(carg)
+            config['wdeployments'][index]['cargs'].remove(carg)
             modify_local(config)
 
         elif argv_parsed.cprovider_img is not None:
-            config = get_local_config()
-            if len(config['wdeployments']) == 0:
-                print('ERROR: no workspace deployment in local configuration.')
-                return 1
-            elif len(config['wdeployments']) > 1:
-                print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
-                return 1
-            cprovider = config['wdeployments'][0]['cprovider']
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+            cprovider = config['wdeployments'][index]['cprovider']
             if cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
@@ -494,7 +504,7 @@ def main(argv=None):
             if cp_images.returncode != 0:
                 print('ERROR: given image name is not recognized by cprovider')
                 return 1
-            config['wdeployments'][0]['image'] = argv_parsed.cprovider_img
+            config['wdeployments'][index]['image'] = argv_parsed.cprovider_img
             modify_local(config)
 
         else:

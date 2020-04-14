@@ -33,6 +33,16 @@ logger = logging.getLogger(__name__)
 WEBUI_PUBLIC_KEY = """ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCpaC+WZHknryjjioYHcCpVweekg7lTFoy4Qc+je5YTJwCEt9NuEQis0Y5pGkVVNWCVTsrA95Cq/H67Sls5dvxul/R20hzmKVaWBxN6QIHxJAqB7z454pNvGRrLOi/PLBeImNgvOC4d5L4uYQyFVpBIRBSbRNaqV9zbfSIFFBjfqIv6Cp4SvvFu0rtHw4A/H62Firy+sap5nkcTynOSe3OskSItmAQT5I42nN6QfjKf9Y2MY0iFbP4GixGdvi0Nre0lRqVV8h5OQwGcrzfSQKBAeWASmJ2fyXja/WBk0UZFx0GSfNEP201xJbx2b9TVZMekBvJpYyDzc2nR/1kddLWucvE3malTW7Geuih5/hjPALXsqFL/zDZ89AF3DsY/QX2cSFazXBVVUz/UdSCmddZMtnL589sWNB2DkUldJXLkCNxGKlKh9aWoH/a6b3AR0EU67RyKK0wSMhcBPGcHLa2Zz/iaFJyNfEmeEhZ8KFz0oZ34cLEwtQRHYI7LtjT/ZT/5AamkGldQ4lMAFOdfc1Qu2LeOpYT9FOF+mkuT7MMlCpWNBR48+AVjni+uoNymStYBDapxPHDJ2D9TjgMDzKgBl+VqwNag8A532dgBxIZsjrqfMMQC7VTUVoeRXgOM8D0FZWYRmw6ozrYsJVaLE7OSqi9JKi50fFCoAMsbRKeFZw== scott@cero"""
 
 
+def find_wd(config, id_prefix):
+    matches = []
+    for ii, wd in enumerate(config['wdeployments']):
+        if wd['id'].startswith(id_prefix):
+            matches.append(ii)
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
 def list_local_keys(collect_errors=False):
     """get list of local keys that appear valid
 
