@@ -257,10 +257,8 @@ def main(argv=None):
 
         if output_format == 'json':
             print(json.dumps(findings))
-        else:
-            # This output is already YAML, so no need for branch output_format == 'yaml'
-            for k, v in findings.items():
-                print('{}: {}'.format(k, v))
+        else:  # output_format == 'yaml'
+            print(yaml.dump(findings, default_flow_style=False))
 
     elif argv_parsed.command == 'ad':
         if ac is None:
