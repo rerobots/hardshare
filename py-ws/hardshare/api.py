@@ -406,6 +406,7 @@ class HSAPIClient:
                 raise ValueError('workspace deployment {} not declared '
                                  'in local config'.format(id_prefix))
         self.current_wdeployment = wdeployment_config
+        logger.info('start to advertise wdeployment {}'.format(self.current_wdeployment['id']))
         headers = self._add_key_header()
         if self.verify_certs:
             session = aiohttp.ClientSession(headers=headers)

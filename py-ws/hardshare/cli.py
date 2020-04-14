@@ -170,6 +170,11 @@ def main(argv=None):
     advertise_parser = subparsers.add_parser('ad',
                                              description=advertise_commanddesc,
                                              help=advertise_commanddesc)
+    advertise_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                  help=('id of workspace deployment to advertise'
+                                        ' (can be unique prefix); '
+                                        'this argument is not required '
+                                        'if there is only 1 workspace deployment'))
     advertise_parser.add_argument('-d', '--daemon', action='store_true', default=False,
                                   help='detach from invoking terminal (i.e., run as daemon)',
                                   dest='become_daemon')
@@ -262,13 +267,16 @@ def main(argv=None):
             print('cannot register without initial local configuration.'
                   ' (try `hardshare config --create`)')
             return 1
+        config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
         if argv_parsed.become_daemon:
             if os.fork() != 0:
                 return 0
             os.close(0)
             os.close(1)
             os.close(2)
-        return ac.run_sync()
+        return ac.run_sync(config['wdeployments'][index]['id'])
 
     elif argv_parsed.command == 'terminate':
         if argv_parsed.purge_supposed_instance:
