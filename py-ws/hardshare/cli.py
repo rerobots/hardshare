@@ -42,10 +42,13 @@ logger.addHandler(loghandler)
 
 
 def get_config_with_index(id_prefix=None):
-    config = get_local_config()
+    try:
+        config = get_local_config()
+    except:
+        print('error loading configuration data. does it exist?')
+        return None, None, 1
     if len(config['wdeployments']) == 0:
-        print(('ERROR: Cannot add device because '
-               'no workspace deployment in local configuration.'))
+        print(('ERROR: no workspace deployment in local configuration.'))
         return config, None, 1
     if id_prefix:
         index = find_wd(config, id_prefix)
@@ -165,6 +168,9 @@ def main(argv=None):
     status_parser = subparsers.add_parser('status',
                                           description=status_commanddesc,
                                           help=status_commanddesc)
+    status_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                               help=('id of target workspace deployment'
+                                     ' (can be unique prefix)'))
 
     advertise_commanddesc = 'advertise availability, accept new instances'
     advertise_parser = subparsers.add_parser('ad',
@@ -183,6 +189,9 @@ def main(argv=None):
     terminate_parser = subparsers.add_parser('terminate',
                                              description=terminate_commanddesc,
                                              help=terminate_commanddesc)
+    terminate_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                  help=('id of target workspace deployment'
+                                        ' (can be unique prefix)'))
     terminate_parser.add_argument('-f', '--force', action='store_true', default=False,
                                   help=('if there is an active instance, then'
                                         ' stop it without waiting'),
@@ -246,14 +255,21 @@ def main(argv=None):
 
     if argv_parsed.command == 'status':
         try:
-            config = get_local_config(collect_errors=True)
+            config = get_local_config()
         except:
             print('error loading configuration data. does it exist?')
             return 1
-        if len(config['wdeployments']) == 0:
-            findings = WorkspaceInstance.inspect_instance()
+        if argv_parsed.id_prefix is None:
+            if len(config['wdeployments']) == 0:
+                findings = [WorkspaceInstance.inspect_instance()]
+            else:
+                findings = []
+                for wd in config['wdeployments']:
+                    findings.append(WorkspaceInstance.inspect_instance(wdeployment=wd))
         else:
-            findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
+            findings = []
+            for m in find_wd(config, argv_parsed.id_prefix, one_or_none=False):
+                findings.append(WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][m]))
 
         if output_format == 'json':
             print(json.dumps(findings))
@@ -277,20 +293,15 @@ def main(argv=None):
         return ac.run_sync(config['wdeployments'][index]['id'])
 
     elif argv_parsed.command == 'terminate':
+        config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
         if argv_parsed.purge_supposed_instance:
-            try:
-                config = get_local_config()
-            except:
-                print('error loading configuration data. does it exist?')
-                return 1
-            if len(config['wdeployments']) == 0:
-                print('ERROR: no workspace deployment defined! Try: hardshare check')
-                return 1
-            cprovider = config['wdeployments'][0]['cprovider']
+            cprovider = config['wdeployments'][index]['cprovider']
             if cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
-            findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][0])
+            findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][index])
             if 'container' in findings:
                 try:
                     subprocess.check_call([cprovider, 'rm', '-f',
@@ -308,7 +319,7 @@ def main(argv=None):
             if ac is None:
                 print('cannot terminate without valid API client')
                 return 1
-            ac.terminate()
+            ac.terminate(config['wdeployments'][index]['id'])
             return 0
 
     elif argv_parsed.command == 'register':

@@ -182,8 +182,12 @@ class HSAPIClient:
                         .format(res.status_code))
         return res.json()
 
-    def terminate(self):
-        to_addr = os.path.join(os.path.expanduser('~'), '.rerobots', 'hardshare.sock')
+    def terminate(self, wdid=None):
+        if wdid is None:
+            sockname = 'hardshare.sock'
+        else:
+            sockname = 'hardshare.{}.sock'.format(wdid)
+        to_addr = os.path.join(os.path.expanduser('~'), '.rerobots', sockname)
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.setblocking(False)
         try:
@@ -195,7 +199,9 @@ class HSAPIClient:
             hss.close()
 
     async def handle_dsocket(self, main):
-        socket_path = os.path.join(os.path.expanduser('~'), '.rerobots', 'hardshare.sock')
+        assert self.current_wdeployment is not None
+        sockname = 'hardshare.{}.sock'.format(self.current_wdeployment['id'])
+        socket_path = os.path.join(os.path.expanduser('~'), '.rerobots', sockname)
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.setblocking(False)
         hss.bind(socket_path)
@@ -208,7 +214,10 @@ class HSAPIClient:
                     msg = await self.loop.sock_recv(conn, 1024)
                     msg = msg.decode()
                     if msg == 'STATUS\n':
-                        await self.loop.sock_sendall(conn, b'OK\n')
+                        if self.current is None:
+                            await self.loop.sock_sendall(conn, b'READY\n')
+                        else:
+                            await self.loop.sock_sendall(conn, bytes('ACTIVE:{}\n'.format(self.current.container_name), encoding='utf-8'))
 
                     elif msg == 'TERMINATE\n':
                         print('received request: TERMINATE')
@@ -235,7 +244,23 @@ class HSAPIClient:
 
     def run_sync(self, id_prefix=None):
         logger.debug('entered run_sync()')
-        self.main = self.loop.create_task(self.run(id_prefix=id_prefix))
+        self.current = None
+        if id_prefix is None:
+            if len(self.local_config['wdeployments']) == 0:
+                raise ValueError('no identifier given, and none in local config')
+            else:
+                wdeployment_config = self.local_config['wdeployments'][0]
+        else:
+            wdeployment_config = None
+            for local_wd_config in self.local_config['wdeployments']:
+                if local_wd_config['id'].startswith(id_prefix):
+                    wdeployment_config = local_wd_config
+                    break
+            if wdeployment_config is None:
+                raise ValueError('workspace deployment {} not declared '
+                                 'in local config'.format(id_prefix))
+        self.current_wdeployment = wdeployment_config
+        self.main = self.loop.create_task(self.run())
         self.dsocket = self.loop.create_task(self.handle_dsocket(self.main))
         logger.debug('started async run()')
         signal.signal(signal.SIGTERM, self.handle_sigterm)
@@ -389,23 +414,7 @@ class HSAPIClient:
         return True
 
 
-    async def run(self, id_prefix=None):
-        self.current = None
-        if id_prefix is None:
-            if len(self.local_config['wdeployments']) == 0:
-                raise ValueError('no identifier given, and none in local config')
-            else:
-                wdeployment_config = self.local_config['wdeployments'][0]
-        else:
-            wdeployment_config = None
-            for local_wd_config in self.local_config['wdeployments']:
-                if local_wd_config['id'].startswith(id_prefix):
-                    wdeployment_config = local_wd_config
-                    break
-            if wdeployment_config is None:
-                raise ValueError('workspace deployment {} not declared '
-                                 'in local config'.format(id_prefix))
-        self.current_wdeployment = wdeployment_config
+    async def run(self):
         logger.info('start to advertise wdeployment {}'.format(self.current_wdeployment['id']))
         headers = self._add_key_header()
         if self.verify_certs:
@@ -413,7 +422,7 @@ class HSAPIClient:
         else:
             conn = aiohttp.TCPConnector(verify_ssl=False)
             session = aiohttp.ClientSession(connector=conn, headers=headers)
-        uri = self.base_uri + '/ad/{}'.format(wdeployment_config['id'])
+        uri = self.base_uri + '/ad/{}'.format(self.current_wdeployment['id'])
         try:
             async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
                 async for msg in ws:

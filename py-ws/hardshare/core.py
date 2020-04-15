@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import os.path
+import random
 import socket
 import subprocess
 import tempfile
@@ -45,7 +46,7 @@ class WorkspaceInstance:
         else:
             self.img = image
         self.status = 'INIT'
-        self.container_name = 'rrc'
+        self.container_name = 'rrc' + str(random.randint(0, 100000))  # TODO: check for existing container with this name
         self.instance_id = None
         self.tunnelhub = None
         self.tunnel_task = None
@@ -61,18 +62,30 @@ class WorkspaceInstance:
         else:
             cprovider = wdeployment['cprovider']
         findings = {
+            'wdeployment': None if wdeployment is None else wdeployment['id'],
             'daemon_found': False,
             'provider': cprovider,
         }
+        if wdeployment is None:
+            sockname = 'hardshare.sock'
+        else:
+            sockname = 'hardshare.{}.sock'.format(wdeployment['id'])
         base_path = os.path.join(os.path.expanduser('~'), '.rerobots')
-        to_addr = os.path.join(base_path, 'hardshare.sock')
+        to_addr = os.path.join(base_path, sockname)
         hss = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
         hss.settimeout(10)
+        container_name = None
         try:
             hss.connect(to_addr)
             hss.send(b'STATUS\n')
             msg = hss.recv(1024)
             findings['daemon_found'] = True
+            if msg == b'READY\n':
+                container_name = None
+            elif msg.startswith(b'ACTIVE:'):
+                container_name = str(msg[7:-1], encoding='utf-8')
+            else:
+                raise ValueError('Unknown daemon status: {}'.format(msg))
         except socket.timeout:
             pass
         except BrokenPipeError:
@@ -81,34 +94,37 @@ class WorkspaceInstance:
             pass
         finally:
             hss.close()
-        empty_default = cls()
         if cprovider in ['docker', 'podman']:
-            try:
-                cp = subprocess.run([cprovider, 'inspect', empty_default.container_name],
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    universal_newlines=True)
-                if cp.returncode == 0:
-                    findings['has_instance'] = True
-                    cinfo = json.loads(cp.stdout)[0]
-                    findings['container'] = {
-                        'name': empty_default.container_name,
-                        'id': cinfo['Id'],
-                        'created': cinfo['Created'],
-                        'image_id': cinfo['Image'],
-                    }
-                    cp = subprocess.run([cprovider, 'image', 'inspect', cinfo['Image']],
+            if container_name:
+                try:
+                    cp = subprocess.run([cprovider, 'inspect', container_name],
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
                                         universal_newlines=True)
                     if cp.returncode == 0:
-                        iminfo = json.loads(cp.stdout)[0]
-                        findings['container']['image_tags'] = iminfo['RepoTags']
-                else:
+                        findings['has_instance'] = True
+                        cinfo = json.loads(cp.stdout)[0]
+                        findings['container'] = {
+                            'name': container_name,
+                            'id': cinfo['Id'],
+                            'created': cinfo['Created'],
+                            'image_id': cinfo['Image'],
+                        }
+                        cp = subprocess.run([cprovider, 'image', 'inspect', cinfo['Image']],
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT,
+                                            universal_newlines=True)
+                        if cp.returncode == 0:
+                            iminfo = json.loads(cp.stdout)[0]
+                            findings['container']['image_tags'] = iminfo['RepoTags']
+                    else:
+                        findings['has_instance'] = False
+                        findings['warnings'] = 'container name {} not found with cprovider {}'.format(container_name, cprovider)
+                except FileNotFoundError:
                     findings['has_instance'] = False
-            except FileNotFoundError:
+                    findings['warnings'] = 'cprovider {} not found. Is it installed?'.format(cprovider)
+            else:
                 findings['has_instance'] = False
-                findings['warnings'] = 'cprovider {} not found. Is it installed?'.format(cprovider)
         else:
             findings['has_instance'] = False
             findings['warnings'] = 'cprovider "{}" not known'.format(cprovider)
