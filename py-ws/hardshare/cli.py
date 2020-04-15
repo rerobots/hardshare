@@ -517,10 +517,20 @@ def main(argv=None):
             if cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
-            cp_images = subprocess.run([cprovider, 'image', 'exists', argv_parsed.cprovider_img])
-            if cp_images.returncode != 0:
-                print('ERROR: given image name is not recognized by cprovider')
-                return 1
+
+            if cprovider == 'podman':
+                cp_images = subprocess.run([cprovider, 'image', 'exists', argv_parsed.cprovider_img])
+                if cp_images.returncode != 0:
+                    print('ERROR: given image name is not recognized by cprovider')
+                    return 1
+            else:  # cprovider == 'docker'
+                cp_images = subprocess.run([cprovider, 'image', 'inspect', argv_parsed.cprovider_img],
+                                           stdout=subprocess.DEVNULL,
+                                           stderr=subprocess.DEVNULL)
+                if cp_images.returncode != 0:
+                    print('ERROR: given image name is not recognized by cprovider')
+                    return 1
+
             config['wdeployments'][index]['image'] = argv_parsed.cprovider_img
             modify_local(config)
 
