@@ -86,6 +86,10 @@ class WorkspaceInstance:
                 container_name = str(msg[7:-1], encoding='utf-8')
             else:
                 raise ValueError('Unknown daemon status: {}'.format(msg))
+        except ConnectionRefusedError:
+            if 'warnings' not in findings:
+                findings['warnings'] = []
+            findings['warnings'].append('fail to open daemon socket at {}'.format(to_addr))
         except socket.timeout:
             pass
         except BrokenPipeError:
@@ -119,15 +123,21 @@ class WorkspaceInstance:
                             findings['container']['image_tags'] = iminfo['RepoTags']
                     else:
                         findings['has_instance'] = False
-                        findings['warnings'] = 'container name {} not found with cprovider {}'.format(container_name, cprovider)
+                        if 'warnings' not in findings:
+                            findings['warnings'] = []
+                        findings['warnings'].append('container name {} not found with cprovider {}'.format(container_name, cprovider))
                 except FileNotFoundError:
                     findings['has_instance'] = False
-                    findings['warnings'] = 'cprovider {} not found. Is it installed?'.format(cprovider)
+                    if 'warnings' not in findings:
+                        findings['warnings'] = []
+                    findings['warnings'].append('cprovider {} not found. Is it installed?'.format(cprovider))
             else:
                 findings['has_instance'] = False
         else:
             findings['has_instance'] = False
-            findings['warnings'] = 'cprovider "{}" not known'.format(cprovider)
+            if 'warnings' not in findings:
+                findings['warnings'] = []
+            findings['warnings'].append('cprovider "{}" not known'.format(cprovider))
         return findings
 
 
