@@ -108,6 +108,14 @@ def main(argv=None):
     config_parser.add_argument('-c', '--create', action='store_true', default=False,
                                dest='create_config',
                                help='if no local configuration is found, then create one')
+    config_parser.add_argument('--add-terminate-prog', metavar='PATH',
+                               dest='add_terminate_prog', default=None,
+                               help='add program to list of commands to execute')
+    config_parser.add_argument('--rm-terminate-prog', metavar='PATH',
+                               dest='rm_terminate_prog', default=None,
+                               help=('remove program from list of commands to execute; '
+                                     'for example, '
+                                     'copy-and-paste value shown in `hardshare config -l` here'))
     config_parser.add_argument('--add-key', metavar='FILE',
                                dest='new_api_token',
                                help='add new account key')
@@ -429,6 +437,10 @@ def main(argv=None):
                             wdeployment['cargs'],
                             wdeployment['image'],
                         ))
+                        if wdeployment['terminate']:
+                            print('\tterminate:')
+                            for terminate_p in wdeployment['terminate']:
+                                print('\t\t{}'.format(terminate_p))
 
                 print('\nfound keys:')
                 if len(config['local']['keys']) == 0:
@@ -536,6 +548,28 @@ def main(argv=None):
                     return 1
 
             config['wdeployments'][index]['image'] = argv_parsed.cprovider_img
+            modify_local(config)
+
+        elif argv_parsed.add_terminate_prog is not None:
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+
+            normalized_path = os.path.abspath(argv_parsed.add_terminate_prog)
+
+            if not os.path.exists(normalized_path):
+                print('ERROR: given path does not exist')
+                return 1
+
+            config['wdeployments'][index]['terminate'].append(normalized_path)
+            modify_local(config)
+
+        elif argv_parsed.rm_terminate_prog is not None:
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+
+            config['wdeployments'][index]['terminate'].remove(argv_parsed.rm_terminate_prog)
             modify_local(config)
 
         else:

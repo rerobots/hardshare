@@ -137,6 +137,8 @@ def get_local_config(create_if_empty=False, collect_errors=False):
     for wdi, wd in enumerate(config['wdeployments']):
         if 'cargs' not in config['wdeployments'][wdi]:
             config['wdeployments'][wdi]['cargs'] = []
+        if 'terminate' not in config['wdeployments'][wdi]:
+            config['wdeployments'][wdi]['terminate'] = []
     if collect_errors:
         keys, errored_keys = list_local_keys(collect_errors=True)
     else:
@@ -175,6 +177,7 @@ def modify_local(config):
             'cprovider': wd['cprovider'] if 'cprovider' in wd else 'docker',
             'cargs': wd['cargs'] if 'cargs' in wd else [],
             'image': wd.get('image', 'rerobots/hs-generic'),
+            'terminate': wd.get('terminate', []),
             "container_name": "rrc",
         })
     with open(os.path.join(base_path, 'main'), 'wt') as fp:

@@ -300,7 +300,8 @@ class HSAPIClient:
                 cprovider = self.current_wdeployment['cprovider']
                 cargs = self.current_wdeployment.get('cargs', None)
                 image = self.current_wdeployment.get('image', None)
-                self.current = core.WorkspaceInstance(cprovider=cprovider, cargs=cargs, image=image)
+                terminate = self.current_wdeployment.get('terminate', None)
+                self.current = core.WorkspaceInstance(cprovider=cprovider, cargs=cargs, image=image, terminate=terminate)
                 self.loop.create_task(self.current.launch_instance(
                     instance_id=payload['id'],
                     ws_send=ws.send_str,

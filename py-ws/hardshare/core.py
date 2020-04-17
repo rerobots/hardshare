@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceInstance:
-    def __init__(self, cprovider=None, cargs=None, image=None, event_loop=None):
+    def __init__(self, cprovider=None, cargs=None, image=None, terminate=None, event_loop=None):
         if event_loop is None:
             self.loop = asyncio.get_event_loop()
         else:
@@ -45,6 +45,7 @@ class WorkspaceInstance:
             self.img = 'rerobots/hs-generic'
         else:
             self.img = image
+        self.terminate = terminate
         self.status = 'INIT'
         self.container_name = 'rrc' + str(random.randint(0, 100000))  # TODO: check for existing container with this name
         self.instance_id = None
@@ -501,3 +502,16 @@ class WorkspaceInstance:
             while not self.tunnel_task.done():
                 await asyncio.sleep(0.5)
             self.tunnel_task = None
+        if self.terminate is not None:
+            for terminate_command in self.terminate:
+                logger.info('starting termination command: {}'.format(terminate_command))
+                try:
+                    tp = await asyncio.create_subprocess_exec(terminate_command)
+                except FileNotFoundError:
+                    logger.error('file not found for termination command ({}); skipping...'.format(terminate_command))
+                    continue
+                rc = await tp.wait()
+                if rc != 0:
+                    logger.error('termination command ({}) failed with exitcode {}'.format(terminate_command, rc))
+                else:
+                    logger.info('termination command ({}) completed successfully'.format(terminate_command))
