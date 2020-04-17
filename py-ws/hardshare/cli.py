@@ -319,7 +319,11 @@ def main(argv=None):
             if ac is None:
                 print('cannot terminate without valid API client')
                 return 1
-            ac.terminate(config['wdeployments'][index]['id'])
+            try:
+                ac.terminate(config['wdeployments'][index]['id'])
+            except FileNotFoundError:
+                print('ERROR: cannot reach daemon. Does it exist? (Try `hardshare status`)')
+                return 1
             return 0
 
     elif argv_parsed.command == 'register':
