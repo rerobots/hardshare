@@ -220,7 +220,7 @@ class HSAPIClient:
                             await self.loop.sock_sendall(conn, bytes('ACTIVE:{}\n'.format(self.current.container_name), encoding='utf-8'))
 
                     elif msg == 'TERMINATE\n':
-                        print('received request: TERMINATE')
+                        logger.info('received request: TERMINATE')
                         main.cancel()
                         conn.close()
                         break
@@ -270,10 +270,11 @@ class HSAPIClient:
             self.main.cancel()
             self.loop.run_until_complete(self.main)
         except ValueError as e:
-            print(e)
+            logger.error('caught ValueError: {}'.format(e))
             return 1
-        self.dsocket.cancel()
-        self.loop.run_until_complete(self.dsocket)
+        finally:
+            self.dsocket.cancel()
+            self.loop.run_until_complete(self.dsocket)
         return 0
 
 
