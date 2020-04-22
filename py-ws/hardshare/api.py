@@ -302,6 +302,7 @@ class HSAPIClient:
                 cargs = self.current_wdeployment.get('cargs', None)
                 image = self.current_wdeployment.get('image', None)
                 terminate = self.current_wdeployment.get('terminate', None)
+                init_inside = self.current_wdeployment.get('init_inside', [])
                 self.current = core.WorkspaceInstance(cprovider=cprovider, cargs=cargs, image=image, terminate=terminate)
                 self.loop.create_task(self.current.launch_instance(
                     instance_id=payload['id'],
@@ -309,6 +310,7 @@ class HSAPIClient:
                     ws_recv=self.ws_recvmap[payload['id']],
                     conntype=payload['ct'],
                     initial_publickey=payload['pr'],
+                    init_inside=init_inside,
                     tunnelkey_path=self.local_config.get('ssh_key', None)
                 ))
                 logger.debug('in response to INSTANCE_LAUNCH, sending ACK')

@@ -139,6 +139,8 @@ def get_local_config(create_if_empty=False, collect_errors=False):
             config['wdeployments'][wdi]['cargs'] = []
         if 'terminate' not in config['wdeployments'][wdi]:
             config['wdeployments'][wdi]['terminate'] = []
+        if 'init_inside' not in config['wdeployments'][wdi]:
+            config['wdeployments'][wdi]['init_inside'] = []
     if collect_errors:
         keys, errored_keys = list_local_keys(collect_errors=True)
     else:
@@ -178,6 +180,7 @@ def modify_local(config):
             'cargs': wd['cargs'] if 'cargs' in wd else [],
             'image': wd.get('image', 'rerobots/hs-generic'),
             'terminate': wd.get('terminate', []),
+            'init_inside': wd.get('init_inside', []),
             "container_name": "rrc",
         })
     with open(os.path.join(base_path, 'main'), 'wt') as fp:

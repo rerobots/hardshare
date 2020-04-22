@@ -417,9 +417,12 @@ class WorkspaceInstance:
             }))
 
 
-    async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, tunnelkey_path=None):
+    async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, init_inside=None, tunnelkey_path=None):
         if self.cprovider not in ['docker', 'podman']:
             raise ValueError('unknown cprovider: {}'.format(self.cprovider))
+
+        if init_inside is None:
+            init_inside = []
 
         self.conntype = conntype
         self.instance_id = instance_id
@@ -476,6 +479,12 @@ class WorkspaceInstance:
                                       stderr=subprocess.DEVNULL)
 
             os.unlink(fname)
+
+            for command in init_inside:
+                logger.debug('init inside: {}'.format(command))
+                subprocess.check_call(cexec + ['/bin/bash', '-c', command],
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
 
         except Exception as e:
             logger.error('caught exception {}: {}'.format(type(e), e))

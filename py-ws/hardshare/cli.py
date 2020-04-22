@@ -131,6 +131,12 @@ def main(argv=None):
     config_parser.add_argument('--rm-raw-device', metavar='PATH', type=str,
                                dest='remove_raw_device_path', default=None,
                                help='remove device previously marked for inclusion in container')
+    config_parser.add_argument('--add-init-inside', metavar='CMD', type=str,
+                               dest='add_init_inside', default=None,
+                               help='add command to be executed inside container')
+    config_parser.add_argument('--rm-init-inside', action='store_true', default=False,
+                               dest='rm_init_inside',
+                               help='remove (empty) list of commands for inside initialization')
     config_parser.add_argument('-p', '--prune', action='store_true', default=False,
                                dest='prune_err_keys',
                                help=('delete files in local key directory that'
@@ -523,6 +529,30 @@ def main(argv=None):
                 return rc
             carg = '--device={D}:{D}'.format(D=argv_parsed.remove_raw_device_path)
             config['wdeployments'][index]['cargs'].remove(carg)
+            modify_local(config)
+
+        elif argv_parsed.add_init_inside is not None:
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+            cprovider = config['wdeployments'][index]['cprovider']
+            if cprovider not in ['docker', 'podman']:
+                print('unknown cprovider: {}'.format(cprovider))
+                return 1
+
+            config['wdeployments'][index]['init_inside'].append(argv_parsed.add_init_inside)
+            modify_local(config)
+
+        elif argv_parsed.rm_init_inside is not None:
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+            cprovider = config['wdeployments'][index]['cprovider']
+            if cprovider not in ['docker', 'podman']:
+                print('unknown cprovider: {}'.format(cprovider))
+                return 1
+
+            config['wdeployments'][index]['init_inside'] = []
             modify_local(config)
 
         elif argv_parsed.cprovider_img is not None:
