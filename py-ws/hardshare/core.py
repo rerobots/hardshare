@@ -495,6 +495,18 @@ class WorkspaceInstance:
             'cmd': 'INSTANCE_STATUS',
             's': self.status
         }))
+        await self.start_tunnel_task(ws_send, ws_recv)
+
+
+    async def start_tunnel_task(self, ws_send, ws_recv, stop_existing=False):
+        if self.tunnel_task is not None:
+            if not stop_existing:
+                raise ValueError('start_tunnel_task called with existing tunnel task, '
+                                 'but stop_existing=False')
+            self.tunnel_task.cancel()
+            while not self.tunnel_task.done():
+                await asyncio.sleep(0.5)
+            self.tunnel_task = None
         if self.conntype == 'vpn':
             self.tunnel_task = self.loop.create_task(self.start_vpn(ws_send, ws_recv))
         else:  # self.conntype == 'sshtun'
