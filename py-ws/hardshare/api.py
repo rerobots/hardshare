@@ -15,7 +15,6 @@
 """hardshare API client
 """
 import asyncio
-from concurrent.futures import FIRST_COMPLETED
 import hashlib
 import json
 import logging
