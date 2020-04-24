@@ -304,6 +304,8 @@ def main(argv=None):
             os.close(0)
             os.close(1)
             os.close(2)
+        else:
+            logger.addHandler(logging.StreamHandler())
         return ac.run_sync(config['wdeployments'][index]['id'])
 
     elif argv_parsed.command == 'terminate':
