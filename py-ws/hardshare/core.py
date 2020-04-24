@@ -283,7 +283,8 @@ class WorkspaceInstance:
         await ws_send(json.dumps({
             'v': 0,
             'cmd': 'INSTANCE_STATUS',
-            's': self.status
+            's': self.status,  # == READY
+            'h': self.hostkey,
         }))
 
         try:
@@ -388,7 +389,8 @@ class WorkspaceInstance:
             await ws_send(json.dumps({
                 'v': 0,
                 'cmd': 'INSTANCE_STATUS',
-                's': self.status
+                's': self.status,  # == READY
+                'h': self.hostkey,
             }))
 
         except:
@@ -462,7 +464,6 @@ class WorkspaceInstance:
                 self.container_addr = '127.0.0.1'
                 self.container_port_ssh = await self.get_container_sshport(timeout=10)
 
-            self.hostkey = await self.get_container_hostkey(timeout=45)
             assert self.container_addr is not None
 
             cexec = [self.cprovider, 'exec', self.container_name]
@@ -479,6 +480,8 @@ class WorkspaceInstance:
                                       stderr=subprocess.DEVNULL)
 
             os.unlink(fname)
+
+            self.hostkey = await self.get_container_hostkey(timeout=45)
 
             for command in init_inside:
                 logger.debug('init inside: {}'.format(command))
