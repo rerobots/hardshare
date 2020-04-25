@@ -134,7 +134,7 @@ def main(argv=None):
     config_parser.add_argument('--add-init-inside', metavar='CMD', type=str,
                                dest='add_init_inside', default=None,
                                help='add command to be executed inside container')
-    config_parser.add_argument('--rm-init-inside', action='store_true', default=False,
+    config_parser.add_argument('--rm-init-inside', action='store_true', default=None,
                                dest='rm_init_inside',
                                help='remove (empty) list of commands for inside initialization')
     config_parser.add_argument('-p', '--prune', action='store_true', default=False,
