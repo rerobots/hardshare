@@ -546,7 +546,9 @@ class WorkspaceInstance:
             for terminate_command in self.terminate:
                 logger.info('starting termination command: {}'.format(terminate_command))
                 try:
-                    tp = await asyncio.create_subprocess_exec(terminate_command)
+                    tp = await asyncio.create_subprocess_exec(terminate_command,
+                                                              stdout=subprocess.DEVNULL,
+                                                              stderr=subprocess.DEVNULL)
                 except FileNotFoundError:
                     logger.error('file not found for termination command ({}); skipping...'.format(terminate_command))
                     continue
