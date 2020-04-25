@@ -306,10 +306,14 @@ class WorkspaceInstance:
                     logger.warning('tunnel subprocess failed '
                                    'with nonzero exit code: {}'
                                    .format(sshtunnel.returncode))
-            await ws_send(json.dumps({
-                'v': 0,
-                'cmd': 'SSHTUN_DELETE',
-            }))
+            try:
+                await ws_send(json.dumps({
+                    'v': 0,
+                    'cmd': 'SSHTUN_DELETE',
+                }))
+            except Exception as e:
+                logger.warning('caught exception while trying to send SSHTUN_DELETE via WebSocket; '
+                               '{}: {}'.format(type(e), e))
 
 
     async def start_vpn(self, ws_send, ws_recv):
@@ -453,9 +457,12 @@ class WorkspaceInstance:
                 launch_args.extend(['-p', '127.0.0.1::22'])
             launch_args += [self.img]
             logger.debug('subprocess: {}'.format(launch_args))
-            subprocess.check_call(launch_args,
-                                  stdout=subprocess.DEVNULL,
-                                  stderr=subprocess.DEVNULL)
+            p = await asyncio.create_subprocess_exec(*launch_args,
+                                                     stdout=subprocess.DEVNULL,
+                                                     stderr=subprocess.DEVNULL)
+            rc = await p.wait()
+            if rc != 0:
+                raise Exception('command ({}) returen error code: {}'.format(launch_args, rc))
 
             if self.cprovider == 'docker':
                 self.container_addr = await self.get_container_addr(timeout=10)
@@ -475,9 +482,12 @@ class WorkspaceInstance:
                                 cexec + ['/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
             for command in prepare_commands + movekey_commands:
                 logger.debug('subprocess: {}'.format(command))
-                subprocess.check_call(command,
-                                      stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL)
+                p = await asyncio.create_subprocess_exec(*command,
+                                                         stdout=subprocess.DEVNULL,
+                                                         stderr=subprocess.DEVNULL)
+                rc = await p.wait()
+                if rc != 0:
+                    raise Exception('command ({}) returned error code: {}'.format(command, rc))
 
             os.unlink(fname)
 
@@ -485,9 +495,12 @@ class WorkspaceInstance:
 
             for command in init_inside:
                 logger.debug('init inside: {}'.format(command))
-                subprocess.check_call(cexec + ['/bin/bash', '-c', command],
-                                      stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL)
+                p = await asyncio.create_subprocess_exec(*(cexec + ['/bin/bash', '-c', command]),
+                                                         stdout=subprocess.DEVNULL,
+                                                         stderr=subprocess.DEVNULL)
+                rc = await p.wait()
+                if rc != 0:
+                    raise Exception('command ({}) returned error code: {}'.format(command, rc))
 
         except Exception as e:
             logger.error('caught exception {}: {}'.format(type(e), e))
@@ -518,9 +531,12 @@ class WorkspaceInstance:
 
     async def destroy_instance(self):
         destroy_args = [self.cprovider, 'rm', '-f', self.container_name]
-        subprocess.check_call(destroy_args,
-                              stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL)
+        destroy_p = await asyncio.create_subprocess_exec(*destroy_args,
+                                                         stdout=subprocess.DEVNULL,
+                                                         stderr=subprocess.DEVNULL)
+        rc = await destroy_p.wait()
+        if rc != 0:
+            raise Exception('command ({}) returned error code: {}'.format(destroy_args, rc))
         if self.tunnel_task is not None:
             self.tunnel_task.cancel()
             while not self.tunnel_task.done():

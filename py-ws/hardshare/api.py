@@ -420,20 +420,25 @@ class HSAPIClient:
     async def run(self):
         logger.info('start to advertise wdeployment {}'.format(self.current_wdeployment['id']))
         headers = self._add_key_header()
-        if self.verify_certs:
-            session = aiohttp.ClientSession(headers=headers)
-        else:
-            conn = aiohttp.TCPConnector(verify_ssl=False)
-            session = aiohttp.ClientSession(connector=conn, headers=headers)
         uri = self.base_uri + '/ad/{}'.format(self.current_wdeployment['id'])
-        try:
-            async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
-                async for msg in ws:
-                    if not (await self.handle_wsrecv(ws, msg)):
-                        break
+        active = True
+        while active:
+            if self.verify_certs:
+                session = aiohttp.ClientSession(headers=headers)
+            else:
+                conn = aiohttp.TCPConnector(verify_ssl=False)
+                session = aiohttp.ClientSession(connector=conn, headers=headers)
+            try:
+                async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
+                    async for msg in ws:
+                        if not (await self.handle_wsrecv(ws, msg)):
+                            break
 
-        except asyncio.CancelledError:
-            pass
+            except asyncio.CancelledError:
+                active = False
 
-        finally:
-            await session.close()
+            except Exception as e:
+                logger.error('caught {}: {}'.format(type(e), e))
+
+            finally:
+                await session.close()
