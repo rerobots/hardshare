@@ -134,7 +134,7 @@ def main(argv=None):
     config_parser.add_argument('--add-init-inside', metavar='CMD', type=str,
                                dest='add_init_inside', default=None,
                                help='add command to be executed inside container')
-    config_parser.add_argument('--rm-init-inside', action='store_true', default=None,
+    config_parser.add_argument('--rm-init-inside', action='store_true', default=False,
                                dest='rm_init_inside',
                                help='remove (empty) list of commands for inside initialization')
     config_parser.add_argument('-p', '--prune', action='store_true', default=False,
@@ -545,7 +545,7 @@ def main(argv=None):
             config['wdeployments'][index]['init_inside'].append(argv_parsed.add_init_inside)
             modify_local(config)
 
-        elif argv_parsed.rm_init_inside is not None:
+        elif argv_parsed.rm_init_inside:
             config, index, rc = get_config_with_index(argv_parsed.id_prefix)
             if rc != 0:
                 return rc
