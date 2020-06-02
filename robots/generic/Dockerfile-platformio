@@ -1,0 +1,20 @@
+# Base image with packages required for add-on `cam`
+#
+#     docker build -t rerobots/hs-generic-platformio:latest -f Dockerfile-platformio .
+#
+#
+# SCL <scott@rerobots.net>
+# Copyright (C) 2020 rerobots, Inc.
+
+FROM rerobots/hs-generic:latest
+
+RUN apt-get install -y python3-distutils
+
+RUN wget https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -O get-platformio.py \
+    && export LC_ALL=C.UTF-8 LANG=C.UTF-8 \
+    && python3 get-platformio.py
+
+RUN echo 'export LC_ALL=C.UTF-8 LANG=C.UTF-8' >> /root/.bashrc \
+    && echo 'source /root/.platformio/penv/bin/activate' >> /root/.bashrc
+
+CMD ["/sbin/rerobots-hs-init.sh"]
