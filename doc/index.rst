@@ -10,6 +10,10 @@ The official repository is at https://github.com/rerobots/hardshare
 Recent releases of this documentation are available at
 https://hardshare.readthedocs.io/
 
+Before you can share your robots, you must have a user account on rerobots.
+The service is not yet generally available, but if you are interested, `ask for
+an account <https://rerobots.net/contact>`_.
+
 .. toctree::
    :numbered:
    :maxdepth: 1
