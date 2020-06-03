@@ -1,6 +1,17 @@
 Quickstart
 ==========
 
+Overview
+--------
+
+.. image:: figures/hardshare-overview.svg
+
+With **hardshare**, you can make your devices available to remote users through
+reproducible sessions. The basic pattern is similar to pay-per-hour "compute
+instances" in a datacenter from companies like `Packet
+<https://www.packet.com/>`_ or `DigitalOcean <https://www.digitalocean.com/>`_.
+
+
 Preliminaries
 -------------
 
