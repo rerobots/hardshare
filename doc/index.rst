@@ -18,5 +18,8 @@ The source code repository is at https://github.com/rerobots/hardshare
    intro
    quickstart
    install
+   maint
+   bestpractices
+   help
 
 .. _rerobots: https://rerobots.net/
