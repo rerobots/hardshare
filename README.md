@@ -4,8 +4,8 @@ hardshare
 Introduction
 ------------
 
-**hardshare** is the client part of a system for sharing your robot hardware
-through the [rerobots](https://rerobots.net) infrastructure.
+**hardshare** is a system for sharing your robot hardware through the
+[rerobots](https://rerobots.net) infrastructure.
 
 If you are a new or potential user, then begin reading at https://hardshare.readthedocs.io/
 where you will find instructions about installation and sharing your robots!

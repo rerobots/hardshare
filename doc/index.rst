@@ -1,8 +1,8 @@
 hardshare
 =========
 
-**hardshare** is the client part of a system for sharing your robot through the
-rerobots_ infrastructure. It is in the early stages of development.
+**hardshare** is a system for sharing your robot through the rerobots_
+infrastructure. It is in the early stages of development.
 
 Before you can share your robots, you must have a user account on rerobots.
 The service is not yet generally available, but if you are interested, `ask for
