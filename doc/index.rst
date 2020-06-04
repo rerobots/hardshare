@@ -18,6 +18,7 @@ an account <https://rerobots.net/contact>`_.
    :numbered:
    :maxdepth: 1
 
+   intro
    quickstart
    install
 
