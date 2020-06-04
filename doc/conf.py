@@ -1,5 +1,5 @@
 project = 'hardshare'
-copyright = '2018-2020 rerobots, Inc.'
+copyright = '2018-2020 rerobots, Inc. | <a href="https://github.com/rerobots/hardshare/">source code</a>'
 author = 'rerobots, Inc.'
 
 import os.path
