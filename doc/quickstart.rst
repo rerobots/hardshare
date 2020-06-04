@@ -8,8 +8,13 @@ For more details, including alternative configurations and special cases, read
 :doc:`intro`.
 
 
+.. highlight:: none
+
 Preliminaries
 -------------
+
+Instuctions below are known to work on modern GNU/Linux distributions, for
+example Ubuntu_.
 
 First, get ``hardshare``::
 
@@ -26,15 +31,35 @@ check that you have it::
 
   docker version
 
-Create an `API token <https://rerobots.net/tokens>`_ for your hardshare client
-to use. (Learn how to do this `from the rerobots Web Guide
-<https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_.)
 
-* hardshare config -c
+Create local configuration
+--------------------------
+
+Get an `API token <https://rerobots.net/tokens>`_ to associate with your
+hardshare client. (Learn how to do this `from the rerobots Web Guide
+<https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_.) Then,
+initialize a new local configuration, and add the API token to it::
+
+  hardshare config -c
   hardshare config --add-key path/to/your/jwt.txt
-  hardshare config --add-ssh-path path/to/your/ssh_key (e.g., ~/.ssh/id_rsa)
+
+Next, add an SSH key pair for the hardshare client to create tunnels. There
+might already be one at ``~/.ssh/id_rsa``. If not, or if you want to create a
+new pair for this purpose, then::
+
+  ssh-keygen
+
+Add the SSH secret key path::
+
+  hardshare config --add-ssh-path path/to/your/ssh_key
+
+Finally, create a new workspace deployment::
+
   hardshare register
-  hardshare check
+
+
+Start sharing!
+--------------
 
 Start the daemon::
 
@@ -43,3 +68,13 @@ Start the daemon::
 Check it::
 
   hardshare status
+
+which should result in output that is similar to the following::
+
+  - daemon_found: true
+    has_instance: false
+    provider: docker
+    wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
+
+
+.. _Ubuntu: https://ubuntu.com/download/desktop
