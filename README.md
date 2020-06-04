@@ -6,18 +6,20 @@ Introduction
 
 **hardshare** is the client part of a system for sharing your robot hardware
 through the [rerobots](https://rerobots.net) infrastructure.
-It is in the early stages of development. Until version 1.0.0, the API can change without warning.
+
+If you are a new or potential user, then begin reading at https://hardshare.readthedocs.io/
+where you will find instructions about installation and sharing your robots!
+
+If you want to contribute to development, then read more below, and clone the
+repository at https://github.com/rerobots/hardshare
+
+Until version 1.0.0, the API between hardshare clients and rerobots servers
+should be considered "strictly internal" and can change without warning.
 
 Because this project is new and because we have not yet identified the full set
 of substantial use-cases in the wild, there are two protocols. The first is
 based on an HTTP API and WebSockets, and the client is implemented in Python.
 The second is already in development, but has not been announced yet.
-
-The official repository is
-https://github.com/rerobots/hardshare
-
-Recent releases of the full documentation are available at
-https://hardshare.readthedocs.io/
 
 
 Navigating the sourcetree
