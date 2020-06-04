@@ -10,22 +10,52 @@ Overview
 
 .. image:: figures/hardshare-overview.svg
 
-With **hardshare**, you can make your devices available to remote users through
-reproducible instances. From the perspective of remote users, the basic pattern
-is similar to that of "cloud computing" companies like Packet_ or DigitalOcean_:
+As illustrated above, the main parts are:
 
-1. Your device (or "robot") is given a unique ID.
-2. Someone requests access using the unique ID.
-3. The remote user is connected through a container that you host locally to the
-   device.
-4. Their input/output can be constrained according to filter rules. For example,
+1. your robot (also referred to as "device" or "devices"),
+2. host computer on which a hardshare client runs,
+3. rerobots infrastructure,
+4. remote users.
+
+The word "robot" is broadly interpreted here: essentially, it is a device or
+collection of devices that are connected somehow. The robot and the surrounding
+environment are together known as a `workspace deployment
+<https://help.rerobots.net/prelim.html>`_. Robots that are owned and managed by
+the company rerobots are always presented as workspace deployments with unique
+IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
+
+The "rerobots infrastructure" is stuff described at https://help.rerobots.net/
+and includes facilities like `a Python client library
+<https://rerobots-py.readthedocs.io/en/latest/>`_ and sandboxes_.
+
+The hardshare client is the part that manages the lifecycle of remote access,
+including advertising that the robot is available, creating SSH tunnels to a
+local container, and enforcing constraints like input filters.
+
+When you create a workspace deployment, you become the owner and can make
+adminstrative decisions.
+
+Remote users do not necessarily have rerobots accounts. The kinds of access that
+are possible depend on the permissions assigned by the owner.
+
+
+Lifecycle of instances
+----------------------
+
+The time during which a user has exclusive access to a workspace deployment is
+known as an `instance <https://help.rerobots.net/prelim.html>`_.  The process of
+requesting, getting credentials, and terminating an instance is similar to how
+you might get a "compute node" from a "cloud computing" company, like Packet_ or
+DigitalOcean_:
+
+1. Someone requests access using the unique ID of the workspace deployment.
+2. The remote user is connected through a container that you host locally.
+3. Their input/output can be constrained according to filter rules. For example,
    the "reboot" command is dropped, while getting sensor data is accepted.
-5. The instance is terminated when the remote user is done. (If needed, you can
+4. The instance is terminated when the remote user is done. (If needed, you can
    force termination at any time.)
-
-A device (or "robot") is made available for sharing by presenting it as part of
-a `workspace deployment <https://help.rerobots.net/prelim.html>`_
 
 
 .. _Packet: https://www.packet.com/
 .. _DigitalOcean: https://www.digitalocean.com/
+.. _sandboxes: https://rerobots.net/sandbox
