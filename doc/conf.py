@@ -21,3 +21,10 @@ pygments_style = 'sphinx'
 html_theme = 'alabaster'
 html_static_path = ['_static']
 htmlhelp_basename = 'hardsharedoc'
+
+
+# Prepare to build on hosts of https://readthedocs.org/
+import os
+if os.environ.get('READTHEDOCS', 'False') == 'True':
+    import subprocess
+    subprocess.check_call('./get-deps.sh')
