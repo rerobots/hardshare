@@ -25,7 +25,7 @@ Daemon fails to start or is not responsive
 
 
 Delete the ``.sock`` file shown.
-    
+
 
 Listing local configurations
 ----------------------------
