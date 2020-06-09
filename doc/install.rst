@@ -4,6 +4,10 @@ Installation instructions
 Summary
 -------
 
+The goals of this page are to provide more detail than :doc:`quickstart` and to
+treat special cases. If :doc:`quickstart` worked for you, then you can safely
+skip this page.
+
 The details vary depending upon the hardware that you want to share. These
 instructions are work in progress, and contributions and feedback are welcome.
 Please open a ticket at https://github.com/rerobots/hardshare/issues
