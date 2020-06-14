@@ -20,14 +20,32 @@ macOS, and FreeBSD.
 Main aspects
 ------------
 
-There are 3 main aspects to an operational ``hardshare`` installation:
+The main aspects to an operational ``hardshare`` installation:
 
 1. API token for a rerobots_ user account,
-2. a container provider (also known as *cprovider*),
-3. ``hardshare`` client.
+2. an SSH key pair,
+3. ``hardshare`` client,
+4. a container provider (also known as *cprovider*),
+5. rules around instance initialization, termination, and filtering.
 
-Instructions about getting an API token are `in the rerobots Web Guide
-<https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_.
+Instructions about managing API tokens are `in the rerobots Web Guide
+<https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_. The
+token that you create at https://rerobots.net/tokens and download is saved to
+your local hardshare configuration. As such, the default expiration time might
+be too small for your application.
+
+There might already be an SSH key at ``~/.ssh/id_rsa``. If not, or if you want to
+create a new pair for this purpose, then::
+
+  ssh-keygen
+
+to start an interactive process to create a new pair. The default options are
+sufficient here; the prompt "default" is selected by simply pushing ENTER
+without typing text. Additional instructions about creating and working with SSH
+keys, for example from `DigitalOcean
+<https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2>`_
+or `GitHub
+<https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`_.
 
 Hardshare shares hardware among remote users through containers. The term
 *container* in the context of hardshare includes Linux containers. Supporting
@@ -41,8 +59,11 @@ Finally, the primary client is implemented in Python and `available via PyPI
   pip install hardshare
 
 
-Preparing for Docker as a cprovider
------------------------------------
+Preparing a cprovider
+---------------------
+
+Docker
+``````
 
 In most cases, Docker images are available via Docker Hub. For example, ::
 
@@ -57,5 +78,12 @@ the sourcetree. These can be `browsed on GitHub
   docker build -t hs.rerobots.net/generic:latest -f Dockerfile .
 
 
+Podman
+``````
+
+For many operations, podman_ is a drop-in replacement for ``docker``.
+
+
 .. _rerobots: https://rerobots.net/
 .. _Ubuntu: https://ubuntu.com/download/desktop
+.. _podman: https://podman.io/
