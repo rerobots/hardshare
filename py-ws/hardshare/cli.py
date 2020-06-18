@@ -159,6 +159,11 @@ def main(argv=None):
     register_parser = subparsers.add_parser('register',
                                             description=register_commanddesc,
                                             help=register_commanddesc)
+    register_parser.add_argument('--permit-more', action='store_false', default=True,
+                                 dest='register_at_most_one',
+                                 help=('permit registration of more than 1 wdeployment; '
+                                       'default is to fail if local configuration already '
+                                       'has wdeployment declared'))
 
     check_commanddesc = 'check registration of this workspace deployment'
     check_parser = subparsers.add_parser('check',
@@ -347,7 +352,7 @@ def main(argv=None):
             print('cannot register without initial local configuration.'
                   ' (try `hardshare config --create`)')
             return 1
-        print(ac.register_new())
+        print(ac.register_new(at_most_one=argv_parsed.register_at_most_one))
 
     elif argv_parsed.command == 'check':
         if ac is None:
