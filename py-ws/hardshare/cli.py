@@ -24,11 +24,13 @@ import subprocess
 import sys
 
 import yaml
+from requests.exceptions import ConnectionError
 
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
 from .mgmt import find_wd, modify_local
 from .api import HSAPIClient
+from .err import Error as HSError
 
 
 logger = logging.getLogger('hardshare')
@@ -352,7 +354,14 @@ def main(argv=None):
             print('cannot register without initial local configuration.'
                   ' (try `hardshare config --create`)')
             return 1
-        print(ac.register_new(at_most_one=argv_parsed.register_at_most_one))
+        try:
+            print(ac.register_new(at_most_one=argv_parsed.register_at_most_one))
+        except HSError as err:
+            print('ERROR: {}'.format(err))
+            return 1
+        except ConnectionError:
+            print('ERROR: failed to reach server. Are you connected to the Internet?')
+            return 1
 
     elif argv_parsed.command == 'check':
         if ac is None:
