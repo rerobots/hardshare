@@ -434,8 +434,12 @@ def main(argv=None):
                     'remote': remote_config,
                 }
 
-            for jj, wdeployment in enumerate(config['wdeployments']):
-                config['wdeployments'][jj]['url'] = 'https://rerobots.net/workspace/{}'.format(wdeployment['id'])
+            if 'local' in config:
+                ref = config['local']['wdeployments']
+            else:
+                ref = config['wdeployments']
+            for jj, wdeployment in enumerate(ref):
+                ref[jj]['url'] = 'https://rerobots.net/workspace/{}'.format(wdeployment['id'])
 
             if output_format == 'json':
                 print(json.dumps(config))
