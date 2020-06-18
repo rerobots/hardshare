@@ -434,6 +434,9 @@ def main(argv=None):
                     'remote': remote_config,
                 }
 
+            for jj, wdeployment in enumerate(config['wdeployments']):
+                config['wdeployments'][jj]['url'] = 'https://rerobots.net/workspace/{}'.format(wdeployment['id'])
+
             if output_format == 'json':
                 print(json.dumps(config))
 
@@ -453,7 +456,7 @@ def main(argv=None):
                     for wdeployment in config['local']['wdeployments']:
                         print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
                             wdeployment['id'],
-                            'https://rerobots.net/workspace/{}'.format(wdeployment['id']),
+                            wdeployment['url'],
                             wdeployment['owner'],
                             wdeployment['cprovider'],
                             wdeployment['cargs'],
