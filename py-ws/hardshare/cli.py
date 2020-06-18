@@ -387,7 +387,7 @@ def main(argv=None):
             print('\tcreated: {}'.format(res['date_created']))
             print('\torigin (address) of registration: {}'.format(res['origin']))
             if 'date_dissolved' in res:
-                print('\tdissolved: {}'.format(res['origin']))
+                print('\tdissolved: {}'.format(res['date_dissolved']))
 
     elif argv_parsed.command == 'dissolve':
         if ac is None:
