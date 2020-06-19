@@ -31,6 +31,7 @@ from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
 from .mgmt import find_wd, modify_local
 from .api import HSAPIClient
 from .err import Error as HSError
+from .addons import camera_main
 
 
 logger = logging.getLogger('hardshare')
@@ -52,7 +53,22 @@ def get_config_with_index(id_prefix=None):
     if len(config['wdeployments']) == 0:
         print(('ERROR: no workspace deployment in local configuration.'))
         return config, None, 1
-    if id_prefix:
+    if isinstance(id_prefix, list):
+        if len(id_prefix) == 0:
+            if len(config['wdeployments']) > 1:
+                print('ERROR: ambiguous command: more than 1 workspace deployment defined.')
+                return config, None, 1
+            index = [0]
+        else:
+            indices = []
+            for idp in id_prefix:
+                index = find_wd(config, idp)
+                if index is None:
+                    print('ERROR: given prefix does not match precisely 1 workspace deployment')
+                    return config, None, 1
+                indices.append(index)
+            index = indices
+    elif id_prefix:
         index = find_wd(config, id_prefix)
         if index is None:
             print('ERROR: given prefix does not match precisely 1 workspace deployment')
@@ -206,6 +222,20 @@ def main(argv=None):
                                   help='detach from invoking terminal (i.e., run as daemon)',
                                   dest='become_daemon')
 
+    attach_camera_commanddesc = 'attach camera stream to workspace deployments'
+    attach_camera_parser = subparsers.add_parser('attach-camera',
+                                                 description=attach_camera_commanddesc,
+                                                 help=attach_camera_commanddesc)
+    attach_camera_parser.add_argument('camera', default=0,
+                                      type=int,
+                                      help=('on Linux, 0 typically implies /dev/video0; '
+                                            'if you only have one camera, then try 0'))
+    attach_camera_parser.add_argument('id_prefix', metavar='ID', nargs='*', default=None,
+                                      help=('id of workspace deployment on which to attach'
+                                            ' (can be unique prefix); '
+                                            'this argument is not required '
+                                            'if there is only 1 workspace deployment'))
+
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
                                              description=terminate_commanddesc,
@@ -246,6 +276,8 @@ def main(argv=None):
                 dissolve_parser.print_help()
             elif argv_parsed.help_target_command == 'status':
                 status_parser.print_help()
+            elif argv_parsed.help_target_command == 'attach-camera':
+                attach_camera_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
                 advertise_parser.print_help()
             elif argv_parsed.help_target_command == 'terminate':
@@ -296,6 +328,23 @@ def main(argv=None):
             print(json.dumps(findings))
         else:  # output_format == 'yaml'
             print(yaml.dump(findings, default_flow_style=False))
+
+
+    elif argv_parsed.command == 'attach-camera':
+        config, indices, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
+        wdeployments = [config['wdeployments'][jj]['id'] for jj in indices]
+
+        local_keys = list_local_keys()
+        if len(local_keys) < 1:
+            print('No valid keys available. Check: `hardshare config -l`')
+            return 1
+        with open(local_keys[0], 'rt') as fp:
+            tok = fp.read().strip()
+
+        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera)
+
 
     elif argv_parsed.command == 'ad':
         if ac is None:
