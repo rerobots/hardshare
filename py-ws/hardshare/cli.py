@@ -235,6 +235,10 @@ def main(argv=None):
                                             ' (can be unique prefix); '
                                             'this argument is not required '
                                             'if there is only 1 workspace deployment'))
+    attach_camera_parser.add_argument('--width-height', metavar='W,H', type=str,
+                                      dest='attach_camera_res', default=None,
+                                      help=('width and height of captured images; '
+                                            'default depends on the supporting drivers'))
 
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
@@ -343,7 +347,15 @@ def main(argv=None):
         with open(local_keys[0], 'rt') as fp:
             tok = fp.read().strip()
 
-        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera)
+        if argv_parsed.attach_camera_res:
+            width, height = [int(x) for x in argv_parsed.attach_camera_res.split(',')]
+            if width < 1 or height < 1:
+                print('Width, height must be positive')
+                return 1
+        else:
+            width, height = None, None
+
+        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height)
 
 
     elif argv_parsed.command == 'ad':
