@@ -83,7 +83,7 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
             logger.error('caught {}: {}'.format(type(err), err))
 
         finally:
-                await session.close()
+            await session.close()
 
 
 def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None):
