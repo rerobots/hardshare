@@ -54,7 +54,7 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
                         if not switched and (time.time() - st >= timeout):
                             switched = True
                             cam = cv2.VideoCapture('/dev/video{}'.format(dev))
-                        time.sleep(1)
+                        await asyncio.sleep(1)
                         continue
                     if not adjusted and width and cam.get(cv2.CAP_PROP_FRAME_HEIGHT) != height:
                         if cam.set(cv2.CAP_PROP_FRAME_WIDTH, width) or cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height):
@@ -74,7 +74,7 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
                     buf = BytesIO()
                     img.save(buf, 'JPEG')
                     await ws.send_str(ENCODING_PREFIX + base64.b64encode(buf.getvalue()).decode('utf-8'))
-                    time.sleep(0.1)
+                    await asyncio.sleep(0.1)
 
         except asyncio.CancelledError:
             active = False
