@@ -86,9 +86,12 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
             await session.close()
 
 
-def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None):
+def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, crop=None):
     headers = {'Authorization': 'Bearer {}'.format(tok)}
-    res = requests.post('https://api.rerobots.net/hardshare/cam', json={'wds': wdeployments}, headers=headers)
+    opts = {'wds': wdeployments}
+    if crop:
+        opts['crop'] = crop
+    res = requests.post('https://api.rerobots.net/hardshare/cam', json=opts, headers=headers)
     assert res.ok
     hscamera_id = res.json()['id']
     loop = asyncio.get_event_loop()

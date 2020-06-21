@@ -239,6 +239,10 @@ def main(argv=None):
                                       dest='attach_camera_res', default=None,
                                       help=('width and height of captured images; '
                                             'default depends on the supporting drivers'))
+    attach_camera_parser.add_argument('--crop', metavar='CROPCONFIG', type=str,
+                                      dest='attach_camera_crop_config', default=None,
+                                      help=('image crop configuration; '
+                                            'default: all wdeployments get full images'))
 
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
@@ -355,7 +359,12 @@ def main(argv=None):
         else:
             width, height = None, None
 
-        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height)
+        if argv_parsed.attach_camera_crop_config:
+            crop = json.loads(argv_parsed.attach_camera_crop_config)
+        else:
+            crop = None
+
+        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height, crop=crop)
 
 
     elif argv_parsed.command == 'ad':
