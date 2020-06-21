@@ -79,6 +79,9 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
         except asyncio.CancelledError:
             active = False
 
+        except KeyboardInterrupt:
+            active = False
+
         except Exception as err:
             logger.error('caught {}: {}'.format(type(err), err))
 
