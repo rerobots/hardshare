@@ -36,7 +36,7 @@ from .addons import camera_main
 
 logger = logging.getLogger('hardshare')
 logger.setLevel(logging.WARNING)
-loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a')
+loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a', delay=True)
 loghandler.setLevel(logging.DEBUG)
 loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s) (pid: {});'
                                           ' %(asctime)s ; %(message)s'
