@@ -16,9 +16,9 @@ from setuptools import setup
 
 # Version of this package
 MAJOR=0
-MINOR=5
-PATCH=1
-devel=True
+MINOR=6
+PATCH=0
+devel=False
 
 version = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 if devel:
