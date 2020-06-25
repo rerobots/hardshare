@@ -1,0 +1,9 @@
+hardshare client (0.6.0)
+
+  * Add CLI switch ``--permit-more` to register more than 1 wdeployment.
+
+  * Include URL in all formats of `config -l`.
+
+  * Implement `attach-camera` to share and split a camera feed among instances.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Thu, 25 Jun 2020 14:33:43 -0700
