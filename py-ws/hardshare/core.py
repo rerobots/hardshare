@@ -462,7 +462,7 @@ class WorkspaceInstance:
                                                      stderr=subprocess.DEVNULL)
             rc = await p.wait()
             if rc != 0:
-                raise Exception('command ({}) returen error code: {}'.format(launch_args, rc))
+                raise Exception('command ({}) return error code: {}'.format(launch_args, rc))
 
             if self.cprovider == 'docker':
                 self.container_addr = await self.get_container_addr(timeout=10)
