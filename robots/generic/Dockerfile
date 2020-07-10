@@ -8,7 +8,7 @@
 
 FROM ubuntu:18.04
 
-RUN apt-get update \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     && apt-get -y install \
        openssh-server \
        openvpn \
