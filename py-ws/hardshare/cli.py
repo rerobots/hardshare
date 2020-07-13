@@ -375,6 +375,9 @@ def main(argv=None):
         config, index, rc = get_config_with_index(argv_parsed.id_prefix)
         if rc != 0:
             return rc
+        if 'ssh_key' not in config or config['ssh_key'] is None:
+            print('WARNING: local configuration does not declare SSH key.\n'
+                  'Instances with connection type sshtun cannot launch.')
         if argv_parsed.become_daemon:
             if os.fork() != 0:
                 return 0

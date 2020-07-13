@@ -19,6 +19,7 @@ import hashlib
 import json
 import logging
 import os
+import os.path
 import signal
 import socket
 
@@ -296,6 +297,20 @@ class HSAPIClient:
 
         if payload['cmd'] == 'INSTANCE_LAUNCH':
             if self.current is None:
+                if payload['ct'] == 'sshtun':
+                    if 'ssh_key' not in self.local_config or self.local_config['ssh_key'] is None:
+                        logger.warning('request to launch with connection type sshtun, '
+                                       'but local configuration declares no SSH key')
+                        logger.debug('in response to INSTANCE_LAUNCH, sending NACK')
+                        await ws.send_str(json.dumps({
+                            'v': 0,
+                            'cmd': 'NACK',
+                            'mi': payload['mi'],
+                        }))
+                        return True
+                    if not os.path.exists(self.local_config['ssh_key']):
+                        logger.warning('key path for sshtun appears to not exist: {}'.format(self.local_config['ssh_key']))
+
                 self.ws_recvmap[payload['id']] = asyncio.Queue()
                 cprovider = self.current_wdeployment['cprovider']
                 cargs = self.current_wdeployment.get('cargs', None)
@@ -318,6 +333,7 @@ class HSAPIClient:
                     'cmd': 'ACK',
                     'mi': payload['mi'],
                 }))
+
             else:
                 logger.debug('in response to INSTANCE_LAUNCH, sending NACK')
                 await ws.send_str(json.dumps({
