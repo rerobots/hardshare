@@ -18,6 +18,8 @@ The source code repository is at https://github.com/rerobots/hardshare
    intro
    quickstart
    install
+   addons
+   attach_camera
    maint
    bestpractices
    help
