@@ -87,6 +87,11 @@ find the ``cprovider`` entry in the configuration file at ``~/.rerobots/main``,
 and change it to ``podman``.
 
 
+Including devices
+-----------------
+
+
+
 .. _rerobots: https://rerobots.net/
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/
