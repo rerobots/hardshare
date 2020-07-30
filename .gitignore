@@ -1,4 +1,5 @@
 *~
 hardshare_client.log
+hardshare_client.*.log
 *.pyc
 ssh_host_ecdsa_key.pub

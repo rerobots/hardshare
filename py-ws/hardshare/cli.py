@@ -34,16 +34,6 @@ from .err import Error as HSError
 from .addons import camera_main
 
 
-logger = logging.getLogger('hardshare')
-logger.setLevel(logging.WARNING)
-loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a', delay=True)
-loghandler.setLevel(logging.DEBUG)
-loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s) (pid: {});'
-                                          ' %(asctime)s ; %(message)s'
-                                          .format(os.getpid())))
-logger.addHandler(loghandler)
-
-
 def get_config_with_index(id_prefix=None):
     try:
         config = get_local_config()
@@ -82,6 +72,15 @@ def get_config_with_index(id_prefix=None):
 
 
 def main(argv=None):
+    pkglogger = logging.getLogger('hardshare')
+    pkglogger.setLevel(logging.WARNING)
+    loghandler = logging.handlers.WatchedFileHandler(filename='hardshare_client.log', mode='a', delay=True)
+    loghandler.setLevel(logging.DEBUG)
+    loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s) (pid: {});'
+                                              ' %(asctime)s ; %(message)s'
+                                              .format(os.getpid())))
+    pkglogger.addHandler(loghandler)
+
     if argv is None:
         argv = sys.argv[1:]
     argparser = argparse.ArgumentParser(description=('Command-line interface'
@@ -297,7 +296,7 @@ def main(argv=None):
         return 0
 
     if argv_parsed.verbose:
-        logger.setLevel(logging.DEBUG)
+        pkglogger.setLevel(logging.DEBUG)
 
     if argv_parsed.output_format is not None:
         output_format = argv_parsed.output_format.lower()
@@ -378,6 +377,7 @@ def main(argv=None):
         if 'ssh_key' not in config or config['ssh_key'] is None:
             print('WARNING: local configuration does not declare SSH key.\n'
                   'Instances with connection type sshtun cannot launch.')
+        pkglogger.removeHandler(loghandler)
         if argv_parsed.become_daemon:
             if os.fork() != 0:
                 return 0
@@ -385,7 +385,14 @@ def main(argv=None):
             os.close(1)
             os.close(2)
         else:
-            logger.addHandler(logging.StreamHandler())
+            pkglogger.addHandler(logging.StreamHandler())
+        logfname = 'hardshare_client.{}.log'.format(config['wdeployments'][index]['id'])
+        loghandler = logging.FileHandler(filename=logfname, mode='a', delay=True)
+        loghandler.setLevel(logging.DEBUG)
+        loghandler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (%(levelname)s) (pid: {});'
+                                                  ' %(asctime)s ; %(message)s'
+                                                  .format(os.getpid())))
+        pkglogger.addHandler(loghandler)
         return ac.run_sync(config['wdeployments'][index]['id'])
 
     elif argv_parsed.command == 'terminate':
