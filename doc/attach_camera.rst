@@ -10,6 +10,12 @@ inside the instance. Furthermore, rectangular subsets of this image can be shown
 for different workspaces.
 
 
+Prerequisites
+-------------
+
+`install OpenCV <https://docs.opencv.org/4.4.0/d2/de6/tutorial_py_setup_in_ubuntu.html>`_
+
+
 Preparing a new configuration
 -----------------------------
 
