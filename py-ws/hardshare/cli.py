@@ -142,6 +142,9 @@ def main(argv=None):
     config_parser.add_argument('--add-raw-device', metavar='PATH', type=str,
                                dest='raw_device_path', default=None,
                                help='add device file to present in container')
+    config_parser.add_argument('--cprovider', metavar='CPROVIDER', type=str,
+                               dest='cprovider', default=None,
+                               help='select a container provider: docker, podman')
     config_parser.add_argument('--assign-image', metavar='IMG', type=str,
                                dest='cprovider_img', default=None,
                                help='assign image for cprovider to use (advanced option)')
@@ -656,6 +659,17 @@ def main(argv=None):
                 return 1
 
             config['wdeployments'][index]['init_inside'] = []
+            modify_local(config)
+
+        elif argv_parsed.cprovider is not None:
+            selected_cprovider = argv_parsed.cprovider.lower()
+            if selected_cprovider not in ['docker', 'podman']:
+                print('ERROR: cprovider must be one of the following: docker, podman')
+                return 1
+            config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+            if rc != 0:
+                return rc
+            config['wdeployments'][index]['cprovider'] = selected_cprovider
             modify_local(config)
 
         elif argv_parsed.cprovider_img is not None:
