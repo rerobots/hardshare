@@ -1,5 +1,5 @@
-Add-ons
-=======
+rerobots add-ons
+================
 
 All workspace deployments provided by rerobots_ and all devices provided by
 hardshare users support the core API. Additional features, referred to as
