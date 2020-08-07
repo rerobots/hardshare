@@ -23,3 +23,8 @@ Preparing a new configuration
 2. Program each device in turn and watch to determine which device has a screen that clears (indicating that it is being flashed).
 3. Open the full image in an image editor and find top-left and bottom-right corners of rectangles for each board.
 4. Create the map file, upload it to your host, and start hardshare attach-camera with it.
+
+The map file has JSON_ syntax and the form: ``{"<wd identifier>": [X0, Y0, X1, Y1], ...}``.
+
+
+.. _JSON: https://www.json.org/json-en.html
