@@ -201,6 +201,7 @@ class WorkspaceInstance:
             logger.info('found hostkey!')
             with open(hostkey_filename, 'rt', encoding='utf-8') as fp:
                 return fp.read().strip()
+            os.unlink(hostkey_filename)
         logger.info('did not find hostkey before timeout of {} s'.format(timeout))
         return None
 
