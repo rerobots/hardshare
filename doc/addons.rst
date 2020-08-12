@@ -9,5 +9,8 @@ satisfied.
 For example, many workspaces include cameras. The add-on ``cam`` enables working
 with cameras via ``api.rerobots.net``
 
+Hardshare provides a feature for sharing a camera feed among several distinct
+workspace deployments, as described in the section: :doc:`attach_camera`.
+
 
 .. _rerobots: https://rerobots.net/
