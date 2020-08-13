@@ -59,3 +59,19 @@ DigitalOcean_:
 .. _Packet: https://www.packet.com/
 .. _DigitalOcean: https://www.digitalocean.com/
 .. _sandboxes: https://rerobots.net/sandbox
+
+
+Interfaces around instances
+---------------------------
+
+The rerobots/hardshare architecture provides for specifying how hardware appears
+to an instance. If carefully configured, any device can be shared through
+instances safely and securely. The precise meanings of *safe* and *secure*
+depend on the hardware in the workspace deployment, but the basic organization
+is the same: associate actions with lifecycle events (e.g., initialization), and
+monitor input and output streams.
+
+The default configuration of a new hardshare client installation does not
+enforce any contracts. Instances in this case have unfiltered access to
+hardware. This can be a good first choice in trusted settings, such as a team
+working closely together at a company.
