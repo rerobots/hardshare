@@ -10,7 +10,7 @@ before_install:
   - pipenv run pip install pip==18.0
 
 install:
-  - cd py-ws && pipenv install --skip-lock --dev .
+  - cd py-ws && pipenv install --skip-lock --dev . && cd ..
 
 script: make check
 
