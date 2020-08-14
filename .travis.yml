@@ -5,9 +5,12 @@ python:
   - "3.7"
   - "3.8"
 
+before_install:
+  - pip install pipenv
+  - pipenv run pip install pip==18.0
+
 install:
-  - pip install -r py-ws/devel-requirements.txt
-  - cd py-ws && pip install . && cd ..
+  - cd py-ws && pipenv install --skip-lock --dev .
 
 script: make check
 
