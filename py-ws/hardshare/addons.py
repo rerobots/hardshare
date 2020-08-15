@@ -20,7 +20,6 @@ except ImportError:
     from asyncio import get_event_loop as get_running_loop
 
 import aiohttp
-import requests
 
 # inline import:
 #   cv2
@@ -89,19 +88,29 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
             await session.close()
 
 
-def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, crop=None):
+async def register_camera_uploader(opts, tok):
     headers = {'Authorization': 'Bearer {}'.format(tok)}
+    async with aiohttp.ClientSession(headers=headers) as session:
+        async with session.post('https://api.rerobots.net/hardshare/cam', json=opts) as res:
+            assert res.status == 200
+            return (await res.json())['id']
+
+
+async def unregister_camera_uploader(hscamera_id, tok):
+    headers = {'Authorization': 'Bearer {}'.format(tok)}
+    async with aiohttp.ClientSession(headers=headers) as session:
+        await session.delete('https://api.rerobots.net/hardshare/cam/{}'.format(hscamera_id))
+
+
+def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, crop=None):
     opts = {'wds': wdeployments}
     if crop:
         opts['crop'] = crop
-    res = requests.post('https://api.rerobots.net/hardshare/cam', json=opts, headers=headers)
-    assert res.ok
-    hscamera_id = res.json()['id']
     loop = asyncio.get_event_loop()
+    hscamera_id = loop.run_until_complete(register_camera_uploader(opts, tok))
     try:
         loop.run_until_complete(camera_upload(hscamera_id, dev, tok, rotate, width, height))
     except KeyboardInterrupt:
         pass
     finally:
-        res = requests.delete('https://api.rerobots.net/hardshare/cam/{}'.format(hscamera_id), headers=headers)
-        assert res.ok
+        loop.run_until_complete(unregister_camera_uploader(hscamera_id, tok))
