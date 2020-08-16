@@ -53,7 +53,6 @@ __version__ = '{}'
               'aiohttp',
               'cryptography',
               'pyjwt',
-              'requests',
               'PyYAML'
           ],
           entry_points={'console_scripts': ['hardshare = hardshare.cli:main']}

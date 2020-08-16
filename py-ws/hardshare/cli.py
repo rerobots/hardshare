@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 import yaml
-from requests.exceptions import ConnectionError
+from aiohttp.client_exceptions import ClientConnectorError as ConnectionError
 
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys

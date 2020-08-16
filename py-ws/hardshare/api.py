@@ -24,7 +24,6 @@ import signal
 import socket
 
 import aiohttp
-import requests
 
 from . import core
 from . import mgmt
@@ -58,6 +57,20 @@ class HSAPIClient:
             self.default_key_index = None
             self._cached_key = None
         self.current_wdeployment = None
+        self.loop.run_until_complete(self.async_init())
+
+
+    async def async_init(self):
+        if self.verify_certs:
+            self.session = aiohttp.ClientSession(headers=self._add_key_header())
+        else:
+            conn = aiohttp.TCPConnector(ssl=False)
+            self.session = aiohttp.ClientSession(connector=conn, headers=self._add_key_header())
+
+
+    def __del__(self):
+        self.loop.run_until_complete(self.session.close())
+
 
     def _add_key_header(self, headers=None):
         if headers is None:
@@ -68,15 +81,15 @@ class HSAPIClient:
 
     def get_remote_config(self):
         headers = self._add_key_header()
-        res = requests.get(self.base_uri + '/list',
-                           headers=headers, verify=self.verify_certs)
-        if res.ok:
-            return res.json()
-        elif res.status_code == 400:
-            return {'err': res.json()['error_message']}
+        res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list'))
+        if res.status == 200:
+            return self.loop.run_until_complete(res.json())
+        elif res.status == 400:
+            err = self.loop.run_until_complete(res.json())['error_message']
+            return {'err': err}
         else:
             raise Error('error contacting hardshare server: {}'
-                        .format(res.status_code))
+                        .format(res.status))
 
     def sync_config(self):
         mgmt.modify_local(self.local_config)
@@ -95,11 +108,9 @@ class HSAPIClient:
         if at_most_one and len(self.local_config['wdeployments']) > 0:
             raise Error('local configuration already declares a'
                         ' workspace deployment (and at_most_one=True)')
-        headers = self._add_key_header()
-        res = requests.post(self.base_uri + '/register',
-                            headers=headers, verify=self.verify_certs)
-        if res.ok:
-            payload = res.json()
+        res = self.loop.run_until_complete(self.session.post(self.base_uri + '/register'))
+        if res.status == 200:
+            payload = self.loop.run_until_complete(res.json())
             assert 'id' in payload
             self.local_config['wdeployments'].append({
                 'id': payload['id'],
@@ -108,20 +119,19 @@ class HSAPIClient:
             self.sync_config()
         else:
             raise Error('error contacting hardshare server: {}'
-                        .format(res.status_code))
+                        .format(res.status))
         return payload['id']
 
     def declare_existing(self, id_prefix):
-        headers = self._add_key_header()
-        res = requests.get(self.base_uri + '/list',
-                           headers=headers, verify=self.verify_certs)
-        if res.ok:
-            payload = res.json()
+        res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list'))
+        if res.status == 200:
+            payload = self.loop.run_until_complete(res.json())
         elif res.status_code == 400:
-            return {'err': res.json()['error_message']}
+            err = self.loop.run_until_complete(res.json())['error_message']
+            return {'err': err}
         else:
             raise Error('error contacting hardshare server: {}'
-                        .format(res.status_code))
+                        .format(res.status))
         for wd in payload['deployments']:
             if wd['id'].startswith(id_prefix):
                 id_prefix = wd['id']
@@ -146,19 +156,18 @@ class HSAPIClient:
                 raise ValueError(msg)
             else:
                 id_prefix = self.local_config['wdeployments'][0]['id']
-        headers = self._add_key_header()
-        res = requests.get(self.base_uri + '/check/{}'.format(id_prefix),
-                           headers=headers, verify=self.verify_certs)
-        if res.ok:
+        res = self.loop.run_until_complete(self.session.get(self.base_uri + '/check/{}'.format(id_prefix)))
+        if res.status == 200:
             pass
-        elif res.status_code == 404:
+        elif res.status == 404:
             return {'err': 'not found', 'id_prefix': id_prefix}
-        elif res.status_code == 400:
-            return {'err': res.json()['error_message'], 'id_prefix': id_prefix}
+        elif res.status == 400:
+            err = self.loop.run_until_complete(res.json())['error_message']
+            return {'err': err, 'id_prefix': id_prefix}
         else:
             raise Error('error contacting hardshare server: {}'
-                        .format(res.status_code))
-        return res.json()
+                        .format(res.status))
+        return self.loop.run_until_complete(res.json())
 
     def dissolve_registration(self, id_prefix=None):
         if id_prefix is None:
@@ -168,19 +177,18 @@ class HSAPIClient:
                 raise ValueError(msg)
             else:
                 id_prefix = self.local_config['wdeployments'][0]['id']
-        headers = self._add_key_header()
-        res = requests.post(self.base_uri + '/dis/{}'.format(id_prefix),
-                            headers=headers, verify=self.verify_certs)
-        if res.ok:
+        res = self.loop.run_until_complete(self.session.post(self.base_uri + '/dis/{}'.format(id_prefix)))
+        if res.status == 200:
             pass
-        elif res.status_code == 404:
+        elif res.status == 404:
             return {'err': 'not found', 'id_prefix': id_prefix}
-        elif res.status_code == 400:
-            return {'err': res.json()['error_message'], 'id_prefix': id_prefix}
+        elif res.status == 400:
+            err = self.loop.run_until_complete(res.json())['error_message']
+            return {'err': err, 'id_prefix': id_prefix}
         else:
             raise Error('error contacting hardshare server: {}'
-                        .format(res.status_code))
-        return res.json()
+                        .format(res.status))
+        return self.loop.run_until_complete(res.json())
 
     def terminate(self, wdid=None):
         if wdid is None:
