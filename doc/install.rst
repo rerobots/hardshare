@@ -58,6 +58,8 @@ Finally, the primary client is implemented in Python and `available via PyPI
 
   pip install hardshare
 
+or ``pipenv install hardshare``.
+
 
 Preparing a cprovider
 ---------------------
