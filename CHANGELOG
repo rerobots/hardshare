@@ -1,3 +1,18 @@
+hardshare client (0.7.0)
+
+  * Remove `requests` dependency (https://github.com/rerobots/hardshare/issues/8).
+
+  * Provide CLI switch to change cprovider: config --cprovider
+
+  * Begin Pipfile, Pipfile.lock for installation via Pipenv (https://pipenv.pypa.io/en/latest/).
+
+  * Warn, prevent launch of sshtun connection type instances if no SSH keys.
+
+  * Improve documentation.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Tue, 18 Aug 2020 16:54:41 -0700
+
+
 hardshare client (0.6.0)
 
   * Add CLI switch ``--permit-more` to register more than 1 wdeployment.
