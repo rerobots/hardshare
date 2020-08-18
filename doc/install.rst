@@ -58,7 +58,7 @@ Finally, the primary client is implemented in Python and `available via PyPI
 
   pip install hardshare
 
-or ``pipenv install hardshare``.
+or ``pipenv install hardshare`` if Pipenv_ is installed.
 
 
 Preparing a cprovider
@@ -97,3 +97,4 @@ Including devices
 .. _rerobots: https://rerobots.net/
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/
+.. _Pipenv: https://pipenv.pypa.io/
