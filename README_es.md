@@ -1,0 +1,5 @@
+hardshare
+=========
+
+Introducción
+------------
