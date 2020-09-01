@@ -79,11 +79,14 @@ class HSAPIClient:
             headers['Authorization'] = 'Bearer ' + self._cached_key
         return headers
 
-    def get_remote_config(self):
+    def get_remote_config(self, include_dissolved=True):
         headers = self._add_key_header()
         res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list'))
         if res.status == 200:
-            return self.loop.run_until_complete(res.json())
+            payload = self.loop.run_until_complete(res.json())
+            if not include_dissolved:
+                payload['deployments'] = [wd for wd in payload['deployments'] if wd['dissolved'] is None]
+            return payload
         elif res.status == 400:
             err = self.loop.run_until_complete(res.json())['error_message']
             return {'err': err}
