@@ -581,6 +581,8 @@ def main(argv=None):
                             print('\tcreated: {}'.format(wd['date_created']))
                             print('\torigin (address) of registration: {}'
                                   .format(wd['origin']))
+                            if wd['dissolved']:
+                                print('\tdissolved: {}'.format(wd['dissolved']))
 
         elif argv_parsed.prune_err_keys:
             _, errored_keys = list_local_keys(collect_errors=True)
