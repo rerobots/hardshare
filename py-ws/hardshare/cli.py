@@ -168,6 +168,9 @@ def main(argv=None):
     config_parser.add_argument('--local', action='store_true', default=False,
                                dest='only_local_config',
                                help='only show local configuration data')
+    config_parser.add_argument('--include-dissolved', action='store_true', default=False,
+                               dest='include_dissolved',
+                               help='include configuration data of dissolved workspace deployments')
     config_parser.add_argument('--declare', metavar='ID',
                                dest='declared_wdeployment_id', default=None,
                                help=('declare that workspace deployment is'
@@ -506,7 +509,7 @@ def main(argv=None):
                 # Try to get remote config, given possibly new local config
                 try:
                     assert ac is not None
-                    remote_config = ac.get_remote_config()
+                    remote_config = ac.get_remote_config(include_dissolved=argv_parsed.include_dissolved)
                 except:
                     print('Error occurred while contacting remote server '
                           'at {}'.format(ac.base_uri))
