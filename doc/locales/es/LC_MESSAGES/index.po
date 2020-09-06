@@ -19,7 +19,8 @@ msgstr ""
 msgid ""
 "**hardshare** is a system for sharing your robot through the rerobots_ "
 "infrastructure. It is in the early stages of development."
-msgstr "**hardshare** es un sistema para compartir su robot por la infraestructura de rerobots_."
+msgstr "**hardshare** es un sistema para compartir su robot por la infraestructura de rerobots_. "
+"Está en las primeras etapas de desarrollo."
 
 #: ../../index.rst:7
 msgid ""
