@@ -27,8 +27,10 @@ msgid ""
 "Before you can share your robots, you must have a user account on "
 "rerobots. The service is not yet generally available, but if you are "
 "interested, `ask for an account <https://rerobots.net/contact>`_."
-msgstr ""
+msgstr "Antes de poder compartir sus robots, debe tener una cuenta de usuario de rerobots. "
+"El servicio todavía no está disponible en general, pero si ústed está interesado, "
+"`solicítanos una cuenta de usuario <https://rerobots.net/contact>`_."
 
 #: ../../index.rst:11
 msgid "The source code repository is at https://github.com/rerobots/hardshare"
-msgstr ""
+msgstr "El repositorio de código fuente está en https://github.com/rerobots/hardshare"
