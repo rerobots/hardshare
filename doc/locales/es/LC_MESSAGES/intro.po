@@ -28,7 +28,7 @@ msgstr "Visión de conjunto"
 
 #: ../../intro.rst:13
 msgid "As illustrated above, the main parts are:"
-msgstr ""
+msgstr "Como se muestra arriba, los partes principales son:"
 
 #: ../../intro.rst:15
 msgid "your robot (also referred to as \"device\" or \"devices\"),"
