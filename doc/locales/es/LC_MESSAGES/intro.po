@@ -36,15 +36,15 @@ msgstr "su robot (también conocido como \"dispositivo\" o \"dispositivos\"),"
 
 #: ../../intro.rst:16
 msgid "host computer on which a hardshare client runs,"
-msgstr ""
+msgstr "computadora en la que se ejecuta un cliente de hardshare,"
 
 #: ../../intro.rst:17
 msgid "rerobots infrastructure,"
-msgstr ""
+msgstr "infraestructura de rerobots,"
 
 #: ../../intro.rst:18
 msgid "remote users."
-msgstr ""
+msgstr "usuarios remotos."
 
 #: ../../intro.rst:20
 msgid ""
