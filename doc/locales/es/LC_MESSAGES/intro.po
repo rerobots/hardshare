@@ -58,6 +58,7 @@ msgid ""
 msgstr "Aquí la palabra \"robot\" se interpreta en sentido amplio: "
 "esencialmente es un dispositivo o una colección de dispositivos que están conectados de algun modo. "
 "El robot y el entorno juntos se llaman `workspace deployment <https://help.rerobots.net/prelim.html>`_. "
+"Robots que son propiedad y están administrados por la empresa rerobots siempre son presentados como workspace deployments con IDs únicos."
 
 #: ../../intro.rst:27
 msgid ""
