@@ -78,7 +78,7 @@ def list_local_keys(collect_errors=False):
         x = os.path.join(keys_dir, x)
         try:
             with open(x) as fp:
-                jwt.decode(fp.read(),
+                jwt.decode(fp.read().strip(),
                            issuer='rerobots.net',
                            audience='rerobots.net',
                            key=WEBUI_PUBLIC_KEY,
