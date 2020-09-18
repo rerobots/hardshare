@@ -16,6 +16,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
        nano \
     && mkdir -p /var/run/sshd
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && apt-get -y install \
+       python3 \
+       python3-aiohttp
+
 COPY init.sh /sbin/rerobots-hs-init.sh
 
 CMD ["/sbin/rerobots-hs-init.sh"]
