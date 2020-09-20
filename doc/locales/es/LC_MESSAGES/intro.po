@@ -95,7 +95,7 @@ msgstr "Es posible que los usuarios remotos no tengan cuentas de rerobots. "
 
 #: ../../intro.rst:43
 msgid "Lifecycle of instances"
-msgstr ""
+msgstr "Ciclo de vida de instances"
 
 #: ../../intro.rst:45
 msgid ""
@@ -105,7 +105,8 @@ msgid ""
 "getting credentials, and terminating an instance is similar to how you "
 "might get a \"compute node\" from a \"cloud computing\" company, like "
 "Packet_ or DigitalOcean_:"
-msgstr ""
+msgstr "El tiempo durante que un usuario tiene acceso exclusivo a un workspace deployment "
+"se llama `instance <https://help.rerobots.net/prelim.html>`_. "
 
 #: ../../intro.rst:51
 msgid "Someone requests access using the unique ID of the workspace deployment."
