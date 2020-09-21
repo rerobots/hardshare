@@ -107,6 +107,9 @@ msgid ""
 "Packet_ or DigitalOcean_:"
 msgstr "El tiempo durante que un usuario tiene acceso exclusivo a un workspace deployment "
 "se llama `instance <https://help.rerobots.net/prelim.html>`_. "
+"El proceso de solicitar, obtener cartas credenciales, y terminar un instance es similar "
+"a como ústed podría obtener un \"compute node\" de una compañía de \"cloud computing\", "
+"por ejemplo Packet_ o DigitalOcean_:"
 
 #: ../../intro.rst:51
 msgid "Someone requests access using the unique ID of the workspace deployment."
