@@ -113,7 +113,7 @@ msgstr "El tiempo durante que un usuario tiene acceso exclusivo a un workspace d
 
 #: ../../intro.rst:51
 msgid "Someone requests access using the unique ID of the workspace deployment."
-msgstr ""
+msgstr "Alguien solicita acceso mediante el ID único del workspace deployment."
 
 #: ../../intro.rst:52
 msgid "The remote user is connected through a container that you host locally."
