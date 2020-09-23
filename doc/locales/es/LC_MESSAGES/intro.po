@@ -124,7 +124,8 @@ msgid ""
 "Their input/output can be constrained according to filter rules. For "
 "example, the \"reboot\" command is dropped, while getting sensor data is "
 "accepted."
-msgstr ""
+msgstr "Su entrada/salida puede ser constreñir por las reglas del filtro. "
+"Por ejemplo, el comando \"reboot\" se deja caer, mientras recibir datos del sensor es aceptado."
 
 #: ../../intro.rst:55
 msgid ""
