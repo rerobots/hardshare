@@ -117,7 +117,7 @@ msgstr "Alguien solicita acceso mediante el ID único del workspace deployment."
 
 #: ../../intro.rst:52
 msgid "The remote user is connected through a container that you host locally."
-msgstr ""
+msgstr "El usuario remoto está conectado a través un contenedor que ústed aloja localmente."
 
 #: ../../intro.rst:53
 msgid ""
