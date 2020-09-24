@@ -59,6 +59,7 @@ msgstr "Aquí la palabra \"robot\" se interpreta en sentido amplio: "
 "esencialmente es un dispositivo o una colección de dispositivos que están conectados de algun modo. "
 "El robot y el entorno juntos se llaman `workspace deployment <https://help.rerobots.net/prelim.html>`_. "
 "Robots que son propiedad y están administrados por la empresa rerobots siempre son presentados como workspace deployments con IDs únicos."
+" Para compartir su robot a través de hardshare, también debe asignar una ID única."
 
 #: ../../intro.rst:27
 msgid ""
@@ -131,11 +132,12 @@ msgstr "Su entrada/salida puede ser constreñir por las reglas del filtro. "
 msgid ""
 "The instance is terminated when the remote user is done. (If needed, you "
 "can force termination at any time.)"
-msgstr ""
+msgstr "El instance termina cuando el usuario remoto ha acabado. "
+"(Si es necesario, ústed puede forzar la terminación en cualquier momento.)"
 
 #: ../../intro.rst:65
 msgid "Interfaces around instances"
-msgstr ""
+msgstr "Interfaces de instances"
 
 #: ../../intro.rst:67
 msgid ""
@@ -145,7 +147,8 @@ msgid ""
 "and *secure* depend on the hardware in the workspace deployment, but the "
 "basic organization is the same: associate actions with lifecycle events "
 "(e.g., initialization), and monitor input and output streams."
-msgstr ""
+msgstr "La arquitectura de rerobots/hardshare proporciona especificar cómo aparece el hardware a un instance. "
+"Si configurar con cuidado, cualquier dispositivo se puede compartir mediante instances con seguridad. "
 
 #: ../../intro.rst:74
 msgid ""
