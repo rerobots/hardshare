@@ -265,7 +265,7 @@ class WorkspaceInstance:
                           '-p {TH_INFRA_PORT} '
                           '{THUSER}@{THADDR}'.format(
                               THADDR=self.tunnelhub['ipv4'],
-                              THPORT=self.tunnelhub['listen_port'],
+                              THPORT=2210,
                               TUNNELKEY_PATH=self.tunnelkey_path,
                               TH_INFRA_PORT=self.tunnelhub['connect_port'],
                               CONTAINERADDR=self.container_addr,
