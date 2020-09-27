@@ -1,3 +1,20 @@
+hardshare client (0.8.0)
+
+  * Fix bug: trailing newline breaks API token reading.
+
+  * Add option to not include dissolved wdeployments in HSAPIClient.get_remote_config().
+
+  * Add new CLI switch --include-dissolved.
+
+  * Create pip requirements file for building documentation (in doc/ of source code).
+
+  * Include aiohttp in generic base Docker image.
+
+  * Update client following upstream changes to rerobots core.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Sat, 26 Sep 2020 22:49:06 -0700
+
+
 hardshare client (0.7.0)
 
   * Remove `requests` dependency (https://github.com/rerobots/hardshare/issues/8).
