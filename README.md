@@ -34,13 +34,30 @@ README files in subdirectories that describe contents therein.
 
 Summary:
 
-* doc - source of the user guide. To build, go in that directory and `make`.
+* doc - source of the user guide. Instructions for building are below.
 * robots - code and configuration data for particular robots.
 * py-ws - source code for the main daemon and CLI program. Releases can be installed directly from PyPI at https://pypi.org/project/hardshare/
 * bootstrapping - scripts for configuring new hosts on which to install hardshare clients.
 
 Current testing status for ``master`` branch on Travis CI:
 [![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
+
+
+Building documentation
+----------------------
+
+    cd doc
+    pip install -r requirements.txt
+    make
+
+The `pip install` call is only required once to get required Python packages. If
+you are working on translations to natural languages besides American English,
+then
+
+    make gettext-update
+
+to generate and update gettext po files. Current translation work is tracked at
+https://github.com/rerobots/hardshare/issues/1
 
 
 Participating
