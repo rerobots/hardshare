@@ -28,11 +28,19 @@ The main aspects to an operational ``hardshare`` installation:
 4. a container provider (also known as *cprovider*),
 5. rules around instance initialization, termination, and filtering.
 
+
+API tokens
+``````````
+
 Instructions about managing API tokens are `in the rerobots Web Guide
 <https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_. The
 token that you create at https://rerobots.net/tokens and download is saved to
 your local hardshare configuration. As such, the default expiration time might
 be too small for your application.
+
+
+SSH keys
+````````
 
 There might already be an SSH key at ``~/.ssh/id_rsa``. If not, or if you want to
 create a new pair for this purpose, then::
@@ -46,6 +54,10 @@ keys, for example from `DigitalOcean
 <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2>`_
 or `GitHub
 <https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`_.
+
+
+Containers
+``````````
 
 Hardshare shares hardware among remote users through containers. The term
 *container* in the context of hardshare includes Linux containers. Supporting
