@@ -42,6 +42,9 @@ be too small for your application.
 SSH keys
 ````````
 
+An SSH key is required to create SSH tunnels through which remote users connect
+to containers that you host.
+
 There might already be an SSH key at ``~/.ssh/id_rsa``. If not, or if you want to
 create a new pair for this purpose, then::
 
