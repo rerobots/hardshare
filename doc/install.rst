@@ -28,6 +28,12 @@ The main aspects to an operational ``hardshare`` installation:
 4. a container provider (also known as *cprovider*),
 5. rules around instance initialization, termination, and filtering.
 
+To begin, initialize a new configuration::
+
+  hardshare config -c
+
+
+.. _ssec:api-tokens:
 
 API tokens
 ``````````
@@ -36,14 +42,16 @@ Instructions about managing API tokens are `in the rerobots Web Guide
 <https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_. The
 token that you create at https://rerobots.net/tokens and download is saved to
 your local hardshare configuration. As such, the default expiration time might
-be too small for your application.
+be too small for your application. Download the token, and add it::
+
+  hardshare config --add-key path/to/your/jwt.txt
 
 
 SSH keys
 ````````
 
 An SSH key is required to create SSH tunnels through which remote users connect
-to containers that you host.
+to containers that you host. This section describes how to prepare one for hardshare.
 
 There might already be an SSH key at ``~/.ssh/id_rsa``. If not, or if you want to
 create a new pair for this purpose, then::
@@ -52,11 +60,28 @@ create a new pair for this purpose, then::
 
 to start an interactive process to create a new pair. The default options are
 sufficient here; the prompt "default" is selected by simply pushing ENTER
-without typing text. Additional instructions about creating and working with SSH
-keys, for example from `DigitalOcean
-<https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2>`_
-or `GitHub
-<https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`_.
+without typing text. For convenience, we recommend that you do not create a
+password for the key. If you insist, then managing such a key is discussed
+below. Additional instructions about creating and working with SSH keys, for
+example from DigitalOcean_ or GitHub_.
+
+The SSH key is used by the hardshare client in a way that does not motivate
+adding password protection: to create reverse tunnels from rerobots-managed
+servers into containers that you host. Only the public key is copied to the
+rerobots server-side. Furthermore, :ref:`API tokens <ssec:api-tokens>` provide
+for authentication and authorization of the hardshare client with respect to
+your rerobots account. In summary, this SSH key has a technical role and
+provides for encryption, but exposure risk of the secret key small.
+
+If the SSH key has a password, then there must be some way for the hardshare
+client to use the key without having to know the password. For this, you should
+configure ``ssh-agent``, usage of which is presented in the `OpenBSD manual`_.
+If you are new to ``ssh-agent``, we recommend reading about basic ideas of how
+it works at http://www.unixwiz.net/techtips/ssh-agent-forwarding.html
+
+Finally, add the SSH secret key path::
+
+  hardshare config --add-ssh-path path/to/your/ssh_key
 
 
 Containers
@@ -107,9 +132,15 @@ and change it to ``podman``.
 Including devices
 -----------------
 
+For example, ::
+
+  hardshare config --add-raw-device /dev/ttyUSB0
 
 
 .. _rerobots: https://rerobots.net/
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/
 .. _Pipenv: https://pipenv.pypa.io/
+.. _DigitalOcean: https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2
+.. _GitHub: https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh
+.. _OpenBSD manual: http://man.openbsd.org/OpenBSD-current/man1/ssh-agent.1
