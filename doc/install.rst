@@ -99,6 +99,10 @@ Finally, the primary client is implemented in Python and `available via PyPI
   pip install hardshare
 
 or ``pipenv install hardshare`` if Pipenv_ is installed.
+If it succeeded, then you should be able to get the version from the
+command-line interface (CLI)::
+
+  hardshare version
 
 
 Preparing a cprovider
