@@ -9,5 +9,5 @@
 .PHONY: check
 check:
 	cd py-ws && pylint --exit-zero --disable=fixme hardshare
-	pylint -j 4 -E `find tests -name \*.py`
-	cd tests && pytest -v
+	pylint -j 4 -E `find py-ws/tests -name \*.py`
+	cd py-ws/tests && pytest -v
