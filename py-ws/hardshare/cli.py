@@ -84,7 +84,10 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
     argparser = argparse.ArgumentParser(description=('Command-line interface'
-                                                     ' for the hardshare client'))
+                                                     ' for the hardshare client'), add_help=False)
+    argparser.add_argument('-h', '--help', dest='print_help',
+                           action='store_true', default=False,
+                           help='print this help message and exit')
     argparser.add_argument('-V', '--version', action='store_true', default=False,
                            help='print version of hardshare (this) package.',
                            dest='print_version')
@@ -278,7 +281,7 @@ def main(argv=None):
         return 0
 
     elif argv_parsed.command is None or argv_parsed.command == 'help':
-        if argv_parsed.help_target_command is not None:
+        if hasattr(argv_parsed, 'help_target_command') and argv_parsed.help_target_command is not None:
             if argv_parsed.help_target_command == 'config':
                 config_parser.print_help()
             elif argv_parsed.help_target_command == 'register':
