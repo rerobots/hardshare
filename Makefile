@@ -10,4 +10,4 @@
 check:
 	cd py-ws && pylint --exit-zero --disable=fixme hardshare
 	pylint -j 4 -E `find py-ws/tests -name \*.py`
-	cd py-ws/tests && pytest -v
+	cd py-ws/tests && pytest -v -x
