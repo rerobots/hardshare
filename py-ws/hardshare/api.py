@@ -80,7 +80,6 @@ class HSAPIClient:
         return headers
 
     def get_remote_config(self, include_dissolved=True):
-        headers = self._add_key_header()
         res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list'))
         if res.status == 200:
             payload = self.loop.run_until_complete(res.json())
