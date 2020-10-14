@@ -3,42 +3,16 @@
 SCL <scott@rerobots.net>
 Copyright (c) 2020 rerobots, Inc.
 """
+import os
 import os.path
 import tempfile
-import time
-
-import jwt
 
 import pytest
 
 from hardshare.mgmt import add_key, get_local_config
 from hardshare.err import Error
 
-from fixtures import RPUBLIC_KEY, RSECRET_KEY
-
-
-@pytest.fixture
-def config(tmpdir, monkeypatch):
-    tmpdir_name = str(tmpdir)
-    def mock_expanduser(path):
-        return path.replace('~', tmpdir_name)
-    monkeypatch.setattr(os.path, 'expanduser', mock_expanduser)
-    return get_local_config(create_if_empty=True)
-
-@pytest.fixture
-def api_token(monkeypatch):
-    import hardshare.mgmt
-    monkeypatch.setattr(hardshare.mgmt, 'WEBUI_PUBLIC_KEY', RPUBLIC_KEY)
-    creationtime = int(time.time())
-    payload = {
-        'sub': 'username',
-        'iss': 'rerobots.net',
-        'aud': 'rerobots.net',
-        'exp': creationtime + 10,
-        'nbf': creationtime - 1
-    }
-    tok = jwt.encode(payload, key=RSECRET_KEY, algorithm='RS256')
-    return str(tok, encoding='utf-8')
+from fixtures import RPUBLIC_KEY, RSECRET_KEY, api_token, config
 
 
 def test_get_local_config(tmpdir, monkeypatch):
