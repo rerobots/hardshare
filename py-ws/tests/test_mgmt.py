@@ -23,3 +23,5 @@ def test_get_local_config(tmpdir, monkeypatch):
     config = get_local_config(create_if_empty=True)
     assert 'wdeployments' in config
     assert len(config['wdeployments']) == 0
+    assert 'keys' in config
+    assert len(config['keys']) == 0
