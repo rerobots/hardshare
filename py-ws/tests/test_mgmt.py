@@ -9,10 +9,10 @@ import tempfile
 
 import pytest
 
-from hardshare.mgmt import add_key, get_local_config
+from hardshare.mgmt import add_key, find_wd, get_local_config
 from hardshare.err import Error
 
-from fixtures import RPUBLIC_KEY, RSECRET_KEY, api_token, config
+from fixtures import RPUBLIC_KEY, RSECRET_KEY, api_token, config, config_with_wd
 
 
 def test_get_local_config(tmpdir, monkeypatch):
@@ -53,3 +53,13 @@ def test_add_key(config, api_token):
     add_key(fname)
     config = get_local_config()
     assert len(config['keys']) == 1
+
+
+@pytest.mark.parametrize('id_prefix, expected', [
+    ('ae064a41-065e-426f-9a1e-619fd2d33fb6', 0),
+    ('ae064a41', 0),
+    ('a', 0),
+    ('b', None),
+])
+def test_find_wd(config_with_wd, id_prefix, expected):
+    assert find_wd(config_with_wd, id_prefix) == expected

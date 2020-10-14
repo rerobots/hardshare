@@ -9,7 +9,7 @@ import jwt
 
 import pytest
 
-from hardshare.mgmt import get_local_config
+from hardshare.mgmt import get_local_config, modify_local
 
 
 RPUBLIC_KEY = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCZ7sEpV8VQ+mLYNbfmUIbttQgXSm6vie2Vh1q+nfiEnZITxUhWtcEg6faWxjdpi4v3ZQMUidgUkAcQRq8bqvJ7kbKLXD5ElAVYozeYlogSbb9odZrtRcrTL+GrWXGyk3S+aBQ/craU39DvJ6TXSmJbBvy6LmoLn424DFn0HXM/zzh8ZOCbbvuvdKHyOUCWdX80rdw9GLx25RWE8C/Pgk361LLZHqjIC3xsBqiCACRN2MGv4AbKUVAiveVEjhpxnQ3dFzktoqYGfKaBqITxMtOf9dOHuaJ15yxcAP77QQ3mXqm3/yTVT33QbaAqa/GUCtKckzGqoA098a6vKzUzoFFwwR3nidvcr36iwLpmofzu3xybx/xAyxpziedrWe/XxfvEm74s9XO1gndgeKhkOObATK1hJn94B+yrYGycLhdME8oMpx3Ty2sAaQH5WfEQ741J2JozEkpL/1aoN1AmVo7knBkWIgPNyFJZAcJjJdD5gieoN0oUDf02H5Rtsm/jK6k= scott@cero'
@@ -79,3 +79,18 @@ def api_token(monkeypatch):
     }
     tok = jwt.encode(payload, key=RSECRET_KEY, algorithm='RS256')
     return str(tok, encoding='utf-8')
+
+
+@pytest.fixture
+def config_with_wd(tmpdir, monkeypatch):
+    tmpdir_name = str(tmpdir)
+    def mock_expanduser(path):
+        return path.replace('~', tmpdir_name)
+    monkeypatch.setattr(os.path, 'expanduser', mock_expanduser)
+    config = get_local_config(create_if_empty=True)
+    config['wdeployments'].append({
+        'id': 'ae064a41-065e-426f-9a1e-619fd2d33fb6',
+        'owner': 'username',
+    })
+    modify_local(config)
+    return get_local_config()
