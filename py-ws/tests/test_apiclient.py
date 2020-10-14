@@ -11,7 +11,8 @@ import aiohttp
 import pytest
 
 from hardshare.api import HSAPIClient
-from hardshare.mgmt import add_key
+from hardshare.mgmt import add_key, get_local_config
+from hardshare.err import Error
 
 from fixtures import config, api_token
 
@@ -43,6 +44,15 @@ class MockClientSession:
         ]}
         return MockResponse(status=200, payload=payload)
 
+    async def post(self, url):
+        if self.headers is None or 'Authorization' not in self.headers:
+            return MockResponse(status=400, payload={'error_message': 'wrong authorization token'})
+        payload = {
+            'owner': 'username',
+            'id': 'c42b5b73-376a-4c84-a20c-be865ca424c0',
+        }
+        return MockResponse(status=200, payload=payload)
+
     async def close(self):
         pass
 
@@ -70,3 +80,26 @@ def test_get_remote_config(config, api_token, monkeypatch):
 
     remote_config = ac.get_remote_config(include_dissolved=False)
     assert len(remote_config['deployments']) == 1
+
+
+def test_register_new(config, api_token, monkeypatch):
+    monkeypatch.setattr(aiohttp, 'ClientSession', MockClientSession)
+
+    # no API token
+    ac = HSAPIClient()
+    with pytest.raises(Error):
+        ac.register_new()
+
+    # add API token
+    fd, fname = tempfile.mkstemp()
+    os.write(fd, api_token.encode())
+    os.close(fd)
+    add_key(fname)
+
+    # valid API token
+    ac = HSAPIClient()
+    wdid = ac.register_new()
+
+    config = get_local_config()
+    assert len(config['wdeployments']) == 1
+    assert config['wdeployments'][0]['id'] == wdid
