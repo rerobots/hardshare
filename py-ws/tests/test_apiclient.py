@@ -103,3 +103,6 @@ def test_register_new(config, api_token, monkeypatch):
     config = get_local_config()
     assert len(config['wdeployments']) == 1
     assert config['wdeployments'][0]['id'] == wdid
+
+    with pytest.raises(Error):
+        ac.register_new(at_most_one=True)
