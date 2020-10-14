@@ -82,7 +82,7 @@ def list_local_keys(collect_errors=False):
                            issuer='rerobots.net',
                            audience='rerobots.net',
                            key=WEBUI_PUBLIC_KEY,
-                           algorithm='RS256')
+                           algorithms=['RS256'])
             x_perm = os.stat(x).st_mode & 511
             if x_perm == 0o600 or x_perm == 0o400:
                 likely_keys.append(x)
