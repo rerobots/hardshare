@@ -497,6 +497,7 @@ def main(argv=None):
             else:
                 print(res['err'])
             return 1
+        rm_wd(argv_parsed.id_prefix, save=True)
 
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:
