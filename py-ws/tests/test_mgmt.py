@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from hardshare.mgmt import add_key, find_wd, get_local_config
+from hardshare.mgmt import add_key, find_wd, get_local_config, rm_wd
 from hardshare.err import Error
 
 from fixtures import RPUBLIC_KEY, RSECRET_KEY, api_token, config, config_with_wd
@@ -63,3 +63,20 @@ def test_add_key(config, api_token):
 ])
 def test_find_wd(config_with_wd, id_prefix, expected):
     assert find_wd(config_with_wd, id_prefix) == expected
+
+
+@pytest.mark.parametrize('id_prefix, should_find', [
+    ('ae064a41-065e-426f-9a1e-619fd2d33fb6', True),
+    ('ae064a41', True),
+    ('a', True),
+    ('b', False),
+])
+def test_rm_wd(config_with_wd, id_prefix, should_find):
+    rm_wd(config_with_wd, id_prefix, save=True)
+
+    # check copy in memory
+    assert len(config_with_wd['wdeployments']) == (0 if should_find else 1)
+
+    # re-read from file
+    config = get_local_config()
+    assert len(config['wdeployments']) == (0 if should_find else 1)

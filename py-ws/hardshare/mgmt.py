@@ -47,6 +47,15 @@ def find_wd(config, id_prefix, one_or_none=True):
     return matches[0]
 
 
+def rm_wd(config, id_prefix, save=False):
+    j = find_wd(config, id_prefix)
+    if j is None:
+        return
+    del config['wdeployments'][j]
+    if save:
+        modify_local(config)
+
+
 def list_local_keys(collect_errors=False):
     """get list of local keys that appear valid
 
