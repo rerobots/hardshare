@@ -482,6 +482,15 @@ def main(argv=None):
         if ac is None:
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
+
+        ui_input = None
+        while ui_input not in ('y', 'yes'):
+            print(('Do you want to dissolve {}? This action cannot be undone. '
+                   '[y/N] ').format(argv_parsed.id_prefix), end='')
+            ui_input = input().lower()
+            if ui_input in ('n', 'no', ''):
+                return 1
+
         try:
             res = ac.dissolve_registration(argv_parsed.id_prefix)
         except:
