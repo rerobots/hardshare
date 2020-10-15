@@ -32,17 +32,32 @@ class MockClientSession:
     async def get(self, url):
         if self.headers is None or 'Authorization' not in self.headers:
             return MockResponse(status=400, payload={'error_message': 'wrong authorization token'})
-        payload = {'owner': 'username', 'deployments': [
-            {'id': 'c42b5b73-376a-4c84-a20c-be865ca424c0',
-             'date_created': '2020-04-08 10:30 UTC',
-             'origin': '76.126.210.153',
-             'dissolved': '2020-09-01 23:16 UTC'},
-            {'id': '57d3984a-f0bd-40af-a4ae-d322ae3a228c',
-             'date_created': '2020-09-10 05:25 UTC',
-             'origin': '76.126.210.153',
-             'dissolved': None}
-        ]}
-        return MockResponse(status=200, payload=payload)
+        if url == 'https://api.rerobots.net/hardshare/list':
+            payload = {
+                'attr': {
+                    'c42b5b73-376a-4c84-a20c-be865ca424c0': {
+                        'desc': 'fake',
+                    },
+                    '57d3984a-f0bd-40af-a4ae-d322ae3a228c': {
+                        'desc': 'other test',
+                    },
+                }
+            }
+            return MockResponse(status=200, payload=payload)
+        elif url.endswith('/list'):
+            payload = {'owner': 'username', 'deployments': [
+                {'id': 'c42b5b73-376a-4c84-a20c-be865ca424c0',
+                 'date_created': '2020-04-08 10:30 UTC',
+                 'origin': '76.126.210.153',
+                 'dissolved': '2020-09-01 23:16 UTC'},
+                {'id': '57d3984a-f0bd-40af-a4ae-d322ae3a228c',
+                 'date_created': '2020-09-10 05:25 UTC',
+                 'origin': '76.126.210.153',
+                 'dissolved': None}
+            ]}
+            return MockResponse(status=200, payload=payload)
+        else:
+            return MockResponse(status=404)
 
     async def post(self, url):
         if self.headers is None or 'Authorization' not in self.headers:
