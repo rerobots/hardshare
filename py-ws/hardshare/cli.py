@@ -513,9 +513,11 @@ def main(argv=None):
                 try:
                     assert ac is not None
                     remote_config = ac.get_remote_config(include_dissolved=argv_parsed.include_dissolved)
+                except HSError as err:
+                    print('Error: {}'.format(err))
+                    return 1
                 except:
-                    print('Error occurred while contacting remote server '
-                          'at {}'.format(ac.base_uri))
+                    print('Error occurred while contacting rerobots servers')
                     return 1
 
                 config = {
@@ -585,6 +587,8 @@ def main(argv=None):
                         for wd in config['remote']['deployments']:
                             print('{}'.format(wd['id']))
                             print('\tcreated: {}'.format(wd['date_created']))
+                            if wd['desc'] is not None:
+                                print('\tdesc: {}'.format(wd['desc']))
                             print('\torigin (address) of registration: {}'
                                   .format(wd['origin']))
                             if wd['dissolved']:

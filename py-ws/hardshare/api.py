@@ -85,13 +85,22 @@ class HSAPIClient:
             payload = self.loop.run_until_complete(res.json())
             if not include_dissolved:
                 payload['deployments'] = [wd for wd in payload['deployments'] if wd['dissolved'] is None]
+        elif res.status == 400:
+            err = self.loop.run_until_complete(res.json())['error_message']
+            return {'err': err}
+        else:
+            raise Error('error contacting hardshare server: {}'.format(res.status))
+        res = self.loop.run_until_complete(self.session.get('https://api.rerobots.net/hardshare/list'))
+        if res.status == 200:
+            hlist = self.loop.run_until_complete(res.json())
+            for jj, wd in enumerate(payload['deployments']):
+                payload['deployments'][jj]['desc'] = hlist['attr'][wd['id']]['desc']
             return payload
         elif res.status == 400:
             err = self.loop.run_until_complete(res.json())['error_message']
             return {'err': err}
         else:
-            raise Error('error contacting hardshare server: {}'
-                        .format(res.status))
+            raise Error('error contacting core API server: {}'.format(res.status))
 
     def sync_config(self):
         mgmt.modify_local(self.local_config)
