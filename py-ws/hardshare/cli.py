@@ -147,7 +147,7 @@ def main(argv=None):
                                help='add device file to present in container')
     config_parser.add_argument('--cprovider', metavar='CPROVIDER', type=str,
                                dest='cprovider', default=None,
-                               help='select a container provider: docker, podman')
+                               help='select a container provider: docker, podman, proxy')
     config_parser.add_argument('--assign-image', metavar='IMG', type=str,
                                dest='cprovider_img', default=None,
                                help='assign image for cprovider to use (advanced option)')
@@ -410,7 +410,10 @@ def main(argv=None):
             return rc
         if argv_parsed.purge_supposed_instance:
             cprovider = config['wdeployments'][index]['cprovider']
-            if cprovider not in ['docker', 'podman']:
+            if cprovider == 'proxy':
+                print('--purge not supported for cprovider `proxy`')
+                return 1
+            elif cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
             findings = WorkspaceInstance.inspect_instance(wdeployment=config['wdeployments'][index])
@@ -559,14 +562,15 @@ def main(argv=None):
                     print('\t(none)')
                 else:
                     for wdeployment in config['local']['wdeployments']:
-                        print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}\n\timg: {}'.format(
+                        print('{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}'.format(
                             wdeployment['id'],
                             wdeployment['url'],
                             wdeployment['owner'],
                             wdeployment['cprovider'],
                             wdeployment['cargs'],
-                            wdeployment['image'],
                         ))
+                        if wdeployment['cprovider'] in ['docker', 'podman']:
+                            print('\timg: {}'.format(wdeployment['image']))
                         if wdeployment['terminate']:
                             print('\tterminate:')
                             for terminate_p in wdeployment['terminate']:
@@ -641,7 +645,10 @@ def main(argv=None):
             if rc != 0:
                 return rc
             cprovider = config['wdeployments'][index]['cprovider']
-            if cprovider not in ['docker', 'podman']:
+            if cprovider == 'proxy':
+                print('--add-raw-device not supported for cprovider `proxy`')
+                return 1
+            elif cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
             if not os.path.exists(argv_parsed.raw_device_path):
@@ -664,7 +671,10 @@ def main(argv=None):
             if rc != 0:
                 return rc
             cprovider = config['wdeployments'][index]['cprovider']
-            if cprovider not in ['docker', 'podman']:
+            if cprovider == 'proxy':
+                print('--add-init-inside not supported for cprovider `proxy`')
+                return 1
+            elif cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
 
@@ -676,7 +686,10 @@ def main(argv=None):
             if rc != 0:
                 return rc
             cprovider = config['wdeployments'][index]['cprovider']
-            if cprovider not in ['docker', 'podman']:
+            if cprovider == 'proxy':
+                print('--rm-init-inside not supported for cprovider `proxy`')
+                return 1
+            elif cprovider not in ['docker', 'podman']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
 
@@ -685,13 +698,15 @@ def main(argv=None):
 
         elif argv_parsed.cprovider is not None:
             selected_cprovider = argv_parsed.cprovider.lower()
-            if selected_cprovider not in ['docker', 'podman']:
-                print('ERROR: cprovider must be one of the following: docker, podman')
+            if selected_cprovider not in ['docker', 'podman', 'proxy']:
+                print('ERROR: cprovider must be one of the following: docker, podman, proxy')
                 return 1
             config, index, rc = get_config_with_index(argv_parsed.id_prefix)
             if rc != 0:
                 return rc
             config['wdeployments'][index]['cprovider'] = selected_cprovider
+            if selected_cprovider == 'proxy':
+                config['wdeployments'][index]['image'] = None
             modify_local(config)
 
         elif argv_parsed.cprovider_img is not None:
@@ -699,7 +714,7 @@ def main(argv=None):
             if rc != 0:
                 return rc
             cprovider = config['wdeployments'][index]['cprovider']
-            if cprovider not in ['docker', 'podman']:
+            if cprovider not in ['docker', 'podman', 'proxy']:
                 print('unknown cprovider: {}'.format(cprovider))
                 return 1
 
@@ -708,13 +723,16 @@ def main(argv=None):
                 if cp_images.returncode != 0:
                     print('ERROR: given image name is not recognized by cprovider')
                     return 1
-            else:  # cprovider == 'docker'
+            elif cprovider == 'docker':
                 cp_images = subprocess.run([cprovider, 'image', 'inspect', argv_parsed.cprovider_img],
                                            stdout=subprocess.DEVNULL,
                                            stderr=subprocess.DEVNULL)
                 if cp_images.returncode != 0:
                     print('ERROR: given image name is not recognized by cprovider')
                     return 1
+            else:  # cprovider == 'proxy'
+                print('ERROR: --assign-image not supported for cprovider `proxy`')
+                return 1
 
             config['wdeployments'][index]['image'] = argv_parsed.cprovider_img
             modify_local(config)
