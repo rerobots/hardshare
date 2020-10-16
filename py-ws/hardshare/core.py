@@ -41,7 +41,7 @@ class WorkspaceInstance:
             self.cargs = []
         else:
             self.cargs = cargs
-        if image is None:
+        if image is None and cprovider in ['docker', 'podman']:
             self.img = 'rerobots/hs-generic'
         else:
             self.img = image
@@ -134,6 +134,11 @@ class WorkspaceInstance:
                     findings['warnings'].append('cprovider {} not found. Is it installed?'.format(cprovider))
             else:
                 findings['has_instance'] = False
+        elif cprovider == 'proxy':
+            findings['has_instance'] = False
+            if 'warnings' not in findings:
+                findings['warnings'] = []
+            findings['warnings'].append('checking instances of cprovider proxy is not complete yet')
         else:
             findings['has_instance'] = False
             if 'warnings' not in findings:
@@ -425,7 +430,7 @@ class WorkspaceInstance:
 
 
     async def launch_instance(self, instance_id, ws_send, ws_recv, conntype, initial_publickey, init_inside=None, tunnelkey_path=None):
-        if self.cprovider not in ['docker', 'podman']:
+        if self.cprovider not in ['docker', 'podman', 'proxy']:
             raise ValueError('unknown cprovider: {}'.format(self.cprovider))
 
         if init_inside is None:
@@ -447,23 +452,24 @@ class WorkspaceInstance:
             fp.write(initial_publickey)
             fp.close()
 
-            launch_args = [self.cprovider, 'run', '-d',
-                           '-h', self.container_name,
-                           '--name', self.container_name,
-                           '--device=/dev/net/tun:/dev/net/tun',
-                           '--cap-add=NET_ADMIN']
-            if self.cargs:
-                launch_args.extend(self.cargs)
-            if self.cprovider == 'podman':
-                launch_args.extend(['-p', '127.0.0.1::22'])
-            launch_args += [self.img]
-            logger.debug('subprocess: {}'.format(launch_args))
-            p = await asyncio.create_subprocess_exec(*launch_args,
-                                                     stdout=subprocess.DEVNULL,
-                                                     stderr=subprocess.DEVNULL)
-            rc = await p.wait()
-            if rc != 0:
-                raise Exception('command ({}) return error code: {}'.format(launch_args, rc))
+            if self.cprovider in ['docker', 'podman']:
+                launch_args = [self.cprovider, 'run', '-d',
+                               '-h', self.container_name,
+                               '--name', self.container_name,
+                               '--device=/dev/net/tun:/dev/net/tun',
+                               '--cap-add=NET_ADMIN']
+                if self.cargs:
+                    launch_args.extend(self.cargs)
+                if self.cprovider == 'podman':
+                    launch_args.extend(['-p', '127.0.0.1::22'])
+                launch_args += [self.img]
+                logger.debug('subprocess: {}'.format(launch_args))
+                p = await asyncio.create_subprocess_exec(*launch_args,
+                                                         stdout=subprocess.DEVNULL,
+                                                         stderr=subprocess.DEVNULL)
+                rc = await p.wait()
+                if rc != 0:
+                    raise Exception('command ({}) return error code: {}'.format(launch_args, rc))
 
             if self.cprovider == 'docker':
                 self.container_addr = await self.get_container_addr(timeout=10)
@@ -471,37 +477,44 @@ class WorkspaceInstance:
             elif self.cprovider == 'podman':
                 self.container_addr = '127.0.0.1'
                 self.container_port_ssh = await self.get_container_sshport(timeout=10)
+            else:  # self.cprovider == 'proxy'
+                self.container_addr = '127.0.0.1'
+                self.container_port_ssh = 8080
 
             assert self.container_addr is not None
 
-            cexec = [self.cprovider, 'exec', self.container_name]
-            prepare_commands = [cexec + ['/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
-                                cexec + ['/usr/bin/ssh-keygen', '-A']]
+            if self.cprovider in ['docker', 'podman']:
+                cexec = [self.cprovider, 'exec', self.container_name]
+                prepare_commands = [cexec + ['/bin/bash', '-c', 'rm /etc/ssh/ssh_host_*'],
+                                    cexec + ['/usr/bin/ssh-keygen', '-A']]
 
-            movekey_commands = [cexec + ['/bin/mkdir', '-p', '/root/.ssh'],
-                                [self.cprovider, 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
-                                cexec + ['/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
-            for command in prepare_commands + movekey_commands:
-                logger.debug('subprocess: {}'.format(command))
-                p = await asyncio.create_subprocess_exec(*command,
-                                                         stdout=subprocess.DEVNULL,
-                                                         stderr=subprocess.DEVNULL)
-                rc = await p.wait()
-                if rc != 0:
-                    raise Exception('command ({}) returned error code: {}'.format(command, rc))
+                movekey_commands = [cexec + ['/bin/mkdir', '-p', '/root/.ssh'],
+                                    [self.cprovider, 'cp', fname, self.container_name + ':/root/.ssh/authorized_keys'],
+                                    cexec + ['/bin/chown', '0:0', '/root/.ssh/authorized_keys']]
+                for command in prepare_commands + movekey_commands:
+                    logger.debug('subprocess: {}'.format(command))
+                    p = await asyncio.create_subprocess_exec(*command,
+                                                             stdout=subprocess.DEVNULL,
+                                                             stderr=subprocess.DEVNULL)
+                    rc = await p.wait()
+                    if rc != 0:
+                        raise Exception('command ({}) returned error code: {}'.format(command, rc))
 
-            os.unlink(fname)
+                os.unlink(fname)
 
-            self.hostkey = await self.get_container_hostkey(timeout=45)
+                self.hostkey = await self.get_container_hostkey(timeout=45)
 
-            for command in init_inside:
-                logger.debug('init inside: {}'.format(command))
-                p = await asyncio.create_subprocess_exec(*(cexec + ['/bin/bash', '-c', command]),
-                                                         stdout=subprocess.DEVNULL,
-                                                         stderr=subprocess.DEVNULL)
-                rc = await p.wait()
-                if rc != 0:
-                    raise Exception('command ({}) returned error code: {}'.format(command, rc))
+                for command in init_inside:
+                    logger.debug('init inside: {}'.format(command))
+                    p = await asyncio.create_subprocess_exec(*(cexec + ['/bin/bash', '-c', command]),
+                                                             stdout=subprocess.DEVNULL,
+                                                             stderr=subprocess.DEVNULL)
+                    rc = await p.wait()
+                    if rc != 0:
+                        raise Exception('command ({}) returned error code: {}'.format(command, rc))
+
+            else:  # self.cprovider == 'proxy'
+                self.hostkey = ''
 
         except Exception as e:
             logger.error('caught exception {}: {}'.format(type(e), e))
@@ -531,13 +544,14 @@ class WorkspaceInstance:
 
 
     async def destroy_instance(self):
-        destroy_args = [self.cprovider, 'rm', '-f', self.container_name]
-        destroy_p = await asyncio.create_subprocess_exec(*destroy_args,
-                                                         stdout=subprocess.DEVNULL,
-                                                         stderr=subprocess.DEVNULL)
-        rc = await destroy_p.wait()
-        if rc != 0:
-            raise Exception('command ({}) returned error code: {}'.format(destroy_args, rc))
+        if self.cprovider in ['docker', 'podman']:
+            destroy_args = [self.cprovider, 'rm', '-f', self.container_name]
+            destroy_p = await asyncio.create_subprocess_exec(*destroy_args,
+                                                             stdout=subprocess.DEVNULL,
+                                                             stderr=subprocess.DEVNULL)
+            rc = await destroy_p.wait()
+            if rc != 0:
+                raise Exception('command ({}) returned error code: {}'.format(destroy_args, rc))
         if self.tunnel_task is not None:
             self.tunnel_task.cancel()
             while not self.tunnel_task.done():
