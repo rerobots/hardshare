@@ -22,6 +22,7 @@ import os
 import os.path
 import subprocess
 import sys
+import uuid
 
 import yaml
 from aiohttp.client_exceptions import ClientConnectorError as ConnectionError
@@ -205,9 +206,8 @@ def main(argv=None):
     dissolve_parser = subparsers.add_parser('dissolve',
                                             description=dissolve_commanddesc,
                                             help=dissolve_commanddesc)
-    dissolve_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
-                                 help=('id of workspace deployment to dissolve'
-                                       ' (can be unique prefix)'))
+    dissolve_parser.add_argument('wdid', metavar='ID', nargs='?', default=None,
+                                 help='id of workspace deployment to dissolve')
 
     status_commanddesc = 'get status of local instances and daemon'
     status_parser = subparsers.add_parser('status',
@@ -486,16 +486,22 @@ def main(argv=None):
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
 
+        try:
+            wdid = str(uuid.UUID(argv_parsed.wdid))
+        except:
+            print('The given ID does not appear to be valid.')
+            return 1
+
         ui_input = None
         while ui_input not in ('y', 'yes'):
             print(('Do you want to dissolve {}? This action cannot be undone. '
-                   '[y/N] ').format(argv_parsed.id_prefix), end='')
+                   '[y/N] ').format(wdid), end='')
             ui_input = input().lower()
             if ui_input in ('n', 'no', ''):
                 return 1
 
         try:
-            res = ac.dissolve_registration(argv_parsed.id_prefix)
+            res = ac.dissolve_registration(wdid)
         except:
             print('Error occurred while contacting remote server '
                   'at {}'.format(ac.base_uri))
@@ -509,7 +515,10 @@ def main(argv=None):
             else:
                 print(res['err'])
             return 1
-        rm_wd(argv_parsed.id_prefix, save=True)
+
+        # Remove from local configuration, if present
+        rm_wd(get_local_config(), wdid, save=True)
+
 
     elif argv_parsed.command == 'config':
         if argv_parsed.list_config:

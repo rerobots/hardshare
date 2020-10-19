@@ -184,22 +184,22 @@ class HSAPIClient:
                         .format(res.status))
         return self.loop.run_until_complete(res.json())
 
-    def dissolve_registration(self, id_prefix=None):
-        if id_prefix is None:
+    def dissolve_registration(self, wdid=None):
+        if wdid is None:
             if len(self.local_config['wdeployments']) == 0:
                 msg = 'no identifier given, and none in local config'
                 logger.error('HSAPIClient.check_registration(): {}'.format(msg))
                 raise ValueError(msg)
             else:
-                id_prefix = self.local_config['wdeployments'][0]['id']
-        res = self.loop.run_until_complete(self.session.post(self.base_uri + '/dis/{}'.format(id_prefix)))
+                wdid = self.local_config['wdeployments'][0]['id']
+        res = self.loop.run_until_complete(self.session.post(self.base_uri + '/dis/{}'.format(wdid)))
         if res.status == 200:
             pass
         elif res.status == 404:
-            return {'err': 'not found', 'id_prefix': id_prefix}
+            return {'err': 'not found', 'wdid': wdid}
         elif res.status == 400:
             err = self.loop.run_until_complete(res.json())['error_message']
-            return {'err': err, 'id_prefix': id_prefix}
+            return {'err': err, 'wdid': wdid}
         else:
             raise Error('error contacting hardshare server: {}'
                         .format(res.status))
