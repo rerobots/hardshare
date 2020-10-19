@@ -28,7 +28,7 @@ from aiohttp.client_exceptions import ClientConnectorError as ConnectionError
 
 from .core import WorkspaceInstance
 from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
-from .mgmt import find_wd, modify_local
+from .mgmt import find_wd, modify_local, rm_wd
 from .api import HSAPIClient
 from .err import Error as HSError
 from .addons import camera_main
