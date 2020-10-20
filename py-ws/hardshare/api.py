@@ -461,6 +461,7 @@ class HSAPIClient:
         headers = self._add_key_header()
         uri = self.base_uri + '/ad/{}'.format(self.current_wdeployment['id'])
         active = True
+        connected_at_least_once = False
         while active:
             if self.verify_certs:
                 session = aiohttp.ClientSession(headers=headers)
@@ -469,6 +470,8 @@ class HSAPIClient:
                 session = aiohttp.ClientSession(connector=conn, headers=headers)
             try:
                 async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
+                    if not connected_at_least_once:
+                        connected_at_least_once = True
                     async for msg in ws:
                         if not (await self.handle_wsrecv(ws, msg)):
                             break
@@ -478,6 +481,8 @@ class HSAPIClient:
 
             except Exception as e:
                 logger.error('caught {}: {}'.format(type(e), e))
+                if not connected_at_least_once:
+                    return
 
             finally:
                 await session.close()
