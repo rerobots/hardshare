@@ -717,6 +717,9 @@ def main(argv=None):
             config['wdeployments'][index]['cprovider'] = selected_cprovider
             if selected_cprovider == 'proxy':
                 config['wdeployments'][index]['image'] = None
+            else:  # selected_cprovider \in {docker, podman}
+                if config['wdeployments'][index]['image'] is None:
+                    config['wdeployments'][index]['image'] = 'rerobots/hs-generic'
             modify_local(config)
 
         elif argv_parsed.cprovider_img is not None:
