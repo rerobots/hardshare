@@ -483,6 +483,7 @@ class HSAPIClient:
                 logger.error('caught {}: {}'.format(type(e), e))
                 if not connected_at_least_once:
                     return
+                await asyncio.sleep(1)
 
             finally:
                 await session.close()
