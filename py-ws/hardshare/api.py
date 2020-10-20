@@ -469,7 +469,7 @@ class HSAPIClient:
                 conn = aiohttp.TCPConnector(verify_ssl=False)
                 session = aiohttp.ClientSession(connector=conn, headers=headers)
             try:
-                async with session.ws_connect(uri, timeout=90.0, autoping=True) as ws:
+                async with session.ws_connect(uri, receive_timeout=45, autoping=True) as ws:
                     if not connected_at_least_once:
                         connected_at_least_once = True
                     async for msg in ws:
