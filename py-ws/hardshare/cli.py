@@ -540,6 +540,7 @@ def main(argv=None):
                     return 1
                 except:
                     print('Error occurred while contacting rerobots servers')
+                    print('Try config -l --local to only get local information')
                     return 1
 
                 config = {
