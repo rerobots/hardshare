@@ -100,16 +100,6 @@ def main(argv=None):
                            help=('special output formatting (default is no special formatting); '
                                  'options: YAML , JSON'),
                            dest='output_format')
-    argparser.add_argument('-s', '--server-name', default='hs.rerobots.net',
-                           help='name or IP address of hardshare server',
-                           dest='server_name')
-    argparser.add_argument('--port', default=443,
-                           help='port number of hardshare server',
-                           dest='server_port')
-    argparser.add_argument('-k', '--insecure', action='store_true', default=False,
-                           help=('communications with hardshare servers always use TLS.'
-                                 ' this switch causes certificates to not be verified.'),
-                           dest='ignore_certs')
 
     subparsers = argparser.add_subparsers(dest='command')
 
@@ -316,9 +306,7 @@ def main(argv=None):
         output_format = None
 
     try:
-        ac = HSAPIClient(server_name=argv_parsed.server_name,
-                         server_port=argv_parsed.server_port,
-                         verify_certs=(not argv_parsed.ignore_certs))
+        ac = HSAPIClient()
     except:
         ac = None
 

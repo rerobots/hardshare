@@ -34,15 +34,14 @@ logger = logging.getLogger(__name__)
 
 
 class HSAPIClient:
-    def __init__(self, server_name='hs.rerobots.net', server_port=443, verify_certs=True, event_loop=None):
+    def __init__(self, event_loop=None):
         if event_loop is None:
             self.loop = asyncio.get_event_loop()
         else:
             self.loop = event_loop
-        self.base_uri = 'https://{}:{}'.format(server_name, server_port)
+        self.base_uri = 'https://hs.rerobots.net'
         logger.debug('instantiating client object for hardshare server at {}'
                      .format(self.base_uri))
-        self.verify_certs = verify_certs
         self.ws_recvmap = dict()
         self.local_config = mgmt.get_local_config()
         if len(self.local_config['keys']) > 0:
@@ -61,11 +60,7 @@ class HSAPIClient:
 
 
     async def async_init(self):
-        if self.verify_certs:
-            self.session = aiohttp.ClientSession(headers=self._add_key_header())
-        else:
-            conn = aiohttp.TCPConnector(ssl=False)
-            self.session = aiohttp.ClientSession(connector=conn, headers=self._add_key_header())
+        self.session = aiohttp.ClientSession(headers=self._add_key_header())
 
 
     def __del__(self):
@@ -463,11 +458,7 @@ class HSAPIClient:
         active = True
         connected_at_least_once = False
         while active:
-            if self.verify_certs:
-                session = aiohttp.ClientSession(headers=headers)
-            else:
-                conn = aiohttp.TCPConnector(verify_ssl=False)
-                session = aiohttp.ClientSession(connector=conn, headers=headers)
+            session = aiohttp.ClientSession(headers=headers)
             try:
                 async with session.ws_connect(uri, receive_timeout=45, autoping=True) as ws:
                     if not connected_at_least_once:
