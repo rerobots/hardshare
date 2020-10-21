@@ -221,6 +221,60 @@ class HSAPIClient:
                         .format(res.status))
         return self.loop.run_until_complete(res.json())
 
+    def add_access_rule(self, wdid=None, to_user=None):
+        if wdid is None:
+            if len(self.local_config['wdeployments']) == 0:
+                msg = 'no identifier given, and none in local config'
+                logger.error('HSAPIClient.check_registration(): {}'.format(msg))
+                raise ValueError(msg)
+            else:
+                wdid = self.local_config['wdeployments'][0]['id']
+                if to_user is None:
+                    to_user = self.local_config['wdeployments'][0]['owner']
+        elif to_user is None:
+            for wd in self.local_config['wdeployments']:
+                if wd['id'] == wdid:
+                    to_user = wd['owner']
+                    break
+            if to_user is None:
+                raise ValueError('to_user None but given wdeployment not in local config')
+        body = {'cap': 'CAP_INSTANTIATE'}
+        if to_user:
+            body['user'] = to_user
+        res = self.loop.run_until_complete(self.session.post(
+            'https://api.rerobots.net/deployment/{}/rule'.format(wdid),
+            json=body,
+        ))
+        if res.status == 200:
+            return
+        elif res.status == 404:
+            raise Error('not found')
+        elif res.status == 400:
+            err = self.loop.run_until_complete(res.json())['error_message']
+            raise Error('error contacting rerobots server: {}'.format(err))
+        else:
+            raise Error('error contacting rerobots server: {}'
+                        .format(res.status))
+
+    def drop_access_rules(self, wdid=None):
+        if wdid is None:
+            if len(self.local_config['wdeployments']) == 0:
+                msg = 'no identifier given, and none in local config'
+                logger.error('HSAPIClient.check_registration(): {}'.format(msg))
+                raise ValueError(msg)
+            else:
+                wdid = self.local_config['wdeployments'][0]['id']
+        res = self.loop.run_until_complete(self.session.get('https://api.rerobots.net/deployment/{}/rules'.format(wdid)))
+        if res.status != 200:
+            raise Error('error contacting rerobots server: ', res.status)
+        payload = self.loop.run_until_complete(res.json())
+        for rule in payload['rules']:
+            res = self.loop.run_until_complete(self.session.delete(
+                'https://api.rerobots.net/deployment/{}/rule/{}'.format(wdid, rule['id'])
+            ))
+            if res.status != 200:
+                raise Error('error deleting rule {}: '.format(rule['id'], res.status))
+
     def terminate(self, wdid=None):
         if wdid is None:
             sockname = 'hardshare.sock'

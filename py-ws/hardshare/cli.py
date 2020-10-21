@@ -184,6 +184,17 @@ def main(argv=None):
     rules_parser.add_argument('-l', '--list', action='store_true', default=False,
                               dest='list_rules',
                               help='list all rules')
+    rules_parser.add_argument('--permit-me', action='store_true', default=False,
+                              dest='add_rule_permit_me',
+                              help='permit instantiations by you (the owner)')
+    rules_parser.add_argument('--drop-all', action='store_true', default=False,
+                              dest='drop_all_rules',
+                              help=('remove all access rules; '
+                                    'note that access is denied by default, '
+                                    'including to you (the owner)'))
+    rules_parser.add_argument('--permit-all', action='store_true', default=False,
+                              dest='add_rule_permit_all',
+                              help='permit instantiations by anyone')
 
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
@@ -464,19 +475,19 @@ def main(argv=None):
             print('no local configuration found. (try `hardshare config -h`)')
             return 1
 
-        if argv_parsed.list_rules:
-            if argv_parsed.id_prefix is None:
-                wdid = None
-            else:
-                try:
-                    wdid = str(uuid.UUID(argv_parsed.id_prefix))
-                except:
-                    config, index, rc = get_config_with_index(argv_parsed.id_prefix)
-                    if rc != 0:
-                        print('The given ID does not appear to be valid.')
-                        return 1
-                    wdid = config['wdeployments'][index]['id']
+        if argv_parsed.id_prefix is None:
+            wdid = None
+        else:
+            try:
+                wdid = str(uuid.UUID(argv_parsed.id_prefix))
+            except:
+                config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+                if rc != 0:
+                    print('The given ID does not appear to be valid.')
+                    return 1
+                wdid = config['wdeployments'][index]['id']
 
+        if argv_parsed.list_rules:
             try:
                 res = ac.get_access_rules(wdid)
             except Exception as err:
@@ -497,6 +508,30 @@ def main(argv=None):
                 print(json.dumps(res))
             else:  # output_format == 'yaml'
                 print(yaml.dump(res, default_flow_style=False))
+
+        elif argv_parsed.drop_all_rules or argv_parsed.add_rule_permit_me:
+            try:
+                if argv_parsed.drop_all_rules:
+                    ac.drop_access_rules(wdid)
+                elif argv_parsed.add_rule_permit_me:
+                    ac.add_access_rule(wdid)
+            except Exception as err:
+                print('{}'.format(err))
+                return 1
+
+        elif argv_parsed.add_rule_permit_all:
+            ui_input = None
+            while ui_input not in ('y', 'yes'):
+                print('Do you want to permit access by anyone? [y/N] ', end='')
+                ui_input = input().lower()
+                if ui_input in ('n', 'no', ''):
+                    return 1
+
+            try:
+                ac.add_access_rule(wdid, to_user='*')
+            except Exception as err:
+                print('{}'.format(err))
+                return 1
 
         else:
             print('Use `hardshare rules` with a switch. For example, `hardshare rules -l`')
