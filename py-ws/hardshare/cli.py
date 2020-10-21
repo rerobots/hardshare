@@ -172,6 +172,19 @@ def main(argv=None):
                                      ' has been previously registered under'
                                      ' the same user account.)'))
 
+    rules_commanddesc = 'modify access rules (also known as capabilities or permissions)'
+    rules_parser = subparsers.add_parser('rules',
+                                         description=rules_commanddesc,
+                                         help=rules_commanddesc)
+    rules_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                              help=('id of target workspace deployment'
+                                    ' (can be unique prefix); '
+                                    'this argument is not required '
+                                    'if there is only 1 workspace deployment'))
+    rules_parser.add_argument('-l', '--list', action='store_true', default=False,
+                              dest='list_rules',
+                              help='list all rules')
+
     register_commanddesc = 'register new workspace deployment'
     register_parser = subparsers.add_parser('register',
                                             description=register_commanddesc,
@@ -274,6 +287,8 @@ def main(argv=None):
         if hasattr(argv_parsed, 'help_target_command') and argv_parsed.help_target_command is not None:
             if argv_parsed.help_target_command == 'config':
                 config_parser.print_help()
+            elif argv_parsed.help_target_command == 'rules':
+                rules_parser.print_help()
             elif argv_parsed.help_target_command == 'register':
                 register_parser.print_help()
             elif argv_parsed.help_target_command == 'check':
@@ -442,6 +457,52 @@ def main(argv=None):
         except ConnectionError:
             print('ERROR: failed to reach server. Are you connected to the Internet?')
             return 1
+
+
+    elif argv_parsed.command == 'rules':
+        if ac is None:
+            print('no local configuration found. (try `hardshare config -h`)')
+            return 1
+
+        if argv_parsed.list_rules:
+            if argv_parsed.id_prefix is None:
+                wdid = None
+            else:
+                try:
+                    wdid = str(uuid.UUID(argv_parsed.id_prefix))
+                except:
+                    config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+                    if rc != 0:
+                        print('The given ID does not appear to be valid.')
+                        return 1
+                    wdid = config['wdeployments'][index]['id']
+
+            try:
+                res = ac.get_access_rules(wdid)
+            except Exception as err:
+                print('{}'.format(err))
+                return 1
+            if 'err' in res:
+                if res['err'] == 'wrong authorization token':
+                    print('wrong API token. Did it expire?')
+                else:
+                    print(res['err'])
+                return 1
+
+            res['comments'] = [
+                'Access is denied unless a rule explicitly permits it.',
+            ]
+
+            if output_format == 'json':
+                print(json.dumps(res))
+            else:  # output_format == 'yaml'
+                print(yaml.dump(res, default_flow_style=False))
+
+        else:
+            print('Use `hardshare rules` with a switch. For example, `hardshare rules -l`')
+            print('or to get a help message, enter\n\n    hardshare help rules')
+            return 1
+
 
     elif argv_parsed.command == 'check':
         if ac is None:
