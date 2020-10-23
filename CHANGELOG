@@ -1,3 +1,20 @@
+hardshare client (0.9.0)
+
+  * New CLI command: `rules` for managing permissions.
+
+  * Improve behavior of failures when `harshare ad`.
+
+  * Minimum viable cprovider: proxy; in this release, only TCP port forwards.
+
+  * Explicit confirmation for `hardshare dissolve`.
+
+  * Return custom descriptions in get_remote_config, in CLI `hardshare config -l`.
+
+  * Remove option to select servers other than hs.rerobots.net.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Fri, 23 Oct 2020 08:14:09 -0700
+
+
 hardshare client (0.8.0)
 
   * Fix bug: trailing newline breaks API token reading.

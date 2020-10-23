@@ -18,7 +18,7 @@ from setuptools import setup
 MAJOR=0
 MINOR=9
 PATCH=0
-devel=True
+devel=False
 
 version = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 if devel:
