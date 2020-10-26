@@ -284,7 +284,22 @@ class WorkspaceInstance:
                                             CONTAINER=self.container_addr))
 
         sshtunnel = await asyncio.create_subprocess_exec(*tunnel_command)
-        self.status = 'READY'
+        st = time.time()
+        connection_ready = False
+        while time.time() - st < 5:
+            try:
+                _, w = await asyncio.open_connection(self.tunnelhub['ipv4'], self.tunnelhub['listen_port'])
+            except ConnectionError:
+                await asyncio.sleep(1)
+                continue
+            w.close()
+            connection_ready = True
+            break
+        if not connection_ready:
+            logger.error('timeout waiting for ssh tunnel')
+            self.status = 'INIT_FAIL'
+        else:
+            self.status = 'READY'
         logger.info('marked instance as {}'.format(self.status))
         await ws_send(json.dumps({
             'v': 0,
@@ -292,6 +307,8 @@ class WorkspaceInstance:
             's': self.status,  # == READY
             'h': self.hostkey,
         }))
+        if self.status == 'INIT_FAIL':
+            return
 
         try:
             while True:
