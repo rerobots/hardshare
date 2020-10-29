@@ -21,4 +21,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
 
 RUN echo 'source /opt/ros/melodic/setup.bash' >> /root/.bashrc
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
+       python-rosdep python-rosinstall python-rosinstall-generator python-wstool build-essential
+
+RUN rosdep init && rosdep update
+
 CMD ["/sbin/rerobots-hs-init.sh"]
