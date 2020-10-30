@@ -20,6 +20,7 @@ import logging
 import os
 import os.path
 import stat
+import subprocess
 
 import jwt
 
@@ -126,6 +127,7 @@ def get_local_config(create_if_empty=False, collect_errors=False):
     if not os.path.exists(base_path):
         if create_if_empty:
             os.makedirs(os.path.join(base_path, 'keys'))
+            os.makedirs(os.path.join(base_path, 'ssh'))
         else:
             raise Error('no configuration data found')
     path = os.path.join(base_path, 'main')
@@ -133,8 +135,21 @@ def get_local_config(create_if_empty=False, collect_errors=False):
     if not os.path.exists(path):
         if create_if_empty:
             logger.debug('local config file not found. creating new one...')
+            init = {
+                'version': 0,
+                'wdeployments': [],
+            }
+            logger.debug('creating key pair for tunnels...')
+            cp = subprocess.run(['ssh-keygen', '-N', '', '-f', os.path.join(base_path, 'ssh', 'tun')],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                universal_newlines=True)
+            if cp.returncode != 0:
+                logger.warning('failed to create SSH key')
+            else:
+                init['ssh_key'] = os.path.join(base_path, 'ssh', 'tun')
             with open(path, 'wt') as fp:
-                fp.write('{"version": 0, "wdeployments": []}')
+                fp.write(json.dumps(init))
         else:
             msg = 'get_local_config(): no configuration data found'
             logger.error(msg)
