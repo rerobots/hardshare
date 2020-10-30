@@ -40,6 +40,7 @@ class HSAPIClient:
         else:
             self.loop = event_loop
         self.base_uri = 'https://hs.rerobots.net'
+        self.session = None
         logger.debug('instantiating client object for hardshare server at {}'
                      .format(self.base_uri))
         self.ws_recvmap = dict()
@@ -64,7 +65,8 @@ class HSAPIClient:
 
 
     def __del__(self):
-        self.loop.run_until_complete(self.session.close())
+        if self.session:
+            self.loop.run_until_complete(self.session.close())
 
 
     def _add_key_header(self, headers=None):
