@@ -43,16 +43,6 @@ initialize a new local configuration, and add the API token to it::
   hardshare config -c
   hardshare config --add-key path/to/your/jwt.txt
 
-Next, add an SSH key pair for the hardshare client to create tunnels. There
-might already be one at ``~/.ssh/id_rsa``. If not, or if you want to create a
-new pair for this purpose, then::
-
-  ssh-keygen
-
-Add the SSH secret key path::
-
-  hardshare config --add-ssh-path path/to/your/ssh_key
-
 Finally, create a new workspace deployment::
 
   hardshare register
