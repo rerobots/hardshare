@@ -14,6 +14,7 @@ Prerequisites
 -------------
 
 `install OpenCV <https://docs.opencv.org/4.4.0/d2/de6/tutorial_py_setup_in_ubuntu.html>`_
+On Ubuntu, this is available in the package python3-opencv
 
 
 Preparing a new configuration
