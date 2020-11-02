@@ -265,6 +265,9 @@ def main(argv=None):
                                       dest='attach_camera_crop_config', default=None,
                                       help=('image crop configuration; '
                                             'default: all wdeployments get full images'))
+    attach_camera_parser.add_argument('-d', '--daemon', action='store_true', default=False,
+                                      help='detach from invoking terminal (i.e., run as daemon)',
+                                      dest='become_daemon')
 
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
@@ -385,6 +388,17 @@ def main(argv=None):
             crop = json.loads(argv_parsed.attach_camera_crop_config)
         else:
             crop = None
+
+        if argv_parsed.become_daemon:
+            pid = os.fork()
+            if pid != 0:
+                pid_file = os.path.join(os.path.expanduser('~'), '.rerobots', 'cam.pid')
+                with open(pid_file, 'wt') as fp:
+                    fp.write(str(pid))
+                return 0
+            os.close(0)
+            os.close(1)
+            os.close(2)
 
         camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height, crop=crop)
 
