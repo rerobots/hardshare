@@ -32,7 +32,7 @@ from .mgmt import get_local_config, add_key, add_ssh_path, list_local_keys
 from .mgmt import find_wd, modify_local, rm_wd
 from .api import HSAPIClient
 from .err import Error as HSError
-from .addons import camera_main
+from .addons import camera_main, stop_cameras
 
 
 def get_config_with_index(id_prefix=None):
@@ -269,6 +269,15 @@ def main(argv=None):
                                       help='detach from invoking terminal (i.e., run as daemon)',
                                       dest='become_daemon')
 
+    stop_cameras_commanddesc = 'stop camera streams previously started by attach-camera'
+    stop_cameras_parser = subparsers.add_parser('stop-cameras',
+                                                description=stop_cameras_commanddesc,
+                                                help=stop_cameras_commanddesc)
+    stop_cameras_parser.add_argument('-a', '--all', action='store_true', default=False,
+                                     help=('stop all attached cameras associated with this '
+                                           'user account, whether or not started on this host'),
+                                     dest='all_cameras')
+
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
                                              description=terminate_commanddesc,
@@ -313,6 +322,8 @@ def main(argv=None):
                 status_parser.print_help()
             elif argv_parsed.help_target_command == 'attach-camera':
                 attach_camera_parser.print_help()
+            elif argv_parsed.help_target_command == 'stop-cameras':
+                stop_cameras_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
                 advertise_parser.print_help()
             elif argv_parsed.help_target_command == 'terminate':
@@ -390,17 +401,24 @@ def main(argv=None):
             crop = None
 
         if argv_parsed.become_daemon:
-            pid = os.fork()
-            if pid != 0:
-                pid_file = os.path.join(os.path.expanduser('~'), '.rerobots', 'cam.pid')
-                with open(pid_file, 'wt') as fp:
-                    fp.write(str(pid))
+            if os.fork() != 0:
                 return 0
             os.close(0)
             os.close(1)
             os.close(2)
 
         camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height, crop=crop)
+
+
+    elif argv_parsed.command == 'stop-cameras':
+        local_keys = list_local_keys()
+        if len(local_keys) < 1:
+            print('No valid keys available. Check: `hardshare config -l`')
+            return 1
+        with open(local_keys[0], 'rt') as fp:
+            tok = fp.read().strip()
+
+        stop_cameras(tok, allcam=argv_parsed.all_cameras)
 
 
     elif argv_parsed.command == 'ad':

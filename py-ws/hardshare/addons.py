@@ -22,8 +22,12 @@ Copyright (C) 2020 rerobots, Inc.
 """
 import asyncio
 import base64
+from glob import glob
 from io import BytesIO
 import logging
+import os
+import os.path
+import signal
 import sys
 import time
 
@@ -37,6 +41,8 @@ import aiohttp
 # inline import:
 #   cv2
 #   PIL
+
+from .mgmt import get_local_config
 
 
 logger = logging.getLogger(__name__)
@@ -115,15 +121,55 @@ async def unregister_camera_uploader(hscamera_id, tok):
         await session.delete('https://api.rerobots.net/hardshare/cam/{}'.format(hscamera_id))
 
 
+async def unregister_camera_uploaders(config, tok, allcam=False):
+    if not allcam:
+        wdeployments = set([x['id'] for x in config['wdeployments']])
+    headers = {'Authorization': 'Bearer {}'.format(tok)}
+    async with aiohttp.ClientSession(headers=headers) as session:
+        stopped_via_pids = []
+        for pid_file in glob(os.path.join(os.path.expanduser('~'), '.rerobots', 'cam.*.pid')):
+            os.kill(int(open(pid_file).read()), signal.SIGINT)
+            _, hscamera_id, _ = os.path.basename(pid_file).split('.')
+            stopped_via_pids.append(hscamera_id)
+            os.unlink(pid_file)
+
+        res = await session.get('https://api.rerobots.net/hardshare/cam')
+        assert res.status == 200
+        payload = await res.json()
+        for hscamera_id, assoc in payload.items():
+            if not allcam and (hscamera_id in stopped_via_pids):
+                continue
+            if not allcam and len(wdeployments.intersection(set(assoc))) == 0:
+                continue
+            res = await session.delete('https://api.rerobots.net/hardshare/cam/{}'.format(hscamera_id))
+            assert res.status == 200
+
+
+def stop_cameras(tok, allcam=False):
+    config = get_local_config()
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(unregister_camera_uploaders(config, tok, allcam=allcam))
+    except KeyboardInterrupt:
+        pass
+
+
 def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, crop=None):
     opts = {'wds': wdeployments}
     if crop:
         opts['crop'] = crop
     loop = asyncio.get_event_loop()
     hscamera_id = loop.run_until_complete(register_camera_uploader(opts, tok))
+    pid_file = os.path.join(os.path.expanduser('~'), '.rerobots', 'cam.{}.pid'.format(hscamera_id))
+    with open(pid_file, 'wt') as fp:
+        fp.write(str(os.getpid()))
     try:
         loop.run_until_complete(camera_upload(hscamera_id, dev, tok, rotate, width, height))
     except KeyboardInterrupt:
         pass
     finally:
         loop.run_until_complete(unregister_camera_uploader(hscamera_id, tok))
+        try:
+            os.unlink(pid_file)
+        except OSError:
+            pass  # Assume deleted by other process, e.g., unregister_camera_uploaders()
