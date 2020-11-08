@@ -129,6 +129,12 @@ class HSAPIClient:
                 'owner': payload['owner'],
             })
             self.sync_config()
+        elif res.status == 400:
+            try:
+                err = self.loop.run_until_complete(res.json())['error_message']
+            except:
+                raise Error('error contacting hardshare server: {}'.format(res.status))
+            raise Error(err)
         else:
             raise Error('error contacting hardshare server: {}'
                         .format(res.status))
