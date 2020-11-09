@@ -66,5 +66,9 @@ which should result in output that is similar to the following::
     provider: docker
     wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
 
+To stop, ::
+
+  hardshare terminate
+
 
 .. _Ubuntu: https://ubuntu.com/download/desktop
