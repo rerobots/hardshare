@@ -91,4 +91,18 @@ command-line, stop the daemon::
 Now entering ``hardshare status`` should return ``daemon_found: false``.
 
 
+Check permissions
+-----------------
+
+When a new device is registered, the default configuration permits only you
+(i.e., your user account) to create instances. To get the list of access rules::
+
+  hardshare rules -l
+
+which should only have 1 item under ``rules``: a capability ``CAP_INSTANTIATE``
+and your username. To allow other users::
+
+  hardshare rules --permit-all
+
+
 .. _Ubuntu: https://ubuntu.com/download/desktop
