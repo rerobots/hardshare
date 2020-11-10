@@ -131,9 +131,9 @@ Podman
 ``````
 
 For many operations, podman_ is a drop-in replacement for ``docker``. To switch
-to it with an existing hardshare configuration (created as described above),
-find the ``cprovider`` entry in the configuration file at ``~/.rerobots/main``,
-and change it to ``podman``.
+to it with an existing hardshare configuration (created as described above), ::
+
+  hardshare config --cprovider podman
 
 
 Including devices
