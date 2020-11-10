@@ -66,9 +66,29 @@ which should result in output that is similar to the following::
     provider: docker
     wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
 
-To stop, ::
+
+Request instance
+----------------
+
+Now that the daemon is active, you can request an instance on your own device
+through https://rerobots.net. Go to the URL shown in ::
+
+  hardshare config -l
+
+It will look like
+``https://rerobots.net/workspace/b47cd57c-833b-47c1-964d-79e5e6f00dba`` but with
+a different ID. After requesting the instance, it should go from ``INIT`` to
+``READY``. If something breaks, for example arriving at ``INIT_FAIL`` status,
+terminate the instance from https://rerobots.net/instances and then read
+:doc:`install` or :doc:`help`.
+
+Otherwise, congratulations on successful instantiation from your own device!
+Terminate the instance from https://rerobots.net/instances and, from the
+command-line, stop the daemon::
 
   hardshare terminate
+
+Now entering ``hardshare status`` should return ``daemon_found: false``.
 
 
 .. _Ubuntu: https://ubuntu.com/download/desktop
