@@ -104,5 +104,7 @@ and your username. To allow other users::
 
   hardshare rules --permit-all
 
+Now you go to https://rerobots.net/hardshare to create your first sandbox.
+
 
 .. _Ubuntu: https://ubuntu.com/download/desktop
