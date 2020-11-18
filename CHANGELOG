@@ -1,3 +1,16 @@
+hardshare client (0.9.2)
+
+  * New CLI commands to manage add-ons: addon-cmdsh, addon-mistyproxy.
+
+  * Option to daemonize `attach-camera`.
+
+  * New command to stop all `attach-camera` processes: stop-cameras.
+
+  * Print more information about failures to register, e.g., requires billing changes.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Wed, 18 Nov 2020 08:09:09 -0800
+
+
 hardshare client (0.9.1)
 
   * Create SSH key pair in `config -c`.
