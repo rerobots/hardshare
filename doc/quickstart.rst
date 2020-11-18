@@ -104,7 +104,16 @@ and your username. To allow other users::
 
   hardshare rules --permit-all
 
-Now you go to https://rerobots.net/hardshare to create your first sandbox.
+
+What next?
+----------
+
+At this stage, you have a ready-to-use hardshare host. Next:
+
+* :doc:`attach_camera` to provide video streams of your hardware.
+* Go to https://rerobots.net/hardshare and create your first sandbox.
+* If you have a Misty_ robot, do the :doc:`tutorial_misty`.
 
 
+.. _Misty: https://www.mistyrobotics.com/
 .. _Ubuntu: https://ubuntu.com/download/desktop
