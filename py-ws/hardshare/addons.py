@@ -173,3 +173,41 @@ def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, cr
             os.unlink(pid_file)
         except OSError:
             pass  # Assume deleted by other process, e.g., unregister_camera_uploaders()
+
+
+async def __update_supported_async(wdeployment_id, tok, addon, rm=False):
+    headers = {'Authorization': 'Bearer {}'.format(tok)}
+    async with aiohttp.ClientSession(headers=headers) as session:
+        res = await session.get('https://api.rerobots.net/deployment/{}'.format(wdeployment_id))
+        assert res.status == 200
+        payload = await res.json()
+        update_payload = {
+            'supported_addons': payload['supported_addons'],
+        }
+        if rm and (addon not in payload['supported_addons']):
+                return
+        elif (not rm) and (addon in payload['supported_addons']):
+                return
+        if 'addons_config' in payload:
+            update_payload['addons_config'] = payload['addons_config']
+        if rm:
+            update_payload['supported_addons'].remove(addon)
+        else:
+            update_payload['supported_addons'].append(addon)
+        res = await session.post('https://hs.rerobots.net/wd/{}'.format(wdeployment_id), json=update_payload)
+        assert res.status == 200
+
+
+def add_cmdsh(wdeployment_id, tok):
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='cmdsh'))
+    except KeyboardInterrupt:
+        pass
+
+def rm_cmdsh(wdeployment_id, tok):
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='cmdsh', rm=True))
+    except KeyboardInterrupt:
+        pass

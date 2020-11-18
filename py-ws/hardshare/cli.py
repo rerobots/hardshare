@@ -33,6 +33,7 @@ from .mgmt import find_wd, modify_local, rm_wd
 from .api import HSAPIClient
 from .err import Error as HSError
 from .addons import camera_main, stop_cameras
+from .addons import add_cmdsh, rm_cmdsh
 
 
 def get_config_with_index(id_prefix=None):
@@ -278,6 +279,22 @@ def main(argv=None):
                                            'user account, whether or not started on this host'),
                                      dest='all_cameras')
 
+    addon_cmdsh_commanddesc = 'manage add-on cmdsh for your workspace deployments'
+    addon_cmdsh_parser = subparsers.add_parser('addon-cmdsh',
+                                               description=addon_cmdsh_commanddesc,
+                                               help=addon_cmdsh_commanddesc)
+    addon_cmdsh_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                    help=('id of workspace deployment'
+                                          ' (can be unique prefix); '
+                                          'this argument is not required '
+                                          'if there is only 1 workspace deployment'))
+    addon_cmdsh_parser.add_argument('--add', action='store_true', default=False,
+                                    help='add add-on cmdsh to enable terminal access via WebSockets',
+                                    dest='add_addon_cmdsh')
+    addon_cmdsh_parser.add_argument('--rm', action='store_true', default=False,
+                                    help='remove add-on cmdsh',
+                                    dest='rm_addon_cmdsh')
+
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
                                              description=terminate_commanddesc,
@@ -324,6 +341,8 @@ def main(argv=None):
                 attach_camera_parser.print_help()
             elif argv_parsed.help_target_command == 'stop-cameras':
                 stop_cameras_parser.print_help()
+            elif argv_parsed.help_target_command == 'addon-cmdsh':
+                addon_cmdsh_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
                 advertise_parser.print_help()
             elif argv_parsed.help_target_command == 'terminate':
@@ -419,6 +438,34 @@ def main(argv=None):
             tok = fp.read().strip()
 
         stop_cameras(tok, allcam=argv_parsed.all_cameras)
+
+
+    elif argv_parsed.command == 'addon-cmdsh':
+        if ac is None:
+            print('cannot register without initial local configuration.'
+                  ' (try `hardshare config --create`)')
+            return 1
+        config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
+
+        wdeployment_id = config['wdeployments'][index]['id']
+
+        local_keys = list_local_keys()
+        if len(local_keys) < 1:
+            print('No valid keys available. Check: `hardshare config -l`')
+            return 1
+        with open(local_keys[0], 'rt') as fp:
+            tok = fp.read().strip()
+
+        if argv_parsed.add_addon_cmdsh:
+            add_cmdsh(wdeployment_id, tok)
+        elif argv_parsed.rm_addon_cmdsh:
+            rm_cmdsh(wdeployment_id, tok)
+        else:
+            print('Use `hardshare addon-cmdsh` with a switch.')
+            print('To get a help message, enter\n\n    hardshare help addon-cmdsh')
+            return 1
 
 
     elif argv_parsed.command == 'ad':
