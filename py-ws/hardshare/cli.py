@@ -33,7 +33,7 @@ from .mgmt import find_wd, modify_local, rm_wd
 from .api import HSAPIClient
 from .err import Error as HSError
 from .addons import camera_main, stop_cameras
-from .addons import add_cmdsh, rm_cmdsh
+from .addons import add_cmdsh, rm_cmdsh, add_mistyproxy, rm_mistyproxy
 
 
 def get_config_with_index(id_prefix=None):
@@ -295,6 +295,25 @@ def main(argv=None):
                                     help='remove add-on cmdsh',
                                     dest='rm_addon_cmdsh')
 
+    addon_mistyproxy_commanddesc = 'manage add-on mistyproxy for your workspace deployments'
+    addon_mistyproxy_parser = subparsers.add_parser('addon-mistyproxy',
+                                               description=addon_mistyproxy_commanddesc,
+                                               help=addon_mistyproxy_commanddesc)
+    addon_mistyproxy_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                    help=('id of workspace deployment'
+                                          ' (can be unique prefix); '
+                                          'this argument is not required '
+                                          'if there is only 1 workspace deployment'))
+    addon_mistyproxy_parser.add_argument('--add', action='store_true', default=False,
+                                    help='add add-on mistyproxy to allow HTTP proxy to Misty robots',
+                                    dest='add_addon_mistyproxy')
+    addon_mistyproxy_parser.add_argument('--ip', metavar='ADDRESS', default=None,
+                                    help='IP address of the Misty robot',
+                                    dest='targetaddr')
+    addon_mistyproxy_parser.add_argument('--rm', action='store_true', default=False,
+                                    help='remove add-on mistyproxy',
+                                    dest='rm_addon_mistyproxy')
+
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
     terminate_parser = subparsers.add_parser('terminate',
                                              description=terminate_commanddesc,
@@ -343,6 +362,8 @@ def main(argv=None):
                 stop_cameras_parser.print_help()
             elif argv_parsed.help_target_command == 'addon-cmdsh':
                 addon_cmdsh_parser.print_help()
+            elif argv_parsed.help_target_command == 'addon-mistyproxy':
+                addon_mistyproxy_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
                 advertise_parser.print_help()
             elif argv_parsed.help_target_command == 'terminate':
@@ -465,6 +486,37 @@ def main(argv=None):
         else:
             print('Use `hardshare addon-cmdsh` with a switch.')
             print('To get a help message, enter\n\n    hardshare help addon-cmdsh')
+            return 1
+
+
+    elif argv_parsed.command == 'addon-mistyproxy':
+        if ac is None:
+            print('cannot register without initial local configuration.'
+                  ' (try `hardshare config --create`)')
+            return 1
+        config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
+
+        wdeployment_id = config['wdeployments'][index]['id']
+
+        local_keys = list_local_keys()
+        if len(local_keys) < 1:
+            print('No valid keys available. Check: `hardshare config -l`')
+            return 1
+        with open(local_keys[0], 'rt') as fp:
+            tok = fp.read().strip()
+
+        if argv_parsed.add_addon_mistyproxy:
+            if argv_parsed.targetaddr is None:
+                print('--ip is required with --add')
+                return 1
+            add_mistyproxy(wdeployment_id, tok, argv_parsed.targetaddr)
+        elif argv_parsed.rm_addon_mistyproxy:
+            rm_mistyproxy(wdeployment_id, tok)
+        else:
+            print('Use `hardshare addon-mistyproxy` with a switch.')
+            print('To get a help message, enter\n\n    hardshare help addon-mistyproxy')
             return 1
 
 
