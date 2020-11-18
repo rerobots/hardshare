@@ -37,6 +37,9 @@ would make the rectangle with corners (190, 133) and (442, 424) available as the
 camera feed for workspace deployment c9f5e2df-f233-4084-9d01-c7f119e3f9a5, and
 the square with corners (500, 500) and (800, 800) would be for 2a789bea-5f46-4dc0-a8a3-bf26759ca329.
 
+Attach and stop cameras
+-----------------------
+
 The contents of a map file is provided to the hardshare daemon via the
 command-line argument ``--crop``, e.g., ::
 
@@ -45,6 +48,21 @@ command-line argument ``--crop``, e.g., ::
 Notice that the above example uses abbreviated references to workspace
 deployments. E.g., ``c9`` abbreviates ``c9f5e2df-f233-4084-9d01-c7f119e3f9a5``.
 Any unique prefix is acceptable.
+
+The above command will keep the terminal from which you called it busy. To stop
+streaming, enter ``Ctrl-C`` (while holding "Ctrl" button on your keyboard, press
+the "c" button).
+
+If you want ``attach-camera`` to execute as a background process, which would
+allow you to then close the terminal window or sign-out of the host without
+interrupting video streams, then add ``-d``, e.g., ::
+
+  hardshare attach-camera -d --crop $(cat mapfile) 0 c9 2a
+
+After ``hardshare attach-camera -d``, the following command can be used to stop
+all ``attach-camera`` background processes::
+
+  hardshare stop-cameras
 
 
 .. _JSON: https://www.json.org/json-en.html
