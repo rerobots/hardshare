@@ -447,7 +447,12 @@ def main(argv=None):
             os.close(1)
             os.close(2)
 
-        camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height, crop=crop)
+        try:
+            camera_main(wdeployments, tok=tok, dev=argv_parsed.camera, width=width, height=height, crop=crop)
+        except ConnectionError:
+            if not argv_parsed.become_daemon:
+                print('ERROR: failed to reach server. Are you connected to the Internet?')
+            return 1
 
 
     elif argv_parsed.command == 'stop-cameras':
@@ -458,7 +463,11 @@ def main(argv=None):
         with open(local_keys[0], 'rt') as fp:
             tok = fp.read().strip()
 
-        stop_cameras(tok, allcam=argv_parsed.all_cameras)
+        try:
+            stop_cameras(tok, allcam=argv_parsed.all_cameras)
+        except ConnectionError:
+            print('ERROR: failed to reach server. Are you connected to the Internet?')
+            return 1
 
 
     elif argv_parsed.command == 'addon-cmdsh':
