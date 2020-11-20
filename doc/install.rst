@@ -124,9 +124,11 @@ which pulls the image from `Docker Hub <https://hub.docker.com/r/rerobots/hs-gen
 
 This image and others are defined by Dockerfiles in the directory ``robots`` of
 the sourcetree. These can be `browsed on GitHub
-<https://github.com/rerobots/hardshare/tree/master/robots>`_. To build the image from source files::
+<https://github.com/rerobots/hardshare/tree/master/robots>`_.  To build the
+image from source files, follow the example given in the comments in the
+beginning of the Dockerfile. For example, ::
 
-  docker build -t hs.rerobots.net/generic:latest -f Dockerfile .
+  docker build -t rerobots/hs-generic:latest -f Dockerfile .
 
 
 Podman
