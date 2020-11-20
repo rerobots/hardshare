@@ -61,4 +61,33 @@ to get details associated with your workspace deployment; for example, ::
   }
 
 
+Streaming video
+---------------
+
+For most users, streaming video is most easily achieved with the command
+``attach-camera`` as described in the section: :doc:`attach_camera`.
+
+When done, the ``cam`` add-on appears on your workspace deployment, which
+practically means that remote users will be able capture camera images or view a
+live stream like that at https://rerobots.net/sandbox/fixed_misty2
+
+
+Making a sandbox
+----------------
+
+At this stage, your workspace deployment with a Misty robot is ready for the
+kind of low-level access demonstrated in the tutorial at https://help.rerobots.net/tutorial_proxy_fixedmisty.html
+
+To provide a faster and simpler (and also more constrained) experience for
+remote users of your Misty, you can make a sandbox.
+A similar arrangement is shown in `the following video <https://vimeo.com/440801712>`_:
+
+.. raw:: html
+
+  <iframe src="https://player.vimeo.com/video/440801712" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+
+Go to your hardshare administrative panel at https://rerobots.net/hardshare
+and in the "Sandboxes" section, do "create new".
+
+
 .. _Misty: https://www.mistyrobotics.com/
