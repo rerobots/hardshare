@@ -108,6 +108,8 @@ command-line interface (CLI)::
   hardshare version
 
 
+.. _ssec:install-preparing-cprovider:
+
 Preparing a cprovider
 ---------------------
 
@@ -142,6 +144,32 @@ Including devices
 For example, ::
 
   hardshare config --add-raw-device /dev/ttyUSB0
+
+
+Access rules
+------------
+
+Each robot shared through rerobots_ is subject to access rules about who can do
+what with it. These rules are said to define *capabilities*. The decision
+sequence for a user ``username`` trying to perform some ``action`` is the
+following:
+
+1. if there is a rule about ``action`` explicitly for ``username``, then apply it;
+2. else, if there is a rule about  ``action`` that is for a class of users of which ``username`` is a member, then apply it;
+3. else, if there is a rule about ``action`` that targets all users (indicated by ``*``), then apply it;
+4. else (no match), default to not permit.
+
+The most simple kind of rule is whether or not to allow someone to remotely
+access a device. When a new device is registered, a single rule is created that
+permits only you (i.e., your user account) to create instances. To get the list
+of access rules::
+
+  hardshare rules -l
+
+which should only have 1 item under ``rules``: a capability ``CAP_INSTANTIATE``
+and your username. To allow other users::
+
+  hardshare rules --permit-all
 
 
 What next?

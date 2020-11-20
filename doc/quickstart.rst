@@ -80,7 +80,9 @@ It will look like
 a different ID. After requesting the instance, it should go from ``INIT`` to
 ``READY``. If something breaks, for example arriving at ``INIT_FAIL`` status,
 terminate the instance from https://rerobots.net/instances and then read
-:doc:`install` or :doc:`help`.
+:doc:`install` or :doc:`help`. For example, the first ``INIT`` can appear slow
+because a Docker image is downloaded, :ref:`as described elsewhere
+<ssec:install-preparing-cprovider>`.
 
 Otherwise, congratulations on successful instantiation from your own device!
 Terminate the instance from https://rerobots.net/instances and, from the
