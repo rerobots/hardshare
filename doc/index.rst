@@ -13,7 +13,7 @@ The source code repository is at https://github.com/rerobots/hardshare
 
 .. toctree::
    :numbered:
-   :maxdepth: 1
+   :maxdepth: 2
 
    intro
    quickstart
