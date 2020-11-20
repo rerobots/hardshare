@@ -130,8 +130,12 @@ the base generic image::
   docker pull rerobots/hs-generic:armv7l-latest
 
 which pulls the image from `Docker Hub <https://hub.docker.com/r/rerobots/hs-generic>`_.
+To declare this image in the local hardshare configuration::
+
+  hardshare config --assign-image rerobots/hs-generic:armv7l-latest
+
 Many consumer "desktop" and "laptop" computers have the ``x86_64`` architecture,
-so the corresponding image would be ``rerobots/hs-generic:x86_64-latest``.
+so the corresponding image is instead ``rerobots/hs-generic:x86_64-latest``.
 
 Images in this registry are defined by Dockerfiles `under the directory robots/
 of the sourcetree`_.  To build the image from source files, use the command
