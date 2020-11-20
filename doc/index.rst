@@ -18,11 +18,11 @@ The source code repository is at https://github.com/rerobots/hardshare
    intro
    quickstart
    install
-   tutorial_misty
    addons
    attach_camera
    maint
    bestpractices
+   tutorial_misty
    help
 
 .. _rerobots: https://rerobots.net/
