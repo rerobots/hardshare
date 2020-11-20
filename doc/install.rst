@@ -116,17 +116,24 @@ Preparing a cprovider
 Docker
 ``````
 
-In most cases, Docker images are available via Docker Hub. For example, ::
+In most cases, Docker images are available via Docker Hub. The correct image to
+use depends on your host architecture. On Linux, you can do ::
 
-  docker pull rerobots/hs-generic
+  uname -m
+
+to find this. For example, on Raspberry Pi this would be ``armv7l``, so Docker
+image tags that begin with ``armv7l-`` can be used. To get the latest release of
+the base generic image::
+
+  docker pull rerobots/hs-generic:armv7l-latest
 
 which pulls the image from `Docker Hub <https://hub.docker.com/r/rerobots/hs-generic>`_.
+Many consumer "desktop" and "laptop" computers have the ``x86_64`` architecture,
+so the corresponding image would be ``rerobots/hs-generic:x86_64-latest``.
 
-This image and others are defined by Dockerfiles in the directory ``robots`` of
-the sourcetree. These can be `browsed on GitHub
-<https://github.com/rerobots/hardshare/tree/master/robots>`_.  To build the
-image from source files, follow the example given in the comments in the
-beginning of the Dockerfile. For example, ::
+Images in this registry are defined by Dockerfiles `under the directory robots/
+of the sourcetree`_.  To build the image from source files, use the command
+given in the comments of the Dockerfile. For example, ::
 
   docker build -t rerobots/hs-generic:latest -f Dockerfile .
 
@@ -185,6 +192,7 @@ At this stage, you have a ready-to-use hardshare host. Next:
 
 
 .. _rerobots: https://rerobots.net/
+.. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
 .. _Misty: https://www.mistyrobotics.com/
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/
