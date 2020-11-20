@@ -128,7 +128,11 @@ async def unregister_camera_uploaders(config, tok, allcam=False):
     async with aiohttp.ClientSession(headers=headers) as session:
         stopped_via_pids = []
         for pid_file in glob(os.path.join(os.path.expanduser('~'), '.rerobots', 'cam.*.pid')):
-            os.kill(int(open(pid_file).read()), signal.SIGINT)
+            this_pid = int(open(pid_file).read())
+            try:
+                os.kill(this_pid, signal.SIGINT)
+            except OSError as err:
+                logger.warning('error sending SIGINT to PID {}: {}'.format(this_pid, err))
             _, hscamera_id, _ = os.path.basename(pid_file).split('.')
             stopped_via_pids.append(hscamera_id)
             os.unlink(pid_file)
