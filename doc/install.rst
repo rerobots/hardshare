@@ -113,6 +113,8 @@ command-line interface (CLI)::
 Preparing a cprovider
 ---------------------
 
+.. _ssec:preparing-docker-cprovider:
+
 Docker
 ``````
 
@@ -145,6 +147,9 @@ For many operations, podman_ is a drop-in replacement for ``docker``. To switch
 to it with an existing hardshare configuration (created as described above), ::
 
   hardshare config --cprovider podman
+
+Then, :ref:`the section about Docker <ssec:preparing-docker-cprovider>` can be
+followed by replacing ``docker`` with ``podman``.
 
 
 Including devices
