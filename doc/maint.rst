@@ -7,6 +7,19 @@ shared devices. Another page provides detailed discussion about :doc:`bestpracti
 
 .. highlight:: none
 
+How to find all hardshare procesess?
+------------------------------------
+
+To find all relevant processes::
+
+  ps -AHF | grep -i hardshare
+
+Beware that this can return several processes that include "hardshare" in their
+arguments but are not hardshare processes per se.  The left-most number in each
+returned row is the PID. These processes can be killed via ``kill`` or
+``kill -SIGINT``.
+
+
 Daemon fails to start or is not responsive
 ------------------------------------------
 
