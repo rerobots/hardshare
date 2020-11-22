@@ -48,51 +48,80 @@ from .mgmt import get_local_config
 logger = logging.getLogger(__name__)
 
 
-async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
+async def __cam_uploader(ws_send, dev, rotate, width, height):
     import cv2
     from PIL import Image
 
     ENCODING_PREFIX = 'data:image/jpeg;base64,'
+    try:
+        cam = cv2.VideoCapture(dev)
+        adjusted = False if width is not None else True
 
+        timeout = 3
+        switched = False
+        st = time.time()
+        while True:
+            if not cam.isOpened():
+                if not switched and (time.time() - st >= timeout):
+                    switched = True
+                    cam = cv2.VideoCapture('/dev/video{}'.format(dev))
+                await asyncio.sleep(1)
+                continue
+            if not adjusted and width and cam.get(cv2.CAP_PROP_FRAME_HEIGHT) != height:
+                if cam.set(cv2.CAP_PROP_FRAME_WIDTH, width) or cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height):
+                    adjusted = True
+            ret, frame = cam.read()
+            img = Image.fromarray(frame[:,:,[2,1,0]], mode='RGB')
+            if rotate == 270:
+                img = img.transpose(Image.ROTATE_270)
+            elif rotate == 90:
+                img = img.transpose(Image.ROTATE_90)
+            elif rotate == 180:
+                img = img.transpose(Image.ROTATE_180)
+            elif rotate == 0:
+                pass
+            elif rotate is not None:
+                pass  # TODO: general case
+            buf = BytesIO()
+            img.save(buf, 'JPEG')
+            await ws_send(ENCODING_PREFIX + base64.b64encode(buf.getvalue()).decode('utf-8'))
+            await asyncio.sleep(0.1)
+
+    except asyncio.CancelledError:
+        return
+
+    except Exception as err:
+        logger.error('caught {}: {}'.format(type(err), err))
+
+
+async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
+    loop = asyncio.get_event_loop()
     headers = {'Authorization': 'Bearer {}'.format(tok)}
     uri = 'https://api.rerobots.net/hardshare/cam/{}/upload'.format(hscamera_id)
     active = True
+    sender_task = None
     while active:
         session = aiohttp.ClientSession(headers=headers)
         try:
             async with session.ws_connect(uri, timeout=30.0, autoping=True) as ws:
-                cam = cv2.VideoCapture(dev)
-                adjusted = False if width is not None else True
+                async for command in ws:
+                    if command.type == aiohttp.WSMsgType.CLOSED:
+                        break
+                    elif command.type == aiohttp.WSMsgType.ERROR:
+                        break
 
-                timeout = 3
-                switched = False
-                st = time.time()
-                while True:
-                    if not cam.isOpened():
-                        if not switched and (time.time() - st >= timeout):
-                            switched = True
-                            cam = cv2.VideoCapture('/dev/video{}'.format(dev))
-                        await asyncio.sleep(1)
-                        continue
-                    if not adjusted and width and cam.get(cv2.CAP_PROP_FRAME_HEIGHT) != height:
-                        if cam.set(cv2.CAP_PROP_FRAME_WIDTH, width) or cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height):
-                            adjusted = True
-                    ret, frame = cam.read()
-                    img = Image.fromarray(frame[:,:,[2,1,0]], mode='RGB')
-                    if rotate == 270:
-                        img = img.transpose(Image.ROTATE_270)
-                    elif rotate == 90:
-                        img = img.transpose(Image.ROTATE_90)
-                    elif rotate == 180:
-                        img = img.transpose(Image.ROTATE_180)
-                    elif rotate == 0:
-                        pass
-                    elif rotate is not None:
-                        pass  # TODO: general case
-                    buf = BytesIO()
-                    img.save(buf, 'JPEG')
-                    await ws.send_str(ENCODING_PREFIX + base64.b64encode(buf.getvalue()).decode('utf-8'))
-                    await asyncio.sleep(0.1)
+                    if command.data == 'START':
+                        if sender_task is None:
+                            sender_task = loop.create_task(__cam_uploader(ws.send_str, dev, rotate, width, height))
+                    elif command.data == 'STOP':
+                        if sender_task is not None:
+                            sender_task.cancel()
+                            while not sender_task.done():
+                                await asyncio.sleep(1)
+                            sender_task = None
+
+                    else:
+                        logger.error('received unexpected command: {}'.format(command.data))
 
         except asyncio.CancelledError:
             active = False
@@ -104,6 +133,11 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
             logger.error('caught {}: {}'.format(type(err), err))
 
         finally:
+            sender_task.cancel()
+            st = time.time()
+            while not sender_task.done() and (time.time() - st < 30):
+                await asyncio.sleep(1)
+            sender_task = None
             await session.close()
 
 
