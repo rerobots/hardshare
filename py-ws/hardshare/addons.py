@@ -213,7 +213,7 @@ def camera_main(wdeployments, tok, dev, rotate=None, width=None, height=None, cr
             pass  # Assume deleted by other process, e.g., unregister_camera_uploaders()
 
 
-async def __update_supported_async(wdeployment_id, tok, addon, config=None, rm=False):
+async def __update_supported_async(wdeployment_id, tok, addons, config=None, rm=False):
     headers = {'Authorization': 'Bearer {}'.format(tok)}
     async with aiohttp.ClientSession(headers=headers) as session:
         res = await session.get('https://api.rerobots.net/deployment/{}'.format(wdeployment_id))
@@ -222,22 +222,27 @@ async def __update_supported_async(wdeployment_id, tok, addon, config=None, rm=F
         update_payload = {
             'supported_addons': payload['supported_addons'],
         }
-        if rm and (addon not in payload['supported_addons']):
-                return
-        elif (not rm) and (addon in payload['supported_addons']):
-                return
+        if rm and all([addon not in payload['supported_addons'] for addon in addons]):
+            return
+        elif (not rm) and all([addon in payload['supported_addons'] for addon in addons]):
+            return
         if 'addons_config' in payload:
             update_payload['addons_config'] = payload['addons_config']
-            if rm and addon in update_payload['addons_config']:
-                del update_payload['addons_config'][addon]
+            for addon in addons:
+                if rm and addon in update_payload['addons_config']:
+                    del update_payload['addons_config'][addon]
         if rm:
-            update_payload['supported_addons'].remove(addon)
+            for addon in addons:
+                if addon in update_payload['supported_addons']:
+                    update_payload['supported_addons'].remove(addon)
         else:
-            update_payload['supported_addons'].append(addon)
+            for addon in addons:
+                if addon not in update_payload['supported_addons']:
+                    update_payload['supported_addons'].append(addon)
             if config is not None:
                 if 'addons_config' not in update_payload:
                     update_payload['addons_config'] = dict()
-                update_payload['addons_config'][addon] = config
+                update_payload['addons_config'].update(config)
         res = await session.post('https://hs.rerobots.net/wd/{}'.format(wdeployment_id), json=update_payload)
         assert res.status == 200
 
@@ -245,14 +250,14 @@ async def __update_supported_async(wdeployment_id, tok, addon, config=None, rm=F
 def add_cmdsh(wdeployment_id, tok):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='cmdsh'))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['cmdsh']))
     except KeyboardInterrupt:
         pass
 
 def rm_cmdsh(wdeployment_id, tok):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='cmdsh', rm=True))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['cmdsh'], rm=True))
     except KeyboardInterrupt:
         pass
 
@@ -260,13 +265,13 @@ def rm_cmdsh(wdeployment_id, tok):
 def add_mistyproxy(wdeployment_id, tok, targetaddr):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='mistyproxy', config={'ip': targetaddr}))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py'], config={'mistyproxy': {'ip': targetaddr}}))
     except KeyboardInterrupt:
         pass
 
 def rm_mistyproxy(wdeployment_id, tok):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addon='mistyproxy', rm=True))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py'], rm=True))
     except KeyboardInterrupt:
         pass
