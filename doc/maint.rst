@@ -40,8 +40,8 @@ Daemon fails to start or is not responsive
 Delete the ``.sock`` file shown.
 
 
-Listing local configurations
-----------------------------
+List local configurations
+-------------------------
 
 ::
 
@@ -82,8 +82,8 @@ Start, check, and stop daemons
    hardshare terminate
 
 
-Updating API tokens
--------------------
+Update API tokens
+-----------------
 
 Remove any expired API tokens::
 

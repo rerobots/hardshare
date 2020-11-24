@@ -110,8 +110,8 @@ command-line interface (CLI)::
 
 .. _ssec:install-preparing-cprovider:
 
-Preparing a cprovider
----------------------
+Prepare a cprovider
+-------------------
 
 .. _ssec:preparing-docker-cprovider:
 
@@ -156,8 +156,8 @@ Then, :ref:`the section about Docker <ssec:preparing-docker-cprovider>` can be
 followed by replacing ``docker`` with ``podman``.
 
 
-Including devices
------------------
+Include devices
+---------------
 
 For example, ::
 

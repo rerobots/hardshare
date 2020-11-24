@@ -17,8 +17,8 @@ Prerequisites
 On Ubuntu, this is available in the package python3-opencv.
 
 
-Preparing a new configuration
------------------------------
+Prepare a new configuration
+---------------------------
 
 1. Capture a full image.
 2. Program each device in turn and watch to determine which device has a screen that clears (indicating that it is being flashed).

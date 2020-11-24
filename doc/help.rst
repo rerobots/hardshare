@@ -1,5 +1,5 @@
-Help and reporting errors
-=========================
+Get help, and report errors
+===========================
 
 If you have a service contract with rerobots, then please use the provided
 contact information to get support immediately.

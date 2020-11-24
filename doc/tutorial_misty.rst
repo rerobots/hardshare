@@ -5,8 +5,8 @@ This tutorial begins where :doc:`quickstart` ended. This tutorial provides
 typical preparation for sharing a Misty_ robot via hardshare.
 
 
-Declaring the add-on mistyproxy
--------------------------------
+Declare the add-on mistyproxy
+-----------------------------
 
 For example, if the Misty robot is available on the local network at IP address
 192.168.0.144, then::
@@ -14,8 +14,8 @@ For example, if the Misty robot is available on the local network at IP address
   hardshare addon-mistyproxy --add --ip 192.168.0.144
 
 
-Checking details via the rerobots CLI
--------------------------------------
+Check details via the rerobots CLI
+----------------------------------
 
 You can check the details associated with your Misty robot deployment through
 the `rerobots CLI <https://rerobots-py.readthedocs.io/en/latest/cli.html>`_.  If
@@ -61,8 +61,8 @@ to get details associated with your workspace deployment; for example, ::
   }
 
 
-Streaming video
----------------
+Stream video
+------------
 
 For most users, streaming video is most easily achieved with the command
 ``attach-camera`` as described in the section: :doc:`attach_camera`.
@@ -72,8 +72,8 @@ practically means that remote users will be able capture camera images or view a
 live stream like that at https://rerobots.net/sandbox/fixed_misty2
 
 
-Making a sandbox
-----------------
+Make a sandbox
+--------------
 
 At this stage, your workspace deployment with a Misty robot is ready for the
 kind of low-level access demonstrated in the tutorial at https://help.rerobots.net/tutorial_proxy_fixedmisty.html
