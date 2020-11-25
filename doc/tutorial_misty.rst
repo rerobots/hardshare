@@ -2,7 +2,13 @@ Tutorial: Misty
 ===============
 
 This tutorial begins where :doc:`quickstart` ended. This tutorial provides
-typical preparation for sharing a Misty_ robot via hardshare.
+typical preparation for sharing a Misty_ robot via hardshare:
+
+1. configure a proxy to the API of your Misty,
+2. attach a camera to the workspace,
+3. create a sandbox with example code, as shown in the figure below.
+
+.. image:: figures/screenshot-misty2sandbox-20201124.png
 
 
 Declare the add-on mistyproxy
