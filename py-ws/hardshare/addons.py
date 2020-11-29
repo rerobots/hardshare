@@ -133,11 +133,12 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
             logger.error('caught {}: {}'.format(type(err), err))
 
         finally:
-            sender_task.cancel()
-            st = time.time()
-            while not sender_task.done() and (time.time() - st < 30):
-                await asyncio.sleep(1)
-            sender_task = None
+            if sender_task is not None:
+                sender_task.cancel()
+                st = time.time()
+                while not sender_task.done() and (time.time() - st < 30):
+                    await asyncio.sleep(1)
+                sender_task = None
             await session.close()
 
 
