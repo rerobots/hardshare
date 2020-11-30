@@ -1,3 +1,13 @@
+hardshare client (0.9.3)
+
+  * attach-camera: only upload video when there is active instance.
+
+  * To simplify creating misty-py sandboxes, adding or removing mistyproxy now
+    does same for add-on `py`.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Mon, 30 Nov 2020 09:24:44 -0800
+
+
 hardshare client (0.9.2)
 
   * New CLI commands to manage add-ons: addon-cmdsh, addon-mistyproxy.
