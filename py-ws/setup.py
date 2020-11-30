@@ -17,7 +17,7 @@ from setuptools import setup
 # Version of this package
 MAJOR=0
 MINOR=9
-PATCH=4
+PATCH=3
 devel=False
 
 version = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
