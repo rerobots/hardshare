@@ -7,7 +7,7 @@ shared devices. Another page provides detailed discussion about :doc:`bestpracti
 
 .. highlight:: none
 
-How to find all hardshare procesess?
+How to find all hardshare processes?
 ------------------------------------
 
 To find all relevant processes::
