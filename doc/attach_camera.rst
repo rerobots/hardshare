@@ -13,8 +13,23 @@ for different workspaces.
 Prerequisites
 -------------
 
-`install OpenCV`_
-On Ubuntu, this is available in the package python3-opencv.
+Streaming from a video camera requires 2 additional packages:
+
+* Pillow_
+* OpenCV_
+
+Of these, OpenCV is often regarded as difficult to install, so try to get it
+through a system package manager first. For example, on Ubuntu::
+
+  sudo apt-get install python3-opencv
+
+If that fails, consider reading `detailed instructions to install
+OpenCV`_. Next, try to install `Pillow from PyPI`_::
+
+  pip3 install Pillow
+
+or just ``pip``, depending on your Python installation. If that fails, consider
+reading the `Pillow documentation`_.
 
 
 Prepare a new configuration
@@ -66,4 +81,8 @@ all ``attach-camera`` background processes::
 
 
 .. _JSON: https://www.json.org/json-en.html
-.. _install OpenCV: https://docs.opencv.org/4.4.0/d2/de6/tutorial_py_setup_in_ubuntu.html
+.. _detailed instructions to install OpenCV: https://docs.opencv.org/4.4.0/d2/de6/tutorial_py_setup_in_ubuntu.html
+.. _Pillow: https://python-pillow.org/
+.. _Pillow documentation: https://pillow.readthedocs.io/en/stable/
+.. _Pillow from PyPI: https://pypi.org/project/Pillow/
+.. _OpenCV: https://opencv.org/
