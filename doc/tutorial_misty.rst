@@ -19,6 +19,12 @@ For example, if the Misty robot is available on the local network at IP address
 
   hardshare addon-mistyproxy --add --ip 192.168.0.144
 
+To use a different address, the previously saved value must be removed. For
+example, to change to 192.168.1.10::
+
+  hardshare addon-mistyproxy --rm
+  hardshare addon-mistyproxy --add --ip 192.168.1.10
+
 
 Check details via the rerobots CLI
 ----------------------------------
