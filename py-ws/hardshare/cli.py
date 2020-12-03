@@ -488,13 +488,17 @@ def main(argv=None):
         with open(local_keys[0], 'rt') as fp:
             tok = fp.read().strip()
 
-        if argv_parsed.add_addon_cmdsh:
-            add_cmdsh(wdeployment_id, tok)
-        elif argv_parsed.rm_addon_cmdsh:
-            rm_cmdsh(wdeployment_id, tok)
-        else:
-            print('Use `hardshare addon-cmdsh` with a switch.')
-            print('To get a help message, enter\n\n    hardshare help addon-cmdsh')
+        try:
+            if argv_parsed.add_addon_cmdsh:
+                add_cmdsh(wdeployment_id, tok)
+            elif argv_parsed.rm_addon_cmdsh:
+                rm_cmdsh(wdeployment_id, tok)
+            else:
+                print('Use `hardshare addon-cmdsh` with a switch.')
+                print('To get a help message, enter\n\n    hardshare help addon-cmdsh')
+                return 1
+        except ValueError as err:
+            print('ERROR: {}'.format(err))
             return 1
 
 
@@ -516,16 +520,20 @@ def main(argv=None):
         with open(local_keys[0], 'rt') as fp:
             tok = fp.read().strip()
 
-        if argv_parsed.add_addon_mistyproxy:
-            if argv_parsed.targetaddr is None:
-                print('--ip is required with --add')
+        try:
+            if argv_parsed.add_addon_mistyproxy:
+                if argv_parsed.targetaddr is None:
+                    print('--ip is required with --add')
+                    return 1
+                add_mistyproxy(wdeployment_id, tok, argv_parsed.targetaddr)
+            elif argv_parsed.rm_addon_mistyproxy:
+                rm_mistyproxy(wdeployment_id, tok)
+            else:
+                print('Use `hardshare addon-mistyproxy` with a switch.')
+                print('To get a help message, enter\n\n    hardshare help addon-mistyproxy')
                 return 1
-            add_mistyproxy(wdeployment_id, tok, argv_parsed.targetaddr)
-        elif argv_parsed.rm_addon_mistyproxy:
-            rm_mistyproxy(wdeployment_id, tok)
-        else:
-            print('Use `hardshare addon-mistyproxy` with a switch.')
-            print('To get a help message, enter\n\n    hardshare help addon-mistyproxy')
+        except ValueError as err:
+            print('ERROR: {}'.format(err))
             return 1
 
 

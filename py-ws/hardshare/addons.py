@@ -220,6 +220,8 @@ async def __update_supported_async(wdeployment_id, tok, addons, config=None, rm=
         res = await session.get('https://api.rerobots.net/deployment/{}'.format(wdeployment_id))
         assert res.status == 200
         payload = await res.json()
+        if 'cam' in payload['supported_addons']:
+            raise ValueError('stop-cameras before changing add-on configuration')
         update_payload = {
             'supported_addons': payload['supported_addons'],
         }
