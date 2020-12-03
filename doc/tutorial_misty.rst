@@ -11,6 +11,8 @@ typical preparation for sharing a Misty_ robot via hardshare:
 .. image:: figures/screenshot-misty2sandbox-20201124.png
 
 
+.. highlight:: none
+
 Declare the add-on mistyproxy
 -----------------------------
 
@@ -77,7 +79,14 @@ Stream video
 ------------
 
 For most users, streaming video is most easily achieved with the command
-``attach-camera`` as described in the section: :doc:`attach_camera`.
+``attach-camera`` as described in the section: :doc:`attach_camera`. After
+following those instructions, typically it suffices to::
+
+  hardshare attach-camera -d 0
+
+to enable video streaming. Note that the camera is only active when there is an
+active instance with your hardshare client. In other words, the above command
+can succeed without you noticing any activity on your camera.
 
 When done, the ``cam`` add-on appears on your workspace deployment, which
 practically means that remote users will be able capture camera images or view a
@@ -101,6 +110,29 @@ A similar arrangement is shown in `the following video <https://vimeo.com/440801
 Go to your hardshare administrative panel at https://rerobots.net/hardshare
 and in the "Sandboxes" section, do "create new".
 Select the sandbox kind ``misty-py``.
+
+
+Hosting more than 1 Misty
+-------------------------
+
+To host more than 1 Misty robot, you must register additional workspace
+deployments: each ID should correspond to precisely 1 Misty::
+
+  hardshare register --permit-more
+
+Now ``hardshare config -l`` will show a list of multiple IDs. All commands given
+previously in this tutorial and in :doc:`quickstart` can be used again with the
+new ID by specifying it on the command-line.
+
+For example, if the new ID returned from the ``hardshare register`` command
+above is ``2d6039bc-7c83-4d46-8567-c8df4711c387`` and if IP address of the
+second Misty robot is ``192.168.1.11``, then::
+
+  hardshare addon-mistyproxy --add --ip 192.168.1.11 2d6039bc
+
+will declare the address. Notice that the above command has a prefix of the ID
+``2d6039bc-7c83-4d46-8567-c8df4711c387``. For convenience, most ``hardshare``
+commands accept a unique prefix where a workspace deployment ID is required.
 
 
 .. _Misty: https://www.mistyrobotics.com/
