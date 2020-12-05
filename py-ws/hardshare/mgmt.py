@@ -224,8 +224,7 @@ def add_key(path, create_if_empty=False):
     if newkey_basename in existing_basenames:
         newkey_basename += '-' + datetime.utcnow().strftime('%Y%m%d-%H%M%S')
     assert not os.path.exists(os.path.join(base_path, 'keys', newkey_basename))
-    os.rename(os.path.join(os.path.dirname(path), newkey_basename),
-              os.path.join(base_path, 'keys', newkey_basename))
+    os.rename(path, os.path.join(base_path, 'keys', newkey_basename))
     os.chmod(os.path.join(base_path, 'keys', newkey_basename), mode=stat.S_IRUSR|stat.S_IWUSR)
 
 
