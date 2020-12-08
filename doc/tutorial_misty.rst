@@ -111,8 +111,9 @@ Go to your hardshare administrative panel at https://rerobots.net/hardshare
 and in the "Sandboxes" section, do "create new".
 Select the sandbox kind ``misty-py``.
 
-Alternatively, the sandbox can present a Blockly_ editor. An example is shown in
-the video at https://vimeo.com/488264658
+Alternatively, the sandbox can present a Blockly_ editor. To do this, select the
+sandbox kind ``misty-blockly``. An example is shown in the video at
+https://vimeo.com/488264658
 
 
 Hosting more than 1 Misty
