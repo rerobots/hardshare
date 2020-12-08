@@ -111,6 +111,9 @@ Go to your hardshare administrative panel at https://rerobots.net/hardshare
 and in the "Sandboxes" section, do "create new".
 Select the sandbox kind ``misty-py``.
 
+Alternatively, the sandbox can present a Blockly_ editor. An example is shown in
+the video at https://vimeo.com/488264658
+
 
 Hosting more than 1 Misty
 -------------------------
@@ -135,4 +138,5 @@ will declare the address. Notice that the above command has a prefix of the ID
 commands accept a unique prefix where a workspace deployment ID is required.
 
 
+.. _Blockly: https://developers.google.com/blockly/
 .. _Misty: https://www.mistyrobotics.com/
