@@ -1,4 +1,4 @@
-# Base image with packages required for add-on `cam`
+# Base image with packages required for PlatformIO (https://platformio.org/)
 #
 #     docker build -t rerobots/hs-generic-platformio:latest -f Dockerfile-platformio .
 #
