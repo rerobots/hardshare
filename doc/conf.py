@@ -1,6 +1,7 @@
 project = 'hardshare'
 copyright = '2018-2020 rerobots, Inc. | <a href="https://github.com/rerobots/hardshare/">source code</a>'
 author = 'rerobots, Inc.'
+html_logo = '_static/logo.svg'
 
 import os.path
 import sys
