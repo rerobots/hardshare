@@ -197,11 +197,14 @@ At this stage, you have a ready-to-use hardshare host. Next:
 
 * :doc:`attach_camera` to provide video streams of your hardware.
 * Go to https://rerobots.net/hardshare and create your first sandbox.
+* If you have a PlatformIO_-compatible board (for example, ESP32_), do the :doc:`tutorial_esp32`.
 * If you have a Misty_ robot, do the :doc:`tutorial_misty`.
 
 
 .. _rerobots: https://rerobots.net/
 .. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
+.. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
+.. _ESP32: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/
 .. _Misty: https://www.mistyrobotics.com/
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/

@@ -22,6 +22,7 @@ The source code repository is at https://github.com/rerobots/hardshare
    attach_camera
    maint
    bestpractices
+   tutorial_esp32
    tutorial_misty
    help
 
