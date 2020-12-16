@@ -34,7 +34,7 @@ https://github.com/platformio/platform-espressif32 ::
   pio run -t nobuild -t upload
 
 If an ESP32 board is connected to your host, then this should result in the
-espidf-hello-world program being written to it.  Now observe messages received
+espidf-hello-world program being written to it.  Now, observe messages received
 via serial from the ESP32::
 
   pio device monitor
@@ -48,13 +48,61 @@ hardshare tutorial.
 Prepare Docker image
 --------------------
 
-:ref:`as described elsewhere <ssec:install-preparing-cprovider>`
+In the context of terms from the :doc:`intro`, ESP32 is presented as part of a
+workspace deployment that you have registered (``hardshare register`` in the
+CLI). Each instance that a remote user gets has a corresponding Docker
+container. To facilitate efficient reproducibility, we want to prepare a Docker
+image that has requirements already installed so the user can simply
+"build-and-flash" without having to wait for additional toolchains to be
+downloaded, built, etc.
 
-get image depending on local arch, or build it yourself from Dockerfile-platformio
+With this in mind, we will begin with a base image that already has PlatformIO_
+installed. Then, we will build example code in a process that will automatically
+install required packages for that example. Finally, the resulting container
+will be committed as an image that can be re-used.
 
-start container and copy in your project code
+The base Docker image is defined by Dockerfile-platformio_ in the `sourcetree of
+the hardshare client`_. You can build it yourself from this Dockerfile, or you
+can pull the image from `the registry
+<https://hub.docker.com/r/rerobots/hs-generic-platformio/tags>`_ if there is a
+tag corresponding to your host architecture. For details about tag names and
+finding your host architecture, read :ref:`details about preparing Docker
+<ssec:preparing-docker-cprovider>` in the :doc:`install`.
 
-docker commit 4e7 demo
+Now start a container from it. For example, on a x86_64 host::
+
+  docker run -it --rm rerobots/hs-generic-platformio:x86_64-latest bash
+
+This will start the container with a ``bash`` shell. PlatformIO is already installed::
+
+  # pio --version
+  PlatformIO, version 5.0.3
+
+In a separate terminal, copy the initial code (including platformio.ini) into
+the container. To get the container ID, call ``docker ps``. For the commands
+below, we assume this value is ``5baec5c80e45``. Continuing with the example of
+espidf-hello-world_ from the Prerequisites section above, ::
+
+  cd platform-espressif32/examples
+  docker cp espidf-hello-world 5baec5c80e45:/root/
+
+Now, in the terminal that is attached to the container::
+
+  cd /root/espidf-hello-world
+  pio run
+
+This will install all requirements for building espidf-hello-world in addition
+to actually building espidf-hello-world. Once complete, in a separate terminal, ::
+
+  docker commit 5baec5c80e45 hs-esp32-tutorial
+
+To create from this container a new Docker image named ``hs-esp32-tutorial``
+("hs" abbreviates "hardshare"). Once complete, you can stop the container,
+either by exiting from the ``bash`` shell or by calling ``docker stop``.
+
+Finally, assign this image to be used by hardshare when creating new instances::
+
+  hardshare config --assign-image hs-esp32-tutorial
 
 
 Add USB device to hardshare configuration
@@ -124,7 +172,8 @@ Make a sandbox
 --------------
 
 
-
+.. _sourcetree of the hardshare client: https://github.com/rerobots/hardshare
 .. _Dockerfile-platformio: https://github.com/rerobots/hardshare/tree/master/robots/generic/Dockerfile-platformio
 .. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
 .. _ESP32-DevKitC: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html
+.. _espidf-hello-world: https://github.com/platformio/platform-espressif32/tree/a58a358fdc1122523c7fcf7b4fc8b4016e48961d/examples/espidf-hello-world
