@@ -126,13 +126,11 @@ the following log messages::
   Dec 15 10:58:58 cero mtp-probe[12527]: checking bus 2, device 4: "/sys/devices/pci0000:00/0000:00:14.0/usb2/2-1"
   Dec 15 10:58:58 cero mtp-probe[12527]: bus: 2, device: 4 was not an MTP device
 
-
 Disconnecting the ESP32 board leads to the following logs::
 
   Dec 15 10:59:17 cero kernel: usb 2-1: USB disconnect, device number 4
   Dec 15 10:59:17 cero kernel: cp210x ttyUSB0: cp210x converter now disconnected from ttyUSB0
   Dec 15 10:59:17 cero kernel: cp210x 2-1:1.0: device disconnected
-
 
 The critical information in the above logs is that the ESP32-DevKitC is
 associated with the device file ``/dev/ttyUSB0``. Accordingly, the device is
@@ -144,14 +142,47 @@ added to the local hardshare configuration::
 On security
 -----------
 
-iptables to prevent access of LAN
-other constraints for container, e.g., --memory
+For the purposes of this tutorial, you can address security by deciding who your
+remote users will be and what (if anything) is valuable about the host computer.
+If your users are trusted---for example, they are fellow students who you know
+from school, or they are collaborators on your engineering team, then you can
+probably skip this section.
+
+Otherwise, please read the following to provide additional security against
+adversarial users. The ESP32 board is shared through a Docker container, so
+there are 3 kinds of attack that are salient:
+
+1. access to an insecure host on your local network (LAN),
+2. denial-of-service by excessive resource consumption on the host,
+3. exploiting a security bug in the Linux kernel.
+
+A simple solution to prevent access to any hosts on the local network is an
+``iptables`` rule that only permits outgoing packets to your router (as part the
+packet's journey to outside networks). To construct this rule, first get a list
+of subnets in the routing table::
+
+ ip route
+
+There will be a subnet associated with Docker containers, having a network
+interface name like ``docker0``. For this tutorial, suppose it is
+``172.17.0.0/16``, i.e., any packet originating from a Docker container has IPv4
+address with first two octets ``172.17.``. There will also be a default route,
+where packets are sent when their destination is somewhere in the Internet. For
+this example, suppose it is ``192.168.1.1``. In simple LAN arrangements, this
+would be the main "router" between your office network and the open
+Internet. Then the following ``iptables`` rules will filter packets from
+hardshare instances to prevent LAN destinations::
+
+  sudo iptables -I -s 172.17.0.0/16 -d 192.168.0.0/16 -j DROP
+  sudo iptables -I -s 172.17.0.0/16 -d 192.168.1.1/32 -j ACCEPT
 
 
 Termination scripts
 -------------------
 
 clean-up (termination script)
+
+  hardshare config --add-terminate-prog /home/scott/hs/terminate.sh
 
 
 Stream video
