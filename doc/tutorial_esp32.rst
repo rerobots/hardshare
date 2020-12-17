@@ -220,6 +220,25 @@ without you noticing any activity on your camera.
 Make a sandbox
 --------------
 
+Go to https://rerobots.net/hardshare and, in the Devices section, find the
+``id`` corresponding to the workspace deployment listed in your local configuration by ::
+
+  hardshare config -l
+
+In the Sandboxes section, push "create new". The form has the following parts:
+
+1. a summary to remind you about the sandbox; visitors to the sandbox cannot read this;
+2. introduction text (Markdown syntax): put whatever you want here to introduce visitors to your sandbox;
+3. sandbox kind: select ``editor-xterm``;
+4. example code: copy-and-paste `src/hello_world_main.c`_ from espidf-hello-world_,
+5. destination path, i.e., where we want to put code from the code editor: for this tutorial, it should be ``/root/espidf-hello-world/src/hello_world_main.c``
+6. button label: a short text to indicate what the custom button does; for this tutorial, put "build & flash";
+7. command associated with the button: for this tutorial, it should be ``export LC_ALL=C.UTF-8 LANG=C.UTF-8 && source /root/.platformio/penv/bin/activate && cd /root/espidf-hello-world && pio run -t upload``
+
+Finally, the form has checkboxes to select which workspace deployments are
+associated with the sandbox. In other words, when someone visits the sandbox,
+any 1 of these devices is feasible for instantiation. The ``id`` corresponding
+to your ESP32 workspace should be already be checked.
 
 .. _sourcetree of the hardshare client: https://github.com/rerobots/hardshare
 .. _Dockerfile-platformio: https://github.com/rerobots/hardshare/tree/master/robots/generic/Dockerfile-platformio
@@ -227,3 +246,4 @@ Make a sandbox
 .. _ESP32-DevKitC: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html
 .. _espidf-hello-world: https://github.com/platformio/platform-espressif32/tree/a58a358fdc1122523c7fcf7b4fc8b4016e48961d/examples/espidf-hello-world
 .. _erase flash memory: https://docs.platformio.org/en/latest/platforms/espressif32.html#erase-flash
+.. _src/hello_world_main.c: https://github.com/platformio/platform-espressif32/blob/a58a358fdc1122523c7fcf7b4fc8b4016e48961d/examples/espidf-hello-world/src/hello_world_main.c
