@@ -92,9 +92,12 @@ Now, in the terminal that is attached to the container::
   pio run
 
 This will install all requirements for building espidf-hello-world in addition
-to actually building espidf-hello-world. Once complete, in a separate terminal, ::
+to actually building espidf-hello-world. Note that multiple, possibly redundant
+targets are listed in the example platformio.ini. If you have a ESP32-DevKitC,
+then you can delete the sections besides ``[env]`` and ``[env:esp32dev]``.
+Once complete, in a separate terminal, ::
 
-  docker commit 5baec5c80e45 hs-esp32-tutorial
+  docker commit -c 'CMD ["/sbin/rerobots-hs-init.sh"]' 5baec5c80e45 hs-esp32-tutorial
 
 To create from this container a new Docker image named ``hs-esp32-tutorial``
 ("hs" abbreviates "hardshare"). Once complete, you can stop the container,
@@ -173,14 +176,30 @@ would be the main "router" between your office network and the open
 Internet. Then the following ``iptables`` rules will filter packets from
 hardshare instances to prevent LAN destinations::
 
-  sudo iptables -I -s 172.17.0.0/16 -d 192.168.0.0/16 -j DROP
-  sudo iptables -I -s 172.17.0.0/16 -d 192.168.1.1/32 -j ACCEPT
+  sudo iptables -I FORWARD -s 172.17.0.0/16 -d 192.168.0.0/16 -j DROP
+  sudo iptables -I FORWARD -s 172.17.0.0/16 -d 192.168.1.1/32 -j ACCEPT
 
 
 Termination scripts
 -------------------
 
-clean-up (termination script)
+You have the choice of executing a script at the end of every instance.
+Intuitively, this script provides automatic clean-up of a workspace to prepare
+it for the next user. For ESP32 boards, we can ::
+
+  pio run -t erase
+
+to `erase flash memory`_. Put this in a shell script that ``hardshare`` can call::
+
+  #!/bin/bash
+
+  pio run -t erase
+
+For some installations of PlatformIO, a Python environment must be sourced
+before beginning. In that case, you might need to add ``source
+~/.platformio/penv/bin/activate`` to the above script.
+
+Finally, add the script path to your hardshare configuration; for example, ::
 
   hardshare config --add-terminate-prog /home/scott/hs/terminate.sh
 
@@ -208,3 +227,4 @@ Make a sandbox
 .. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
 .. _ESP32-DevKitC: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html
 .. _espidf-hello-world: https://github.com/platformio/platform-espressif32/tree/a58a358fdc1122523c7fcf7b4fc8b4016e48961d/examples/espidf-hello-world
+.. _erase flash memory: https://docs.platformio.org/en/latest/platforms/espressif32.html#erase-flash
