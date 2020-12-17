@@ -193,13 +193,12 @@ to `erase flash memory`_. Put this in a shell script that ``hardshare`` can call
 
   #!/bin/bash
 
+  source ~/.platformio/penv/bin/activate
   pio run -t erase
 
-For some installations of PlatformIO, a Python environment must be sourced
-before beginning. In that case, you might need to add ``source
-~/.platformio/penv/bin/activate`` to the above script.
-
-Finally, add the script path to your hardshare configuration; for example, ::
+where we include the sourcing of a Python environment, which is required in some
+installations of PlatformIO.  Finally, add the script path to your hardshare
+configuration; for example, ::
 
   hardshare config --add-terminate-prog /home/scott/hs/terminate.sh
 
