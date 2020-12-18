@@ -20,6 +20,46 @@ returned row is the PID. These processes can be killed via ``kill`` or
 ``kill -SIGINT``.
 
 
+After first installation, instance status INIT_FAIL
+---------------------------------------------------
+
+There are many reasons why an instance can fail to initialize, depending on your
+configuration. For a newly configured hardshare installation that uses Docker,
+first check that the Docker image is compatible with your host architecture. To
+do this, first ::
+
+  hardshare config -l
+
+and find the Docker image line; for example, ::
+
+  cprovider: docker
+  cargs: []
+  img: rerobots/hs-generic
+
+indicates the image rerobots/hs-generic:latest ("latest" is implied if not
+present). Now, get your host architecture as known to Linux::
+
+  # uname -m
+  x86_64
+
+The output might be different, such as ``armv7l`` on some Raspyberry Pi
+boards. Continuing the example above, we can pull the base generic Docker image
+for x86_64 hosts::
+
+  docker image pull rerobots/hs-generic:x86_64-latest
+
+and update the hardshare configuration with the tag name::
+
+  hardshare config --assign-image rerobots/hs-generic:x86_64-latest
+
+Now restart the hardshare daemon::
+
+  hardshare terminate
+  hardshare ad -d
+
+Finally, request an instance as usual.
+
+
 Daemon fails to start or is not responsive
 ------------------------------------------
 
