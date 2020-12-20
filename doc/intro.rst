@@ -64,6 +64,8 @@ DigitalOcean_:
 Interfaces around instances
 ---------------------------
 
+.. image:: figures/layers-illustration.svg
+
 The rerobots/hardshare architecture provides for specifying how hardware appears
 to an instance. If carefully configured, any device can be shared through
 instances safely and securely. The precise meanings of *safe* and *secure*
