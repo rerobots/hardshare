@@ -56,6 +56,9 @@ DigitalOcean_:
    force termination at any time.)
 
 
+.. image:: figures/instance-lifecycle.svg
+
+
 .. _Packet: https://www.packet.com/
 .. _DigitalOcean: https://www.digitalocean.com/
 .. _sandboxes: https://rerobots.net/sandbox
