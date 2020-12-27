@@ -1,3 +1,14 @@
+hardshare client (0.9.4)
+
+  * New CLI command: addon-vnc {--add, --rm}
+
+  * `hardshare addon-` commands fail if active cameras.
+
+  * Quit re-connect attempts after 20 minutes of fail.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Sat, 26 Dec 2020 20:13:16 -0800
+
+
 hardshare client (0.9.3)
 
   * attach-camera: only upload video when there is active instance.
