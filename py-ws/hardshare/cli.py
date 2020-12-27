@@ -33,7 +33,7 @@ from .mgmt import find_wd, modify_local, rm_wd
 from .api import HSAPIClient
 from .err import Error as HSError
 from .addons import camera_main, stop_cameras
-from .addons import add_cmdsh, rm_cmdsh, add_mistyproxy, rm_mistyproxy
+from .addons import add_cmdsh, rm_cmdsh, add_vnc, rm_vnc, add_mistyproxy, rm_mistyproxy
 
 
 def get_config_with_index(id_prefix=None):
@@ -295,6 +295,22 @@ def main(argv=None):
                                     help='remove add-on cmdsh',
                                     dest='rm_addon_cmdsh')
 
+    addon_vnc_commanddesc = 'manage add-on vnc for your workspace deployments'
+    addon_vnc_parser = subparsers.add_parser('addon-vnc',
+                                               description=addon_vnc_commanddesc,
+                                               help=addon_vnc_commanddesc)
+    addon_vnc_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
+                                    help=('id of workspace deployment'
+                                          ' (can be unique prefix); '
+                                          'this argument is not required '
+                                          'if there is only 1 workspace deployment'))
+    addon_vnc_parser.add_argument('--add', action='store_true', default=False,
+                                    help='add add-on vnc to enable VNC via rerobots.net',
+                                    dest='add_addon_vnc')
+    addon_vnc_parser.add_argument('--rm', action='store_true', default=False,
+                                    help='remove add-on vnc',
+                                    dest='rm_addon_vnc')
+
     addon_mistyproxy_commanddesc = 'manage add-on mistyproxy for your workspace deployments'
     addon_mistyproxy_parser = subparsers.add_parser('addon-mistyproxy',
                                                description=addon_mistyproxy_commanddesc,
@@ -362,6 +378,8 @@ def main(argv=None):
                 stop_cameras_parser.print_help()
             elif argv_parsed.help_target_command == 'addon-cmdsh':
                 addon_cmdsh_parser.print_help()
+            elif argv_parsed.help_target_command == 'addon-vnc':
+                addon_vnc_parser.print_help()
             elif argv_parsed.help_target_command == 'addon-mistyproxy':
                 addon_mistyproxy_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
@@ -496,6 +514,38 @@ def main(argv=None):
             else:
                 print('Use `hardshare addon-cmdsh` with a switch.')
                 print('To get a help message, enter\n\n    hardshare help addon-cmdsh')
+                return 1
+        except ValueError as err:
+            print('ERROR: {}'.format(err))
+            return 1
+
+
+    elif argv_parsed.command == 'addon-vnc':
+        if ac is None:
+            print('cannot register without initial local configuration.'
+                  ' (try `hardshare config --create`)')
+            return 1
+        config, index, rc = get_config_with_index(argv_parsed.id_prefix)
+        if rc != 0:
+            return rc
+
+        wdeployment_id = config['wdeployments'][index]['id']
+
+        local_keys = list_local_keys()
+        if len(local_keys) < 1:
+            print('No valid keys available. Check: `hardshare config -l`')
+            return 1
+        with open(local_keys[0], 'rt') as fp:
+            tok = fp.read().strip()
+
+        try:
+            if argv_parsed.add_addon_vnc:
+                add_vnc(wdeployment_id, tok)
+            elif argv_parsed.rm_addon_vnc:
+                rm_vnc(wdeployment_id, tok)
+            else:
+                print('Use `hardshare addon-vnc` with a switch.')
+                print('To get a help message, enter\n\n    hardshare help addon-vnc')
                 return 1
         except ValueError as err:
             print('ERROR: {}'.format(err))
