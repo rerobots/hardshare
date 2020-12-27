@@ -22,6 +22,7 @@ import os
 import os.path
 import signal
 import socket
+import time
 
 import aiohttp
 
@@ -539,13 +540,13 @@ class HSAPIClient:
         headers = self._add_key_header()
         uri = self.base_uri + '/ad/{}'.format(self.current_wdeployment['id'])
         active = True
-        connected_at_least_once = False
+        lost_connection = None
         while active:
             session = aiohttp.ClientSession(headers=headers)
             try:
                 async with session.ws_connect(uri, receive_timeout=45, autoping=True) as ws:
-                    if not connected_at_least_once:
-                        connected_at_least_once = True
+                    if lost_connection is not None:
+                        lost_connection  = None
                     async for msg in ws:
                         if not (await self.handle_wsrecv(ws, msg)):
                             break
@@ -555,8 +556,12 @@ class HSAPIClient:
 
             except Exception as e:
                 logger.error('caught {}: {}'.format(type(e), e))
-                if not connected_at_least_once:
-                    return
+                if lost_connection is None:
+                    lost_connection = time.time()
+                else:
+                    if time.time() - lost_connection > 1200:  # 20 minutes
+                        logger.error('giving up re-connection attempts')
+                        break
                 await asyncio.sleep(1)
 
             finally:
