@@ -99,11 +99,14 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
     headers = {'Authorization': 'Bearer {}'.format(tok)}
     uri = 'https://api.rerobots.net/hardshare/cam/{}/upload'.format(hscamera_id)
     active = True
+    lost_connection = None
     sender_task = None
     while active:
         session = aiohttp.ClientSession(headers=headers)
         try:
-            async with session.ws_connect(uri, timeout=30.0, autoping=True) as ws:
+            async with session.ws_connect(uri, receive_timeout=45, autoping=True) as ws:
+                if lost_connection is not None:
+                    lost_connection  = None
                 async for command in ws:
                     if command.type == aiohttp.WSMsgType.CLOSED:
                         break
@@ -131,6 +134,12 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
 
         except Exception as err:
             logger.error('caught {}: {}'.format(type(err), err))
+            if lost_connection is None:
+                lost_connection = time.time()
+            else:
+                if time.time() - lost_connection > 1200:  # 20 minutes
+                    logger.error('giving up re-connection attempts')
+                    raise
 
         finally:
             if sender_task is not None:
