@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!(crate_version!());
     } else if let Some(_) = matches.subcommand_matches("version") {
         println!(crate_version!());
-    } if let Some(matches) = matches.subcommand_matches("config") {
+    } else if let Some(matches) = matches.subcommand_matches("config") {
         let create_if_missing = matches.is_present("create_config");
         if matches.is_present("list") {
 
