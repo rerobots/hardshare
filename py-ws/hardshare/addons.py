@@ -292,13 +292,13 @@ def rm_vnc(wdeployment_id, tok):
 def add_mistyproxy(wdeployment_id, tok, targetaddr):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py'], config={'mistyproxy': {'ip': targetaddr}}))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py', 'java'], config={'mistyproxy': {'ip': targetaddr}}))
     except KeyboardInterrupt:
         pass
 
 def rm_mistyproxy(wdeployment_id, tok):
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py'], rm=True))
+        loop.run_until_complete(__update_supported_async(wdeployment_id, tok, addons=['mistyproxy', 'py', 'java'], rm=True))
     except KeyboardInterrupt:
         pass
