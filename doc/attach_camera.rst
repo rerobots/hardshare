@@ -35,10 +35,18 @@ reading the `Pillow documentation`_.
 Prepare a new configuration
 ---------------------------
 
-1. Capture a full image.
+If you have remote access to the array of devices, then the following process
+should suffice to create a new configuration:
+
+1. Capture a full-size image. The shape can be specified with ``--width-height`` when calling ``hardshare attach-camera``.
 2. Program each device in turn and watch to determine which device has a screen that clears (indicating that it is being flashed).
 3. Open the full image in an image editor and find top-left and bottom-right corners of rectangles for each board.
 4. Create the map file, upload it to your host, and start hardshare attach-camera with it.
+
+Note that some steps can be changed if you have physical access. For example,
+instead of programming each device in turn, you can physically detach and
+re-attach a device to find the file that corresponds to the device (e.g.,
+``/dev/ttyUSB0``), while observing its location in the array.
 
 The map file has JSON_ syntax and the form: ``{"<wd identifier>": [X0, Y0, X1, Y1], ...}``.
 For example, ::
@@ -60,6 +68,7 @@ command-line argument ``--crop``, e.g., ::
 
   hardshare attach-camera --crop $(cat mapfile) 0 c9 2a
 
+If ``--width-height`` was specified earlier, then include it here.
 Notice that the above example uses abbreviated references to workspace
 deployments. E.g., ``c9`` abbreviates ``c9f5e2df-f233-4084-9d01-c7f119e3f9a5``.
 Any unique prefix is acceptable.
