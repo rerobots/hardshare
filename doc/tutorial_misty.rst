@@ -36,7 +36,7 @@ the `rerobots CLI <https://rerobots-py.readthedocs.io/en/latest/cli.html>`_.  If
 you do not have it, try ``pip install rerobots`` as described `in the
 introduction to the rerobots CLI <https://rerobots-py.readthedocs.io/en/latest/intro.html>`_.
 
-The rerobots CLI requires an API token, much like the hardshare client. To find your locally, ::
+The rerobots CLI requires an API token, much like the hardshare client. To find yours locally, ::
 
   hardshare config -l
 
