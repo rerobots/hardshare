@@ -37,7 +37,7 @@ If an ESP32 board is connected to your host, then this should result in the
 espidf-hello-world program being written to it.  Now, observe messages received
 via serial from the ESP32::
 
-  pio device monitor
+  pio device monitor -b 115200
 
 If you cannot build the example code, if the device cannot be written to, or if
 nothing is received via serial (indicating the program is not executing or the
