@@ -111,6 +111,11 @@ Go to your hardshare administrative panel at https://rerobots.net/hardshare
 and in the "Sandboxes" section, do "create new".
 Select the sandbox kind ``misty-py``.
 
+The sandbox kind ``misty-py`` presents a code editor in which you can place
+example code that is executed in an isolated, ephemeral Python environment on
+rerobots servers. The code can include ``{{ mistyhttps }}``, a template variable
+that is replaced with the ``mistyproxy`` URL generated for each instance.
+
 Alternatively, the sandbox can present a Blockly_ editor. To do this, select the
 sandbox kind ``misty-blockly``. An example is shown in the video at
 https://vimeo.com/488264658
