@@ -39,20 +39,35 @@ To add it from the CLI::
 and to remove it, ``hardshare addon-cmdsh --rm``.
 
 To use ``cmdsh``, instances must be created from a compatible image. The default
-Docker image ``rerobots/hs-generic`` (defined by robots/generic/Dockerfile in
-the hardshare source repository) supports ``cmdsh``.
+Docker image ``rerobots/hs-generic`` (defined by generic/Dockerfile in the
+`under the directory robots/ of the sourcetree`_) supports ``cmdsh``.
 
 
 VNC
 ---
 
-::
+VNC is a system for remote access to a desktop display, keyboard, and mouse,
+following the protocol defined in `RFC 6143`_. The add-on ``vnc`` enables parts
+of the rerobots API for worknig with VNC servers in instances. An example with
+HackRF_ hardware together with a window of `GNU Radio`_ embedded in a sandbox is
+shown in the figure below.
+
+.. image:: figures/screenshot-vnc-hackrf.jpg
+
+At this time, the sandbox kind ``vnc`` is basesd on noVNC_ and requires
+instances created from an image derived from Dockerfile-vnc `under the directory
+robots/ of the sourcetree`_.
+
+To add it from the CLI::
 
   hardshare addon-vnc --add
 
-
-``hardshare addon-vnc --rm``
+and to remove it, ``hardshare addon-vnc --rm``.
 
 
 .. _rerobots: https://rerobots.net/
 .. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
+.. _RFC 6143: https://tools.ietf.org/html/rfc6143
+.. _HackRF: https://greatscottgadgets.com/hackrf/
+.. _GNU Radio: https://www.gnuradio.org/
+.. _noVNC: https://github.com/novnc/noVNC
