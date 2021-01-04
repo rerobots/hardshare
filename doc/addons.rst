@@ -1,5 +1,5 @@
-rerobots add-ons
-================
+Add-ons
+=======
 
 .. highlight:: none
 
