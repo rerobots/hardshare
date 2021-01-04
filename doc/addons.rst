@@ -8,10 +8,20 @@ hardshare users support the core API. Additional features, referred to as
 *add-ons*, can also be made available if sufficient hardware requirements are
 satisfied.
 
-For example, many workspaces include cameras. The add-on ``cam`` enables working
-with cameras via ``api.rerobots.net``. Hardshare provides a feature for sharing
-a camera feed among several distinct workspace deployments, as described in the
-section: :doc:`attach_camera`.
+
+cam
+---
+
+Many workspaces include cameras. The add-on ``cam`` enables working with cameras
+via ``api.rerobots.net`` and embedding of video feeds in webpages, such as
+sandboxes hosted on ``rerobots.net``. If the entire camera is part of a single
+workspace deployment, then typically the camera device file will be created
+inside the filesystem of an instance, and the add-on ``cam`` will operate on
+this file.
+
+Many hardshare users want to share a camera across multiple workspaces, or to
+only expose a subset of the image to their remote users. For these cases,
+``hardshare`` provides special features described in the section :doc:`attach_camera`.
 
 
 cmdsh
