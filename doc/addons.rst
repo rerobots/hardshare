@@ -27,11 +27,20 @@ only expose a subset of the image to their remote users. For these cases,
 cmdsh
 -----
 
-::
+The add-on ``cmdsh`` provides remote shells via WebSockets. This is motivated to
+provide ``ssh``-like features from contexts where ``ssh`` is not available, for
+example in Web apps. This add-on is required for sandbox kinds that include a
+browser-embedded terminal: ``xterm`` and ``editor-xterm``.
+
+To add it from the CLI::
 
   hardshare addon-cmdsh --add
 
-``hardshare addon-cmdsh --rm``
+and to remove it, ``hardshare addon-cmdsh --rm``.
+
+To use ``cmdsh``, instances must be created from a compatible image. The default
+Docker image ``rerobots/hs-generic`` (defined by robots/generic/Dockerfile in
+the hardshare source repository) supports ``cmdsh``.
 
 
 VNC
