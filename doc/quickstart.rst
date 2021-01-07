@@ -88,7 +88,7 @@ Otherwise, congratulations on successful instantiation from your own device!
 Terminate the instance from https://rerobots.net/instances and, from the
 command-line, stop the daemon::
 
-  hardshare terminate
+  hardshare stop-ad
 
 Now entering ``hardshare status`` should return ``daemon_found: false``.
 

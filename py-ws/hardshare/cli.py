@@ -331,7 +331,7 @@ def main(argv=None):
                                     dest='rm_addon_mistyproxy')
 
     terminate_commanddesc = 'mark as unavailable; optionally wait for current instance to finish'
-    terminate_parser = subparsers.add_parser('terminate',
+    terminate_parser = subparsers.add_parser('stop-ad',
                                              description=terminate_commanddesc,
                                              help=terminate_commanddesc)
     terminate_parser.add_argument('id_prefix', metavar='ID', nargs='?', default=None,
@@ -384,7 +384,7 @@ def main(argv=None):
                 addon_mistyproxy_parser.print_help()
             elif argv_parsed.help_target_command == 'ad':
                 advertise_parser.print_help()
-            elif argv_parsed.help_target_command == 'terminate':
+            elif argv_parsed.help_target_command == 'stop-ad':
                 terminate_parser.print_help()
             else:
                 argparser.print_help()
@@ -616,7 +616,7 @@ def main(argv=None):
         pkglogger.addHandler(loghandler)
         return ac.run_sync(config['wdeployments'][index]['id'])
 
-    elif argv_parsed.command == 'terminate':
+    elif argv_parsed.command == 'stop-ad':
         config, index, rc = get_config_with_index(argv_parsed.id_prefix)
         if rc != 0:
             return rc

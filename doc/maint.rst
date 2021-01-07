@@ -54,7 +54,7 @@ and update the hardshare configuration with the tag name::
 
 Now restart the hardshare daemon::
 
-  hardshare terminate
+  hardshare stop-ad
   hardshare ad -d
 
 Finally, request an instance as usual.
@@ -119,7 +119,7 @@ Start, check, and stop daemons
 
    hardshare ad -d
    hardshare status
-   hardshare terminate
+   hardshare stop-ad
 
 
 Update API tokens
