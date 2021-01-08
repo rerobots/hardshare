@@ -1,3 +1,12 @@
+hardshare client (0.10.0)
+
+  * rename: `hardshare terminate` -> `hardshare stop-ad`.
+
+  * Include add-on `java` when in CLI `addon-mistyproxy`.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Thu, 07 Jan 2021 16:13:51 -0800
+
+
 hardshare client (0.9.4)
 
   * New CLI command: addon-vnc {--add, --rm}
