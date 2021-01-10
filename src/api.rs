@@ -25,18 +25,16 @@ pub struct RemoteConfig {
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
         match mgmt::get_local_config(false, false) {
-            Ok(local_config) => {
-                HSAPIClient {
-                    local_config: Some(local_config),
-                    default_key_index: None,
-                    cached_key: None,
-                }
+            Ok(local_config) => HSAPIClient {
+                local_config: Some(local_config),
+                default_key_index: None,
+                cached_key: None,
             },
-            Err(err) => HSAPIClient {
-                    local_config: None,
-                    default_key_index: None,
-                    cached_key: None,
-                }
+            Err(_) => HSAPIClient {
+                local_config: None,
+                default_key_index: None,
+                cached_key: None,
+            }
         }
     }
 
