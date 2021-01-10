@@ -11,8 +11,55 @@ mod api;
 mod mgmt;
 
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+struct CliError {
+    msg: Option<String>,
+    exitcode: i32,
+}
+impl std::error::Error for CliError {}
+
+impl std::fmt::Display for CliError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.msg {
+            Some(m) => write!(f, "{}", m),
+            None => write!(f, "")
+        }
+    }
+}
+
+impl std::fmt::Debug for CliError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.msg {
+            Some(m) => write!(f, "{}", m),
+            None => write!(f, "")
+        }
+    }
+}
+
+impl CliError {
+    fn new(msg: &str, exitcode: i32) -> Result<(), CliError> {
+        Err(CliError { msg: Some(String::from(msg)), exitcode: exitcode })
+    }
+
+    fn new_std(err: Box<dyn std::error::Error>, exitcode: i32) -> Result<(), CliError> {
+        Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
+    }
+}
+
+
+fn main() {
+    match main_cli() {
+        Ok(_) => std::process::exit(0),
+        Err(err) => {
+            if err.msg.is_some() {
+                eprintln!("{}", err);
+            }
+            std::process::exit(err.exitcode);
+        }
+    }
+}
+
+
+fn main_cli() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .about("Command-line interface for the hardshare client")
         .subcommand(SubCommand::with_name("version")
@@ -41,13 +88,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let create_if_missing = matches.is_present("create_config");
         if matches.is_present("list") {
 
-            let local_config = mgmt::get_local_config(create_if_missing, true)?;
+            let local_config = match mgmt::get_local_config(create_if_missing, true) {
+                Ok(lc) => lc,
+                Err(err) => return CliError::new_std(err, 1)
+            };
             println!("{:?}", local_config);
             let ac = api::HSAPIClient::new();
             println!("{:?}", ac.get_remote_config(false));
 
         } else if create_if_missing {
-            mgmt::get_local_config(true, false)?;
+            if let Err(err) = mgmt::get_local_config(true, false) {
+                return CliError::new_std(err, 1);
+            }
+        } else {
+            let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
+            return CliError::new(errmessage, 1);
         }
     } else {
         println!("No command given. Try `hardshare -h`");
