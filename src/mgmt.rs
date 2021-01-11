@@ -36,11 +36,11 @@ fn error(msg: &str) -> Result<Config, Box<dyn std::error::Error>> {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     version: u16,
-    wdeployments: Vec<HashMap<String, serde_json::Value>>,
-    ssh_key: String,
+    pub wdeployments: Vec<HashMap<String, serde_json::Value>>,
+    pub ssh_key: String,
 
     #[serde(default)]
-    keys: Vec<String>,
+    pub keys: Vec<String>,
 }
 
 
@@ -54,7 +54,21 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 
 
 pub fn list_local_keys(collect_errors: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    Ok(vec![])
+    let base_path = get_base_path().unwrap();
+    let mut likely_keys = Vec::new();
+    if !base_path.exists() {
+        return Ok(likely_keys);
+    }
+    let path = base_path.join("keys");
+    if !path.exists() {
+        return Ok(likely_keys);
+    }
+
+    for entry in std::fs::read_dir(path)? {
+        likely_keys.push(String::from(entry?.path().to_str().unwrap()));
+    }
+
+    Ok(likely_keys)
 }
 
 
@@ -97,6 +111,18 @@ pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<C
         }
     }
     let config_raw = std::fs::read_to_string(path)?;
-    let mut config = serde_json::from_str(config_raw.as_str())?;
+    let mut config: Config = serde_json::from_str(config_raw.as_str())?;
+    config.keys = list_local_keys(false)?;
     Ok(config)
+}
+
+
+pub fn append_urls(config: &mut Config) {
+    let prefix = "https://rerobots.net/workspace/";
+    for wd in config.wdeployments.iter_mut() {
+        if !wd.contains_key("url") {
+            wd.insert("url".to_string(),
+                      serde_json::Value::String(format!("{}{}", prefix, wd["id"].as_str().unwrap())));
+        }
+    }
 }
