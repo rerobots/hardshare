@@ -10,6 +10,19 @@ use serde::{Serialize, Deserialize};
 
 extern crate home;
 
+extern crate openssl;
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+
+extern crate jwt;
+use jwt::{Token, Header, Claims};
+use jwt::VerifyWithKey;
+use jwt::algorithm::openssl::PKeyWithDigest;
+
+
+// TODO: this should eventually be placed in a public key store
+const WEBUI_PUBLIC_KEY: &[u8] = include_bytes!("../keys/webui-public.pem");
+
 
 struct MgmtError {
     msg: String,
@@ -41,6 +54,9 @@ pub struct Config {
 
     #[serde(default)]
     pub keys: Vec<String>,
+
+    #[serde(default)]
+    pub err_keys: Option<HashMap<String, String>>,
 }
 
 
@@ -53,22 +69,56 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 }
 
 
-pub fn list_local_keys(collect_errors: bool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_local_keys(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
     let mut likely_keys = Vec::new();
+    let mut errored_keys = HashMap::new();
     if !base_path.exists() {
-        return Ok(likely_keys);
+        return Ok((likely_keys, errored_keys));
     }
     let path = base_path.join("keys");
     if !path.exists() {
-        return Ok(likely_keys);
+        return Ok((likely_keys, errored_keys));
     }
+
+    let alg = PKeyWithDigest {
+        digest: MessageDigest::sha256(),
+        key: PKey::public_key_from_pem(WEBUI_PUBLIC_KEY).unwrap(),
+    };
+    let now = std::time::SystemTime::now();
+    let utime = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
 
     for entry in std::fs::read_dir(path)? {
-        likely_keys.push(String::from(entry?.path().to_str().unwrap()));
+        let path = entry?.path();
+        let rawtok = String::from(String::from_utf8(std::fs::read(&path).unwrap()).unwrap().trim());
+        let result: Result<Token<Header, Claims, _>, jwt::error::Error> = rawtok.verify_with_key(&alg);
+        match result {
+            Ok(tok) => {
+                let claims = tok.claims();
+                if claims.registered.expiration.unwrap() < utime {
+                    if collect_errors {
+                        errored_keys.insert(String::from(path.to_str().unwrap()), "expired".into());
+                    }
+                } else {
+                    likely_keys.push(String::from(path.to_str().unwrap()));
+                }
+            },
+            Err(err) => match err {
+                jwt::error::Error::InvalidSignature => {
+                    if collect_errors {
+                        errored_keys.insert(String::from(path.to_str().unwrap()), "invalid signature".into());
+                    }
+                }
+                _ => {
+                    if collect_errors {
+                        errored_keys.insert(String::from(path.to_str().unwrap()), "unknown error".into());
+                    }
+                }
+            }
+        };
     }
 
-    Ok(likely_keys)
+    Ok((likely_keys, errored_keys))
 }
 
 
@@ -91,6 +141,7 @@ pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<C
                 wdeployments: vec![],
                 ssh_key: "".to_string(),
                 keys: vec![],
+                err_keys: None,
             };
             let sshpath = base_path.join("ssh").join("tun");
             let exitcode = Command::new("ssh-keygen")
@@ -112,7 +163,11 @@ pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<C
     }
     let config_raw = std::fs::read_to_string(path)?;
     let mut config: Config = serde_json::from_str(config_raw.as_str())?;
-    config.keys = list_local_keys(false)?;
+    let res = list_local_keys(collect_errors)?;
+    config.keys = res.0;
+    if collect_errors {
+        config.err_keys = Some(res.1);
+    }
     Ok(config)
 }
 

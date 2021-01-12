@@ -78,6 +78,12 @@ fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>) {
             println!("\t{}", k);
         }
     }
+    if let Some(err_keys) = &local.err_keys {
+        println!("found possible keys with errors:");
+        for (err_key_path, err) in err_keys {
+            println!("\t {}: {}", err, err_key_path);
+        }
+    }
 
     if let Some(remote_config) = remote {
         let rc_wds = &remote_config["deployments"].as_array().unwrap();

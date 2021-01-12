@@ -4,3 +4,5 @@ hardshare_client.*.log
 *.pyc
 ssh_host_ecdsa_key.pub
 /target/
+
+/keys/
