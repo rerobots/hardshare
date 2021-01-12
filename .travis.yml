@@ -8,6 +8,10 @@ jobs:
   fast_finish: true
 cache: cargo
 
+before_install:
+  - mkdir keys
+  - openssl genpkey -algorithm RSA -out keys/testing-secret.pem && openssl pkey -in keys/testing-secret.pem -pubout -out keys/webui-public.pem
+
 script:
     - cargo build --verbose
     - cargo test --verbose
