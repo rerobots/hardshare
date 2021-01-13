@@ -62,6 +62,9 @@ impl HSAPIClient {
 
 
     pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
+        if self.cached_key.is_none() {
+            return Err("No valid API tokens found.  Try\n\n    hardshare config -l --local".into());
+        }
         let mut rt = Runtime::new().unwrap();
         rt.block_on(async {
 
