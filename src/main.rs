@@ -149,7 +149,12 @@ fn main_cli() -> Result<(), CliError> {
                     .arg(Arg::with_name("create_config")
                          .short("c")
                          .long("create")
-                         .help("If no local configuration is found, then create one")));
+                         .help("If no local configuration is found, then create one"))
+                    .arg(Arg::with_name("prune_err_keys")
+                         .short("p")
+                         .long("prune")
+                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`")));
+
     let matches = app.get_matches();
 
     if matches.is_present("version") {
@@ -178,6 +183,22 @@ fn main_cli() -> Result<(), CliError> {
             }
 
             print_config(&local_config, &remote_config);
+
+        } else if matches.is_present("prune_err_keys") {
+
+            let local_config = match mgmt::get_local_config(false, true) {
+                Ok(lc) => lc,
+                Err(err) => return CliError::new_std(err, 1)
+            };
+
+            if let Some(err_keys) = &local_config.err_keys {
+                for (err_key_path, _) in err_keys {
+                    match std::fs::remove_file(err_key_path) {
+                        Err(err) => return CliError::new(format!("failed to remove {}", err_key_path).as_str(), 1),
+                        Ok(_) => ()
+                    };
+                }
+            }
 
         } else if create_if_missing {
             if let Err(err) = mgmt::get_local_config(true, false) {
