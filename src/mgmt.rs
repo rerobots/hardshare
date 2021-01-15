@@ -212,3 +212,13 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
     Ok(())
 }
+
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn configuration_directory_suffix() {
+        let base_path = super::get_base_path().unwrap();
+        assert!(base_path.ends_with(".rerobots"));
+    }
+}
