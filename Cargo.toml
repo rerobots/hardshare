@@ -21,3 +21,4 @@ features = [ "color" ]
 
 [dev-dependencies]
 assert_cmd = "1.0"
+tempfile = "3.1"
