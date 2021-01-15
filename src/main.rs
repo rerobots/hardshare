@@ -79,7 +79,9 @@ fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>) {
         }
     }
     if let Some(err_keys) = &local.err_keys {
-        println!("found possible keys with errors:");
+        if err_keys.len() > 0 {
+            println!("found possible keys with errors:");
+        }
         for (err_key_path, err) in err_keys {
             println!("\t {}: {}", err, err_key_path);
         }
