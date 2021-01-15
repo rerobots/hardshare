@@ -43,6 +43,10 @@ impl CliError {
     fn new_std(err: Box<dyn std::error::Error>, exitcode: i32) -> Result<(), CliError> {
         Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
     }
+
+    fn new_stdio(err: std::io::Error, exitcode: i32) -> Result<(), CliError> {
+        Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
+    }
 }
 
 
@@ -196,7 +200,7 @@ fn main_cli() -> Result<(), CliError> {
             if let Some(err_keys) = &local_config.err_keys {
                 for (err_key_path, _) in err_keys {
                     match std::fs::remove_file(err_key_path) {
-                        Err(err) => return CliError::new(format!("failed to remove {}", err_key_path).as_str(), 1),
+                        Err(err) => return CliError::new_stdio(err, 1),
                         Ok(_) => ()
                     };
                 }
