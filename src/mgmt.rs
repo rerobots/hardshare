@@ -181,3 +181,31 @@ pub fn append_urls(config: &mut Config) {
         }
     }
 }
+
+
+pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let base_path = get_base_path().unwrap();
+    let tokens_dir = base_path.join("keys");
+    if !tokens_dir.exists() {
+        std::fs::create_dir(&tokens_dir)?
+    }
+    let from_filename = std::path::Path::new(path).file_name().unwrap();
+    let mut target_path = tokens_dir.join(from_filename);
+    if target_path.exists() {
+        let utime = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
+        let candidate = format!("{}-{}", target_path.to_str().unwrap(), utime);
+        target_path = std::path::PathBuf::from(candidate);
+    }
+    if target_path.exists() {
+        for counter in 0.. {
+            let candidate = format!("{}-{}", target_path.to_str().unwrap(), counter);
+            let candidate = std::path::PathBuf::from(candidate);
+            if !candidate.exists() {
+                target_path = candidate;
+                break;
+            }
+        }
+    }
+    std::fs::rename(path, target_path)?;
+    Ok(())
+}

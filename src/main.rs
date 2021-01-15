@@ -156,6 +156,10 @@ fn main_cli() -> Result<(), CliError> {
                          .short("c")
                          .long("create")
                          .help("If no local configuration is found, then create one"))
+                    .arg(Arg::with_name("new_api_token")
+                         .long("add-key")
+                         .value_name("FILE")
+                         .help("add new API token"))
                     .arg(Arg::with_name("prune_err_keys")
                          .short("p")
                          .long("prune")
@@ -189,6 +193,13 @@ fn main_cli() -> Result<(), CliError> {
             }
 
             print_config(&local_config, &remote_config);
+
+        } else if let Some(new_token_path) = matches.value_of("new_api_token") {
+
+            match mgmt::add_token_file(new_token_path) {
+                Err(err) => return CliError::new_std(err, 1),
+                Ok(_) => ()
+            }
 
         } else if matches.is_present("prune_err_keys") {
 
