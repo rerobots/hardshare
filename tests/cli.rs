@@ -4,6 +4,7 @@
 use std::io::prelude::*;
 
 use assert_cmd::Command;
+use tempfile::NamedTempFile;
 
 
 #[test]
@@ -18,5 +19,15 @@ fn prints_version() {
 fn config_requires_arg() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd.arg("config").assert();
+    assert.failure().code(1);
+}
+
+
+#[test]
+fn add_token_does_not_exist() {
+    let ntf = NamedTempFile::new().unwrap();
+    println!("{:?}", ntf.path().join("notexist"));
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("config").arg("--add-key").arg(ntf.path().join("notexist")).assert();
     assert.failure().code(1);
 }
