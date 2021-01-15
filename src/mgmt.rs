@@ -206,6 +206,9 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    std::fs::rename(path, target_path)?;
+    if let Err(err) = std::fs::rename(path, &target_path) {
+        std::fs::copy(path, &target_path)?;
+        std::fs::remove_file(path)?;
+    }
     Ok(())
 }
