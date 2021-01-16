@@ -13,6 +13,31 @@ use tokio::runtime::Runtime;
 use crate::mgmt;
 
 
+struct ClientError {
+    msg: String,
+}
+impl std::error::Error for ClientError {}
+
+impl std::fmt::Display for ClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl std::fmt::Debug for ClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+fn error<T, S>(msg: S) -> Result<T, Box<dyn std::error::Error>>
+where
+    S: ToString
+{
+    Err(Box::new(ClientError { msg: msg.to_string() }))
+}
+
+
 #[derive(Debug)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
@@ -61,10 +86,21 @@ impl HSAPIClient {
     }
 
 
-    pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
+    fn create_authclient(&self) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
         if self.cached_key.is_none() {
-            return Err("No valid API tokens found.  Try\n\n    hardshare config -l --local".into());
+            return error("No valid API tokens found.  Try\n\n    hardshare config -l --local");
         }
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::AUTHORIZATION,
+                       format!("Bearer {}", self.cached_key.as_ref().unwrap()).parse().unwrap());
+        Ok(reqwest::Client::builder()
+           .default_headers(headers)
+           .build().unwrap())
+    }
+
+
+    pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
         let mut rt = Runtime::new().unwrap();
         rt.block_on(async {
 
@@ -74,12 +110,10 @@ impl HSAPIClient {
                 "/list"
             };
 
-            let mut headers = reqwest::header::HeaderMap::new();
-            headers.insert(reqwest::header::AUTHORIZATION,
-                           format!("Bearer {}", self.cached_key.as_ref().unwrap()).parse().unwrap());
-            let client = reqwest::Client::builder()
-                .default_headers(headers)
-                .build().unwrap();
+            let client = match self.create_authclient() {
+                Ok(c) => c,
+                Err(err) => return Err(format!("{}", err))
+            };
 
             let res = match client.get(self.url(hslisturl)).send().await {
                 Ok(r) => r,
@@ -121,6 +155,30 @@ impl HSAPIClient {
             }
 
             Ok(payload)
+        })
+    }
+
+
+    pub fn get_access_rules(&self, wdid: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let mut rt = Runtime::new().unwrap();
+        rt.block_on(async {
+
+            let client = self.create_authclient()?;
+
+            let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rules", wdid).as_str()).unwrap();
+            let res = client.get(url).send().await?;
+            if res.status() == 200 {
+                let payload = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+
+                Ok(payload)
+
+            } else if res.status() == 400 {
+                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                error(payload["error_message"].as_str().unwrap())
+            } else {
+                error(format!("error contacting core API server: {}", res.status()))
+            }
+
         })
     }
 }

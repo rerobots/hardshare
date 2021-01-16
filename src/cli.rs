@@ -175,6 +175,33 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+    if matches.is_present("list_rules") {
+
+        let ac = api::HSAPIClient::new();
+        let rules = match ac.get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
+            Ok(r) => r,
+            Err(err) => return CliError::new_std(err, 1)
+        };
+        println!("{}", rules);
+        Ok(())
+
+    } else {
+        return CliError::new("Use `hardshare rules` with a switch. For example, `hardshare rules -l`\nor to get a help message, enter\n\n    hardshare help rules", 1);
+    }
+}
+
+
 fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
@@ -229,7 +256,16 @@ pub fn main() -> Result<(), CliError> {
                     .about("Advertise availability, accept new instances")
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
-                         .help("id of workspace deployment to advertise (can be unique prefix); this argument is not required if there is only 1 workspace deployment")));
+                         .help("id of workspace deployment to advertise (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
+        .subcommand(SubCommand::with_name("rules")
+                    .about("Modify access rules (also known as capabilities or permissions)")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of target workspace deployment (can be unique prefix); this argument is not required if there is only 1 workspace deployment"))
+                    .arg(Arg::with_name("list_rules")
+                         .short("l")
+                         .long("list")
+                         .help("list all rules")));
 
     let matches = app.get_matches();
 
@@ -239,6 +275,8 @@ pub fn main() -> Result<(), CliError> {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
         return config_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("rules") {
+        return rules_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("ad") {
         return ad_subcommand(matches);
     } else {
