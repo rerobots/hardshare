@@ -115,6 +115,66 @@ fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>) {
 }
 
 
+fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let create_if_missing = matches.is_present("create_config");
+    let only_local_config = matches.is_present("onlylocalconfig");
+    let include_dissolved = matches.is_present("includedissolved");
+
+    if matches.is_present("list") {
+
+        let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
+            Ok(lc) => lc,
+            Err(err) => return CliError::new_std(err, 1)
+        };
+        mgmt::append_urls(&mut local_config);
+
+        let mut remote_config = None;
+        if !only_local_config {
+            let ac = api::HSAPIClient::new();
+            remote_config = Some(match ac.get_remote_config(include_dissolved) {
+                Ok(rc) => rc,
+                Err(err) => return CliError::new(err.as_str(), 1)
+            });
+        }
+
+        print_config(&local_config, &remote_config);
+
+    } else if let Some(new_token_path) = matches.value_of("new_api_token") {
+
+        match mgmt::add_token_file(new_token_path) {
+            Err(err) => return CliError::new_std(err, 1),
+            Ok(_) => ()
+        }
+
+    } else if matches.is_present("prune_err_keys") {
+
+        let local_config = match mgmt::get_local_config(false, true) {
+            Ok(lc) => lc,
+            Err(err) => return CliError::new_std(err, 1)
+        };
+
+        if let Some(err_keys) = &local_config.err_keys {
+            for (err_key_path, _) in err_keys {
+                match std::fs::remove_file(err_key_path) {
+                    Err(err) => return CliError::new_stdio(err, 1),
+                    Ok(_) => ()
+                };
+            }
+        }
+
+    } else if create_if_missing {
+        if let Err(err) = mgmt::get_local_config(true, false) {
+            return CliError::new_std(err, 1);
+        }
+    } else {
+        let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
+        return CliError::new(errmessage, 1);
+    }
+
+    Ok(())
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .about("Command-line interface for the hardshare client")
@@ -156,59 +216,7 @@ pub fn main() -> Result<(), CliError> {
     } else if let Some(_) = matches.subcommand_matches("version") {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
-        let create_if_missing = matches.is_present("create_config");
-        let only_local_config = matches.is_present("onlylocalconfig");
-        let include_dissolved = matches.is_present("includedissolved");
-        if matches.is_present("list") {
-
-            let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
-                Ok(lc) => lc,
-                Err(err) => return CliError::new_std(err, 1)
-            };
-            mgmt::append_urls(&mut local_config);
-
-            let mut remote_config = None;
-            if !only_local_config {
-                let ac = api::HSAPIClient::new();
-                remote_config = Some(match ac.get_remote_config(include_dissolved) {
-                    Ok(rc) => rc,
-                    Err(err) => return CliError::new(err.as_str(), 1)
-                });
-            }
-
-            print_config(&local_config, &remote_config);
-
-        } else if let Some(new_token_path) = matches.value_of("new_api_token") {
-
-            match mgmt::add_token_file(new_token_path) {
-                Err(err) => return CliError::new_std(err, 1),
-                Ok(_) => ()
-            }
-
-        } else if matches.is_present("prune_err_keys") {
-
-            let local_config = match mgmt::get_local_config(false, true) {
-                Ok(lc) => lc,
-                Err(err) => return CliError::new_std(err, 1)
-            };
-
-            if let Some(err_keys) = &local_config.err_keys {
-                for (err_key_path, _) in err_keys {
-                    match std::fs::remove_file(err_key_path) {
-                        Err(err) => return CliError::new_stdio(err, 1),
-                        Ok(_) => ()
-                    };
-                }
-            }
-
-        } else if create_if_missing {
-            if let Err(err) = mgmt::get_local_config(true, false) {
-                return CliError::new_std(err, 1);
-            }
-        } else {
-            let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
-            return CliError::new(errmessage, 1);
-        }
+        return config_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
