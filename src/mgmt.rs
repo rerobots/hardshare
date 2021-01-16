@@ -41,7 +41,7 @@ impl std::fmt::Debug for MgmtError {
     }
 }
 
-fn error(msg: &str) -> Result<Config, Box<dyn std::error::Error>> {
+fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
     Err(Box::new(MgmtError { msg: String::from(msg) }))
 }
 
@@ -214,11 +214,73 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize, Box<dyn std::error::Error>> {
+    if let Some(id_prefix) = id_prefix {
+
+        for (j, wd) in config.wdeployments.iter().enumerate() {
+            if wd["id"].as_str().unwrap().starts_with(id_prefix) {
+                return Ok(j);
+            }
+        }
+        return error("given prefix does not match precisely 1 workspace deployment");
+
+    } else {
+
+        if config.wdeployments.len() == 1 {
+            Ok(0)
+        } else if config.wdeployments.len() == 0 {
+            return error("no workspace deployment in local configuration.");
+        } else {
+            return error("ambiguous command: more than 1 workspace deployment defined.");
+        }
+
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
+    use super::Config;
+    use super::find_id_prefix;
+
+
     #[test]
     fn configuration_directory_suffix() {
         let base_path = super::get_base_path().unwrap();
         assert!(base_path.ends_with(".rerobots"));
+    }
+
+
+    #[test]
+    fn find_id() {
+        let local_config = Config {
+            version: 0,
+            wdeployments: vec![],
+            ssh_key: "".to_string(),
+            keys: vec![],
+            err_keys: None,
+        };
+        assert!(find_id_prefix(&local_config, Some("a")).is_err());
+
+        let local_config: Config = serde_json::from_str(r#"
+            {
+                "version": 0,
+                "wdeployments": [
+                    {
+                        "id": "2d6039bc-7c83-4d46-8567-c8df4711c386",
+                        "owner": "scott",
+                        "cprovider": "proxy",
+                        "cargs": [],
+                        "image": null,
+                        "terminate": [],
+                        "init_inside": [],
+                        "container_name": "rrc"
+                    }
+                ],
+                "ssh_key": "/home/scott/.rerobots/ssh/tun"
+            }"#).unwrap();
+        assert!(find_id_prefix(&local_config, Some("a")).is_err());
+        let wd_index = find_id_prefix(&local_config, Some("2")).unwrap();
+        assert_eq!(wd_index, 0);
     }
 }
