@@ -175,6 +175,23 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+
+
+    Ok(())
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .about("Command-line interface for the hardshare client")
@@ -207,7 +224,12 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("prune_err_keys")
                          .short("p")
                          .long("prune")
-                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`")));
+                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`")))
+        .subcommand(SubCommand::with_name("ad")
+                    .about("Advertise availability, accept new instances")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment to advertise (can be unique prefix); this argument is not required if there is only 1 workspace deployment")));
 
     let matches = app.get_matches();
 
@@ -217,6 +239,8 @@ pub fn main() -> Result<(), CliError> {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
         return config_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("ad") {
+        return ad_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
