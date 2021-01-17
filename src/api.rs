@@ -211,6 +211,7 @@ impl HSAPIClient {
         })
     }
 
+
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut rt = Runtime::new().unwrap();
         rt.block_on(async {
