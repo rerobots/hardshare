@@ -200,6 +200,14 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
         println!("{}", ruleset);
 
+    } else if matches.is_present("drop_all_rules") {
+
+        let ac = api::HSAPIClient::new();
+        match ac.drop_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
+            Ok(_) => (),
+            Err(err) => return CliError::new_std(err, 1)
+        }
+
     } else {
         return CliError::new("Use `hardshare rules` with a switch. For example, `hardshare rules -l`\nor to get a help message, enter\n\n    hardshare help rules", 1);
     }
@@ -271,7 +279,10 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("list_rules")
                          .short("l")
                          .long("list")
-                         .help("list all rules")));
+                         .help("list all rules"))
+                    .arg(Arg::with_name("drop_all_rules")
+                         .long("drop-all")
+                         .help("Removes all access rules; note that access is denied by default, including to you (the owner)")));
 
     let matches = app.get_matches();
 

@@ -184,25 +184,51 @@ impl HSAPIClient {
     }
 
 
+    async fn get_access_rules_a(&self, client: &reqwest::Client, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
+        let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rules", wdid).as_str()).unwrap();
+        let res = client.get(url).send().await?;
+        if res.status() == 200 {
+
+            let payload: AccessRules = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+            Ok(payload)
+
+        } else if res.status() == 400 {
+            let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+            error(payload["error_message"].as_str().unwrap())
+        } else {
+            error(format!("error contacting core API server: {}", res.status()))
+        }
+    }
+
+
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
         let mut rt = Runtime::new().unwrap();
         rt.block_on(async {
 
             let client = self.create_authclient()?;
+            self.get_access_rules_a(&client, wdid).await
 
-            let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rules", wdid).as_str()).unwrap();
-            let res = client.get(url).send().await?;
-            if res.status() == 200 {
+        })
+    }
 
-                let payload: AccessRules = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-                Ok(payload)
+    pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut rt = Runtime::new().unwrap();
+        rt.block_on(async {
 
-            } else if res.status() == 400 {
-                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-                error(payload["error_message"].as_str().unwrap())
-            } else {
-                error(format!("error contacting core API server: {}", res.status()))
+            let client = self.create_authclient()?;
+
+            let ruleset = self.get_access_rules_a(&client, wdid).await?;
+            for rule in ruleset.rules.iter() {
+
+                let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rule/{}", wdid, rule.id).as_str()).unwrap();
+                let res = client.delete(url).send().await?;
+                if res.status() != 200 {
+                    return error(format!("error deleting rule {}: {}", rule.id, res.status()))
+                }
+
             }
+
+            Ok(())
 
         })
     }
