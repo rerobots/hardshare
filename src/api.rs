@@ -128,7 +128,7 @@ impl HSAPIClient {
 
 
     pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(async {
 
             let hslisturl = if include_dissolved {
@@ -204,7 +204,7 @@ impl HSAPIClient {
 
 
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(async {
 
             let client = self.create_authclient()?;
@@ -215,7 +215,7 @@ impl HSAPIClient {
 
 
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(async {
 
             let client = self.create_authclient()?;
@@ -238,7 +238,7 @@ impl HSAPIClient {
 
 
     pub fn add_access_rule(&self, wdid: &str, to_user: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let mut rt = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
         rt.block_on(async {
 
             let mut body = HashMap::new();
