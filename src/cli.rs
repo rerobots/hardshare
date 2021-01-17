@@ -1,6 +1,8 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
+use std::io::prelude::*;
+
 extern crate tokio;
 
 use clap::{Arg, SubCommand};
@@ -43,6 +45,10 @@ impl CliError {
 
     fn new_stdio(err: std::io::Error, exitcode: i32) -> Result<(), CliError> {
         Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
+    }
+
+    fn newrc(exitcode: i32) -> Result<(), CliError> {
+        Err(CliError { msg: None, exitcode: exitcode })
     }
 }
 
@@ -208,6 +214,31 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => return CliError::new_std(err, 1)
         }
 
+    } else if matches.is_present("permit_all") {
+
+        let mut confirmation = String::new();
+        loop {
+            print!("Do you want to permit access by anyone? [y/N] ");
+            std::io::stdout().flush().expect("failed to flush stdout");
+            match std::io::stdin().read_line(&mut confirmation) {
+                Ok(n) => n,
+                Err(err) => return CliError::new_stdio(err, 1)
+            };
+            confirmation = confirmation.trim().to_lowercase();
+            if confirmation == "y" || confirmation == "yes" {
+                break;
+            } else if confirmation.len() == 0 || confirmation == "n" || confirmation == "no" {
+                return CliError::newrc(1);
+            }
+        }
+
+        let ac = api::HSAPIClient::new();
+        let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
+        match ac.add_access_rule(wdid, "*") {
+            Ok(_) => (),
+            Err(err) => return CliError::new_std(err, 1)
+        }
+
     } else {
         return CliError::new("Use `hardshare rules` with a switch. For example, `hardshare rules -l`\nor to get a help message, enter\n\n    hardshare help rules", 1);
     }
@@ -282,7 +313,10 @@ pub fn main() -> Result<(), CliError> {
                          .help("list all rules"))
                     .arg(Arg::with_name("drop_all_rules")
                          .long("drop-all")
-                         .help("Removes all access rules; note that access is denied by default, including to you (the owner)")));
+                         .help("Removes all access rules; note that access is denied by default, including to you (the owner)"))
+                    .arg(Arg::with_name("permit_all")
+                         .long("permit-all")
+                         .help("Permit instantiations by anyone")));
 
     let matches = app.get_matches();
 

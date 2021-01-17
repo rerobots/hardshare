@@ -1,6 +1,8 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
+use std::collections::HashMap;
+
 extern crate reqwest;
 
 extern crate serde_json;
@@ -227,6 +229,33 @@ impl HSAPIClient {
                     return error(format!("error deleting rule {}: {}", rule.id, res.status()))
                 }
 
+            }
+
+            Ok(())
+
+        })
+    }
+
+
+    pub fn add_access_rule(&self, wdid: &str, to_user: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut rt = Runtime::new().unwrap();
+        rt.block_on(async {
+
+            let mut body = HashMap::new();
+            body.insert("cap", "CAP_INSTANTIATE");
+            body.insert("user", to_user);
+
+            let client = self.create_authclient()?;
+
+            let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rule", wdid).as_str()).unwrap();
+            let res = client.post(url).json(&body).send().await?;
+            if res.status() == 400 {
+                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                return error(payload["error_message"].as_str().unwrap())
+            } else if res.status() == 404 {
+                return error(format!("not found"))
+            } else if res.status() != 200 {
+                return error(format!("server indicated error: {}", res.status()))
             }
 
             Ok(())
