@@ -5,6 +5,8 @@ authors = ["Scott C. Livingston <scott@rerobots.net>"]
 edition = "2018"
 
 [dependencies]
+log = "0.4"
+env_logger = "0.8"
 home = "0.5.3"
 openssl = { version = "0.10", features = ["vendored"] }
 reqwest = { version = "0.11", features = ["json"] }

@@ -2,6 +2,9 @@
 // Copyright (C) 2021 rerobots, Inc.
 
 #[macro_use]
+extern crate log;
+
+#[macro_use]
 extern crate clap;
 
 mod api;
@@ -10,6 +13,11 @@ mod mgmt;
 
 
 fn main() {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "WARN");
+    }
+    env_logger::init();
+
     match cli::main() {
         Ok(_) => std::process::exit(0),
         Err(err) => {
