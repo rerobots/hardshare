@@ -214,6 +214,16 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => return CliError::new_std(err, 1)
         }
 
+    } else if matches.is_present("permit_me") {
+
+        let ac = api::HSAPIClient::new();
+        let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
+        let username = local_config.wdeployments[wd_index]["owner"].as_str().unwrap();
+        match ac.add_access_rule(wdid, username) {
+            Ok(_) => (),
+            Err(err) => return CliError::new_std(err, 1)
+        }
+
     } else if matches.is_present("permit_all") {
 
         let mut confirmation = String::new();
@@ -314,6 +324,9 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("drop_all_rules")
                          .long("drop-all")
                          .help("Removes all access rules; note that access is denied by default, including to you (the owner)"))
+                    .arg(Arg::with_name("permit_me")
+                         .long("permit-me")
+                         .help("Permit instantiations by you (the owner)"))
                     .arg(Arg::with_name("permit_all")
                          .long("permit-all")
                          .help("Permit instantiations by anyone")));
