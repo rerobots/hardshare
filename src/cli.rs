@@ -189,16 +189,22 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     if matches.is_present("list_rules") {
 
         let ac = api::HSAPIClient::new();
-        let rules = match ac.get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
+        let mut ruleset = match ac.get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
             Ok(r) => r,
             Err(err) => return CliError::new_std(err, 1)
         };
-        println!("{}", rules);
-        Ok(())
+
+        if ruleset.comment.is_none() {
+            ruleset.comment = Some("Access is denied unless a rule explicitly permits it.".into());
+        }
+
+        println!("{}", ruleset);
 
     } else {
         return CliError::new("Use `hardshare rules` with a switch. For example, `hardshare rules -l`\nor to get a help message, enter\n\n    hardshare help rules", 1);
     }
+
+    Ok(())
 }
 
 

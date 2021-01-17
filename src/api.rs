@@ -38,6 +38,31 @@ where
 }
 
 
+#[derive(Serialize, Deserialize)]
+pub struct AccessRule {
+    capability: String,
+    date_created: String,
+    pub id: u16,
+    param: Option<serde_json::Value>,
+    pub user: String,
+    pub wdeployment_id: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccessRules {
+    pub rules: Vec<AccessRule>,
+
+    #[serde(default)]
+    pub comment: Option<String>
+}
+
+impl std::fmt::Display for AccessRules {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_yaml::to_string(self).unwrap())
+    }
+}
+
+
 #[derive(Debug)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
@@ -159,7 +184,7 @@ impl HSAPIClient {
     }
 
 
-    pub fn get_access_rules(&self, wdid: &str) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
         let mut rt = Runtime::new().unwrap();
         rt.block_on(async {
 
@@ -168,8 +193,8 @@ impl HSAPIClient {
             let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rules", wdid).as_str()).unwrap();
             let res = client.get(url).send().await?;
             if res.status() == 200 {
-                let payload = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
 
+                let payload: AccessRules = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
                 Ok(payload)
 
             } else if res.status() == 400 {
