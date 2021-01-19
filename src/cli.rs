@@ -268,9 +268,21 @@ fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => return CliError::new_std(err, 1)
     };
 
+    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
+    let ac = api::HSAPIClient::new();
+    match ac.run(wdid, "127.0.0.1:6666") {
+        Ok(()) => Ok(()),
+        Err(err) => return CliError::new_std(err, 1)
+    }
+}
 
 
-    Ok(())
+fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let ac = api::HSAPIClient::new();
+    match ac.stop("127.0.0.1:6666") {
+        Ok(()) => Ok(()),
+        Err(err) => return CliError::new_std(err, 1)
+    }
 }
 
 
@@ -329,7 +341,9 @@ pub fn main() -> Result<(), CliError> {
                          .help("Permit instantiations by you (the owner)"))
                     .arg(Arg::with_name("permit_all")
                          .long("permit-all")
-                         .help("Permit instantiations by anyone")));
+                         .help("Permit instantiations by anyone")))
+        .subcommand(SubCommand::with_name("stop-ad")
+                    .about("Mark as unavailable; optionally wait for current instance to finish"));
 
     let matches = app.get_matches();
 
@@ -343,6 +357,8 @@ pub fn main() -> Result<(), CliError> {
         return rules_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("ad") {
         return ad_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("stop-ad") {
+        return stop_ad_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
