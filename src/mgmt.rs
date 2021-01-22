@@ -313,4 +313,14 @@ mod tests {
         let base_path = td.path().join(".rerobots");
         assert!(get_local_config_bp(&base_path, false, false).is_err());
     }
+
+
+    #[test]
+    fn init_config() {
+        let td = tempdir().unwrap();
+        let base_path = td.path().join(".rerobots");
+        let lconf = get_local_config_bp(&base_path, true, false).unwrap();
+        assert!(lconf.wdeployments.len() == 0);
+        assert!(lconf.ssh_key.len() > 0);
+    }
 }
