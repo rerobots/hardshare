@@ -286,6 +286,19 @@ fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let mut ac = api::HSAPIClient::new();
+    let at_most_1 = !matches.is_present("permit_more");
+    match ac.register_new(at_most_1) {
+        Ok(new_wdid) => {
+            println!("{}", new_wdid);
+            Ok(())
+        },
+        Err(err) => return CliError::new_std(err, 1)
+    }
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .about("Command-line interface for the hardshare client")
@@ -343,7 +356,12 @@ pub fn main() -> Result<(), CliError> {
                          .long("permit-all")
                          .help("Permit instantiations by anyone")))
         .subcommand(SubCommand::with_name("stop-ad")
-                    .about("Mark as unavailable; optionally wait for current instance to finish"));
+                    .about("Mark as unavailable; optionally wait for current instance to finish"))
+        .subcommand(SubCommand::with_name("register")
+                    .about("Register new workspace deployment")
+                    .arg(Arg::with_name("permit_more")
+                         .long("permit-more")
+                         .help("Permits registration of more than 1 wdeployment; default is to fail if local configuration already has wdeployment declared")));
 
     let matches = app.get_matches();
 
@@ -359,6 +377,8 @@ pub fn main() -> Result<(), CliError> {
         return ad_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("stop-ad") {
         return stop_ad_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("register") {
+        return register_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }

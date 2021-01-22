@@ -331,6 +331,72 @@ impl HSAPIClient {
 
         Ok(())
     }
+
+
+    pub fn register_new(&mut self, at_most_1: bool) -> Result<String, Box<dyn std::error::Error>> {
+        if let Some(local_config) = &self.local_config {
+            if at_most_1 && local_config.wdeployments.len() > 0 {
+                return error("local configuration already declares a workspace deployment (to register more, `hardshare register --permit-more`)");
+            }
+        } else {
+            return error("cannot register without initial local configuration. (try `hardshare config --create`)");
+        }
+
+        let url = format!("{}/register", self.origin);
+        let connector = SslConnector::builder(SslMethod::tls())?.build();
+        let authheader = format!("Bearer {}", self.cached_key.as_ref().unwrap());
+
+        let mut sys = System::new("wclient");
+        let res = actix::SystemRunner::block_on(&mut sys, async {
+            let client = awc::Client::builder()
+                .connector(awc::Connector::new().ssl(connector).finish())
+                .header("Authorization", authheader)
+                .finish();
+            let mut resp = client.post(url).send().await?;
+            if resp.status() == 200 {
+                let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
+                let mut new_wd = HashMap::new();
+                new_wd.insert("id".into(), json!(payload["id"].as_str().unwrap()));
+                new_wd.insert("owner".into(), json!(payload["owner"].as_str().unwrap()));
+                Ok(new_wd)
+            } else if resp.status() == 400 {
+                let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
+                error(String::from(payload["error_message"].as_str().unwrap()))
+            } else {
+                error(format!("server indicated error: {}", resp.status()))
+            }
+        });
+        if res.is_err() {
+            return Err(res.unwrap_err());
+        }
+        let mut new_wd = res.unwrap();
+
+        if !new_wd.contains_key("cprovider") {
+            new_wd.insert("cprovider".into(), json!("docker"));
+        }
+        if !new_wd.contains_key("cargs") {
+            new_wd.insert("cargs".into(), json!([]));
+        }
+        if !new_wd.contains_key("image") {
+            new_wd.insert("image".into(), json!("rerobots/hs-generic"));
+        }
+        if !new_wd.contains_key("terminate") {
+            new_wd.insert("terminate".into(), json!([]));
+        }
+        if !new_wd.contains_key("init_inside") {
+            new_wd.insert("init_inside".into(), json!([]));
+        }
+        if !new_wd.contains_key("container_name") {
+            new_wd.insert("container_name".into(), json!("rrc"));
+        }
+
+        let wdid = String::from(new_wd["id"].as_str().unwrap());
+        if let Some(local_config) = &mut self.local_config {
+            local_config.wdeployments.push(new_wd);
+            mgmt::modify_local(&local_config)?;
+        }
+        Ok(wdid)
+    }
 }
 
 

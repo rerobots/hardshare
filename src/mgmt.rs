@@ -238,6 +238,20 @@ pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize,
 }
 
 
+pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+    let base_path = get_base_path().unwrap();
+    if !base_path.exists() {
+        return error("no configuration data found");
+    }
+    let path = base_path.join("main");
+    if !path.exists() {
+        return error("no configuration data found");
+    }
+    std::fs::write(&path, serde_json::to_string(&config)?)?;
+    Ok(())
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::Config;
