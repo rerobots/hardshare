@@ -122,8 +122,13 @@ pub fn list_local_keys(collect_errors: bool) -> Result<(Vec<String>, HashMap<Str
 }
 
 
+
 pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
+    return get_local_config_bp(&base_path, create_if_empty, collect_errors);
+}
+
+fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
     if !base_path.exists() {
         if create_if_empty {
             std::fs::create_dir(&base_path)?;
@@ -254,8 +259,11 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::Config;
     use super::find_id_prefix;
+    use super::get_local_config_bp;
 
 
     #[test]
@@ -296,5 +304,13 @@ mod tests {
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
         let wd_index = find_id_prefix(&local_config, Some("2")).unwrap();
         assert_eq!(wd_index, 0);
+    }
+
+
+    #[test]
+    fn no_config() {
+        let td = tempdir().unwrap();
+        let base_path = td.path().join(".rerobots");
+        assert!(get_local_config_bp(&base_path, false, false).is_err());
     }
 }
