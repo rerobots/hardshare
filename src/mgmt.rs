@@ -71,7 +71,11 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 
 pub fn list_local_keys(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
-    let mut likely_keys = Vec::new();
+    return list_local_keys_bp(&base_path, collect_errors);
+}
+
+fn list_local_keys_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
+     let mut likely_keys = Vec::new();
     let mut errored_keys = HashMap::new();
     if !base_path.exists() {
         return Ok((likely_keys, errored_keys));
@@ -264,6 +268,7 @@ mod tests {
     use super::Config;
     use super::find_id_prefix;
     use super::get_local_config_bp;
+    use super::list_local_keys_bp;
 
 
     #[test]
@@ -322,5 +327,15 @@ mod tests {
         let lconf = get_local_config_bp(&base_path, true, false).unwrap();
         assert!(lconf.wdeployments.len() == 0);
         assert!(lconf.ssh_key.len() > 0);
+    }
+
+
+    #[test]
+    fn no_saved_api_tokens() {
+        let td = tempdir().unwrap();
+        let base_path = td.path().join(".rerobots");
+        let (likely_keys, errored_keys) = list_local_keys_bp(&base_path, false).unwrap();
+        assert_eq!(likely_keys.len(), 0);
+        assert_eq!(errored_keys.len(), 0);
     }
 }
