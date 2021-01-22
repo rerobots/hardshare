@@ -325,8 +325,8 @@ mod tests {
         let td = tempdir().unwrap();
         let base_path = td.path().join(".rerobots");
         let lconf = get_local_config_bp(&base_path, true, false).unwrap();
-        assert!(lconf.wdeployments.len() == 0);
-        assert!(lconf.ssh_key.len() > 0);
+        assert_eq!(lconf.wdeployments.len(), 0);
+        assert_ne!(lconf.ssh_key.len(), 0);
     }
 
 
