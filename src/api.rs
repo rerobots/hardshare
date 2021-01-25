@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use actix::io::SinkWrite;
-use actix::*;
+use actix::prelude::*;
 use actix_codec::Framed;
 use awc::{
     error::WsProtocolError,
