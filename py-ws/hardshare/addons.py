@@ -104,7 +104,7 @@ async def camera_upload(hscamera_id, dev, tok, rotate, width, height):
     while active:
         session = aiohttp.ClientSession(headers=headers)
         try:
-            async with session.ws_connect(uri, receive_timeout=45, autoping=True) as ws:
+            async with session.ws_connect(uri, autoping=True) as ws:
                 if lost_connection is not None:
                     lost_connection  = None
                 async for command in ws:
