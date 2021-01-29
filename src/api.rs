@@ -130,7 +130,7 @@ impl HSAPIClient {
 
     fn create_authclient(&self) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
         if self.cached_key.is_none() {
-            return error("No valid API tokens found.  Try\n\n    hardshare config -l --local");
+            return error("No valid API tokens found.");
         }
 
         let mut headers = reqwest::header::HeaderMap::new();

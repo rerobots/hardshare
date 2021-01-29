@@ -139,7 +139,11 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             let ac = api::HSAPIClient::new();
             remote_config = Some(match ac.get_remote_config(include_dissolved) {
                 Ok(rc) => rc,
-                Err(err) => return CliError::new(err.as_str(), 1)
+                Err(err) => {
+                    let mut err_message = err;
+                    err_message += "\nTo get only the local configuration, do\n\n    hardshare config -l --local";
+                    return CliError::new(err_message.as_str(), 1)
+                }
             });
         }
 
