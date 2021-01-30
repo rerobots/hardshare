@@ -2,6 +2,7 @@
 // Copyright (C) 2020 rerobots, Inc.
 
 use std::collections::HashMap;
+use std::sync::mpsc;
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -296,10 +297,14 @@ impl HSAPIClient {
 
         let url = format!("{}/ad/{}", self.origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
+        if self.cached_key.is_none() {
+            return error("No valid API tokens found.");
+        }
         let authheader = format!("Bearer {}", self.cached_key.as_ref().unwrap());
         let bindaddr: std::net::SocketAddr = bindaddr.parse()?;
 
         let sys = System::new("wsclient");
+        let (err_notify, err_rx) = mpsc::channel();
         Arbiter::spawn(async move {
 
             let client = awc::Client::builder()
@@ -307,29 +312,53 @@ impl HSAPIClient {
                 .header("Authorization", authheader)
                 .finish();
 
-            let (_, framed) = client.ws(url).connect().await.unwrap();
+            let (_, framed) = match client.ws(url).connect().await {
+                Ok(r) => r,
+                Err(err) => {
+                    err_notify.send(format!("{}", err)).unwrap();
+                    System::current().stop_with_code(1);
+                    return
+                }
+            };
             let (sink, stream) = framed.split();
+
             let addr = WSClient::create(|ctx| {
                 WSClient::add_stream(stream, ctx);
-                WSClient(SinkWrite::new(sink, ctx))
+                WSClient {
+                    ws_sink: SinkWrite::new(sink, ctx)
+                }
             });
 
-            actix_web::HttpServer::new(move || {
+            let mut manip = actix_web::HttpServer::new(move || {
                 let addr = addr.clone();
                 actix_web::App::new().route("/stop", actix_web::web::post().to(move || {
                     addr.do_send(WSClientCommand("STOP".into()));
                     actix_web::HttpResponse::Ok()
                 }))
-            })
-                .workers(1)
-                .bind(bindaddr).unwrap()
-                .run()
-                .await.unwrap()
+            }).workers(1);
+            manip = match manip.bind(bindaddr) {
+                Ok(s) => s,
+                Err(err) => {
+                    err_notify.send(format!("failed to bind to {}; {}", bindaddr, err)).unwrap();
+                    System::current().stop_with_code(1);
+                    return
+                }
+            };
+            match manip.run().await {
+                Ok(()) => (),
+                Err(err) => {
+                    err_notify.send(format!("failed to start listener: {}", err)).unwrap();
+                    System::current().stop_with_code(1);
+                    return
+                }
+            }
 
         });
-        sys.run()?;
-
-        Ok(())
+        let res = Arbiter::current().join();
+        match sys.run() {
+            Ok(()) => Ok(()),
+            Err(_) => error(err_rx.recv()?)
+        }
     }
 
 
@@ -400,7 +429,9 @@ impl HSAPIClient {
 }
 
 
-struct WSClient(SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>);
+struct WSClient {
+    ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
+}
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -422,7 +453,7 @@ impl Actor for WSClient {
 impl WSClient {
     fn heartbeat(&self, ctx: &mut Context<Self>) {
         ctx.run_later(Duration::new(15, 0), |act, ctx| {
-            act.0.write(Message::Ping(Bytes::from_static(b"")));
+            act.ws_sink.write(Message::Ping(Bytes::from_static(b"")));
             act.heartbeat(ctx);
 
         });
@@ -445,6 +476,17 @@ impl Handler<WSClientCommand> for WSClient {
 impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
     fn handle(&mut self, msg: Result<Frame, WsProtocolError>, ctx: &mut Context<Self>) {
         if let Ok(Frame::Text(txt)) = msg {
+            let payload: serde_json::Value = match serde_json::from_slice(txt.as_ref()) {
+                Ok(p) => p,
+                Err(err) => {
+                    error!("failed to parse {:?}: {}", txt, err);
+                    return;
+                }
+            };
+            debug!("received: {}", serde_json::to_string(&payload).unwrap());
+            let cmd = payload["cmd"].as_str().unwrap();
+            if cmd == "INSTANCE_LAUNCH" {
+            }
         }
     }
 
