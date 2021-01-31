@@ -87,6 +87,7 @@ pub struct HSAPIClient {
     default_key_index: Option<usize>,
     cached_key: Option<String>,
     origin: String,
+    hs_origin: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -96,18 +97,28 @@ pub struct RemoteConfig {
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
+        let hs_origin = match option_env!("REROBOTS_HS_ORIGIN") {
+            Some(u) => u,
+            None => "https://hs.rerobots.net"
+        };
+        let origin = match option_env!("REROBOTS_ORIGIN") {
+            Some(u) => u,
+            None => "https://api.rerobots.net"
+        };
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
                 local_config: Some(local_config),
                 default_key_index: None,
                 cached_key: None,
-                origin: String::from("https://hs.rerobots.net"),
+                origin: String::from(origin),
+                hs_origin: String::from(hs_origin),
             },
             Err(_) => return HSAPIClient {
                 local_config: None,
                 default_key_index: None,
                 cached_key: None,
-                origin: String::from("https://hs.rerobots.net"),
+                origin: String::from(origin),
+                hs_origin: String::from(hs_origin),
             }
         };
 
@@ -125,7 +136,7 @@ impl HSAPIClient {
 
 
     fn url(&self, path: &str) -> reqwest::Url {
-        reqwest::Url::parse((self.origin.clone() + path).as_str()).unwrap()
+        reqwest::Url::parse((self.hs_origin.clone() + path).as_str()).unwrap()
     }
 
 
@@ -173,13 +184,14 @@ impl HSAPIClient {
                 return Err(format!("error contacting hardshare server: {}", res.status()));
             }
 
-            let apilisturl = if include_dissolved {
-                "https://api.rerobots.net/hardshare/list?with_dissolved"
+            let listurl_path = if include_dissolved {
+                "/hardshare/list?with_dissolved"
             } else {
-                "https://api.rerobots.net/hardshare/list"
+                "/hardshare/list"
             };
+            let apilisturl = format!("{}{}", self.origin, listurl_path);
 
-            let res = match client.get(apilisturl).send().await {
+            let res = match client.get(&apilisturl).send().await {
                 Ok(r) => r,
                 Err(err) => return Err(format!("{}", err))
             };
@@ -203,7 +215,7 @@ impl HSAPIClient {
 
 
     async fn get_access_rules_a(&self, client: &reqwest::Client, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rules", wdid).as_str()).unwrap();
+        let url = reqwest::Url::parse(format!("{}/deployment/{}/rules", self.origin, wdid).as_str()).unwrap();
         let res = client.get(url).send().await?;
         if res.status() == 200 {
 
@@ -239,7 +251,7 @@ impl HSAPIClient {
             let ruleset = self.get_access_rules_a(&client, wdid).await?;
             for rule in ruleset.rules.iter() {
 
-                let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rule/{}", wdid, rule.id).as_str()).unwrap();
+                let url = reqwest::Url::parse(format!("{}/deployment/{}/rule/{}", self.origin, wdid, rule.id).as_str()).unwrap();
                 let res = client.delete(url).send().await?;
                 if res.status() != 200 {
                     return error(format!("error deleting rule {}: {}", rule.id, res.status()))
@@ -263,7 +275,7 @@ impl HSAPIClient {
 
             let client = self.create_authclient()?;
 
-            let url = reqwest::Url::parse(format!("https://api.rerobots.net/deployment/{}/rule", wdid).as_str()).unwrap();
+            let url = reqwest::Url::parse(format!("{}/deployment/{}/rule", self.origin, wdid).as_str()).unwrap();
             let res = client.post(url).json(&body).send().await?;
             if res.status() == 400 {
                 let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
@@ -295,7 +307,7 @@ impl HSAPIClient {
 
     pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
 
-        let url = format!("{}/ad/{}", self.origin, wdid);
+        let url = format!("{}/ad/{}", self.hs_origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
         if self.cached_key.is_none() {
             return error("No valid API tokens found.");
@@ -371,7 +383,7 @@ impl HSAPIClient {
             return error("cannot register without initial local configuration. (try `hardshare config --create`)");
         }
 
-        let url = format!("{}/register", self.origin);
+        let url = format!("{}/register", self.hs_origin);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
         let authheader = format!("Bearer {}", self.cached_key.as_ref().unwrap());
 
