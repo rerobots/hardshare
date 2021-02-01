@@ -3,6 +3,8 @@
 
 use std::io::prelude::*;
 
+use serde::Serialize;
+
 extern crate tokio;
 
 use clap::{Arg, SubCommand};
@@ -53,75 +55,112 @@ impl CliError {
 }
 
 
-fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>) {
-    println!("workspace deployments defined in local configuration:");
+#[derive(PartialEq, Debug)]
+enum PrintingFormat {
+    DEFAULT,
+    YAML,
+    JSON,
+}
+
+
+fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>, pformat: PrintingFormat) -> Result<(), Box<dyn std::error::Error>> {
+    print_config_w(&mut std::io::stdout(), local, remote, pformat)?;
+    Ok(())
+}
+
+
+fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<serde_json::Value>, pformat: PrintingFormat) -> Result<(), Box<dyn std::error::Error>> {
+    if pformat != PrintingFormat::DEFAULT {
+        fn serializer<T: Serialize>(x: &T, pformat: PrintingFormat) -> String {
+            if pformat == PrintingFormat::JSON {
+                serde_json::to_string(x).unwrap()
+            } else {  // if pformat == PrintingFormat::YAML
+                serde_yaml::to_string(x).unwrap()
+            }
+        }
+
+        if let Some(remote) = remote {
+            let combined = json!({
+                "local": local,
+                "remote": remote
+            });
+            writeln!(f, "{}", serializer(&combined, pformat))?;
+        } else {
+            writeln!(f, "{}", serializer(&local, pformat))?;
+        }
+        return Ok(())
+    }
+
+    writeln!(f, "workspace deployments defined in local configuration:")?;
     if local.wdeployments.len() == 0 {
-        println!("\t(none)");
+        writeln!(f, "\t(none)")?;
     } else {
         for wd in local.wdeployments.iter() {
-            println!("{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
+            writeln!(f, "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
                      wd["id"].as_str().unwrap(),
                      wd["url"].as_str().unwrap(),
                      wd["owner"].as_str().unwrap(),
                      wd["cprovider"].as_str().unwrap(),
-                     wd["cargs"]);
+                     wd["cargs"])?;
             if wd["cprovider"] == "docker" || wd["cprovider"] == "podman" {
-                println!("\timg: {}", wd["image"].as_str().unwrap());
+                writeln!(f, "\timg: {}", wd["image"].as_str().unwrap())?;
             }
             if wd["terminate"].as_array().unwrap().len() > 0 {
-                println!("\tterminate:");
+                writeln!(f, "\tterminate:")?;
                 for terminate_p in wd["terminate"].as_array().unwrap().iter() {
-                    println!("\t\t{}", terminate_p.as_str().unwrap());
+                    writeln!(f, "\t\t{}", terminate_p.as_str().unwrap())?;
                 }
             }
         }
     }
 
-    println!("\nfound keys:");
+    writeln!(f, "\nfound keys:")?;
     if local.keys.len() == 0 {
-        println!("\t(none)");
+        writeln!(f, "\t(none)")?;
     } else {
         for k in local.keys.iter() {
-            println!("\t{}", k);
+            writeln!(f, "\t{}", k)?;
         }
     }
     if let Some(err_keys) = &local.err_keys {
         if err_keys.len() > 0 {
-            println!("found possible keys with errors:");
+            writeln!(f, "found possible keys with errors:")?;
         }
         for (err_key_path, err) in err_keys {
-            println!("\t {}: {}", err, err_key_path);
+            writeln!(f, "\t {}: {}", err, err_key_path)?;
         }
     }
 
     if let Some(remote_config) = remote {
         let rc_wds = &remote_config["deployments"].as_array().unwrap();
         if rc_wds.len() == 0 {
-            println!("\nno registered workspace deployments with this user account");
+            writeln!(f, "\nno registered workspace deployments with this user account")?;
         } else {
-            println!("\nregistered workspace deployments with this user account:");
+            writeln!(f, "\nregistered workspace deployments with this user account:")?;
             for wd in rc_wds.iter() {
-                println!("{}", wd["id"].as_str().unwrap());
-                println!("\tcreated: {}", wd["date_created"].as_str().unwrap());
+                writeln!(f, "{}", wd["id"].as_str().unwrap())?;
+                writeln!(f, "\tcreated: {}", wd["date_created"].as_str().unwrap())?;
                 if !wd["desc"].is_null() {
-                    println!("\tdesc: {}", wd["desc"].as_str().unwrap());
+                    writeln!(f, "\tdesc: {}", wd["desc"].as_str().unwrap())?;
                 }
                 let origin = if wd["origin"].is_null() {
                     "(unknown)"
                 } else {
                     wd["origin"].as_str().unwrap()
                 };
-                println!("\torigin (address) of registration: {}", origin);
+                writeln!(f, "\torigin (address) of registration: {}", origin)?;
                 if !wd["dissolved"].is_null() {
-                    println!("\tdissolved: {}", wd["dissolved"].as_str().unwrap());
+                    writeln!(f, "\tdissolved: {}", wd["dissolved"].as_str().unwrap())?;
                 }
             }
         }
     }
+
+    Ok(())
 }
 
 
-fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Result<(), CliError> {
     let create_if_missing = matches.is_present("create_config");
     let only_local_config = matches.is_present("onlylocalconfig");
     let include_dissolved = matches.is_present("includedissolved");
@@ -147,7 +186,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             });
         }
 
-        print_config(&local_config, &remote_config);
+        print_config(&local_config, &remote_config, pformat).unwrap();
 
     } else if let Some(new_token_path) = matches.value_of("new_api_token") {
 
@@ -312,6 +351,10 @@ pub fn main() -> Result<(), CliError> {
              .short("V")
              .long("version")
              .help("Prints version number and exits"))
+        .arg(Arg::with_name("printformat")
+             .long("format")
+             .value_name("FORMAT")
+             .help("special output formatting (default is no special formatting); options: YAML , JSON"))
         .subcommand(SubCommand::with_name("config")
                     .about("Manage local and remote configuration")
                     .arg(Arg::with_name("list")
@@ -369,12 +412,26 @@ pub fn main() -> Result<(), CliError> {
 
     let matches = app.get_matches();
 
+    let pformat = match matches.value_of("printformat") {
+        Some(given_pformat) => {
+            let given_pformat_lower = given_pformat.to_lowercase();
+            if given_pformat_lower == "json" {
+                PrintingFormat::JSON
+            } else if given_pformat_lower == "yaml" {
+                PrintingFormat::YAML
+            } else {
+                return CliError::new(format!("unrecognized format: {}", given_pformat).as_str(), 1)
+            }
+        },
+        None => PrintingFormat::DEFAULT
+    };
+
     if matches.is_present("version") {
         println!(crate_version!());
     } else if let Some(_) = matches.subcommand_matches("version") {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
-        return config_subcommand(matches);
+        return config_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("rules") {
         return rules_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("ad") {
@@ -388,4 +445,27 @@ pub fn main() -> Result<(), CliError> {
     }
 
     Ok(())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use crate::mgmt;
+    use super::PrintingFormat;
+    use super::print_config_w;
+
+
+    #[test]
+    fn list_config_json() {
+        let td = tempdir().unwrap();
+        let base_path = td.path().join(".rerobots");
+        let lconf = mgmt::get_local_config_bp(&base_path, true, false).unwrap();
+
+        let mut buf: Vec<u8> = vec![];
+        print_config_w(&mut buf, &lconf, &None, PrintingFormat::JSON).unwrap();
+        let buf_parsing_result: Result<serde_json::Value, serde_json::Error> = serde_json::from_slice(&buf);
+        assert!(buf_parsing_result.is_ok());
+    }
 }

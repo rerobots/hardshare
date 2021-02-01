@@ -132,7 +132,7 @@ pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<C
     return get_local_config_bp(&base_path, create_if_empty, collect_errors);
 }
 
-fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
+pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
     if !base_path.exists() {
         if create_if_empty {
             std::fs::create_dir(&base_path)?;
