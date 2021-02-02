@@ -81,7 +81,7 @@ impl std::fmt::Display for AccessRules {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
     default_key_index: Option<usize>,
@@ -317,6 +317,7 @@ impl HSAPIClient {
 
         let sys = System::new("wsclient");
         let (err_notify, err_rx) = mpsc::channel();
+        let ac = self.clone();
         Arbiter::spawn(async move {
 
             let client = awc::Client::builder()
@@ -334,11 +335,19 @@ impl HSAPIClient {
             };
             let (sink, stream) = framed.split();
 
+            let (cworker_tx, cworker_rx) = mpsc::channel();
             let addr = WSClient::create(|ctx| {
                 WSClient::add_stream(stream, ctx);
                 WSClient {
-                    ws_sink: SinkWrite::new(sink, ctx)
+                    worker_req: cworker_tx,
+                    ws_sink: SinkWrite::new(sink, ctx),
+                    recent_rx_instant: std::time::Instant::now()  // First instant at first connect
                 }
+            });
+
+            let ws_addr = addr.clone();
+            std::thread::spawn(move || {
+                cworker(ac, cworker_rx, ws_addr)
             });
 
             let mut manip = actix_web::HttpServer::new(move || {
@@ -440,33 +449,54 @@ impl HSAPIClient {
 }
 
 
+fn cworker(ac: HSAPIClient, wsclient_req: mpsc::Receiver<serde_json::Value>, wsclient_addr: Addr<WSClient>) {
+    loop {
+        let req = match wsclient_req.recv() {
+            Ok(m) => m,
+            Err(_) => return
+        };
+    }
+}
+
+
 struct WSClient {
+    worker_req: mpsc::Sender<serde_json::Value>,
     ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
+    recent_rx_instant: std::time::Instant,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
 struct WSClientCommand(String);
 
+#[derive(Message)]
+#[rtype(result = "()")]
+struct WSClientWorkerMessage(String);
+
 impl Actor for WSClient {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Context<Self>) {
-        self.heartbeat(ctx);
+        self.check_receive_timeout(ctx);
     }
 
 
     fn stopped(&mut self, ctx: &mut Context<Self>) {
+        debug!("WSClient actor stopped");
         System::current().stop();
     }
 }
 
 impl WSClient {
-    fn heartbeat(&self, ctx: &mut Context<Self>) {
-        ctx.run_later(Duration::new(15, 0), |act, ctx| {
-            act.ws_sink.write(Message::Ping(Bytes::from_static(b"")));
-            act.heartbeat(ctx);
-
+    fn check_receive_timeout(&self, ctx: &mut Context<Self>) {
+        ctx.run_later(Duration::new(60, 0), |act, ctx| {
+            if act.recent_rx_instant.elapsed() > Duration::new(45, 0) {
+                debug!("timeout waiting for server");
+                act.ws_sink.write(Message::Close(None));
+                ctx.stop();
+            } else {
+                act.check_receive_timeout(ctx);
+            }
         });
     }
 }
@@ -484,8 +514,18 @@ impl Handler<WSClientCommand> for WSClient {
     }
 }
 
+impl Handler<WSClientWorkerMessage> for WSClient {
+    type Result = ();
+
+    fn handle(&mut self, msg: WSClientWorkerMessage, ctx: &mut Context<Self>) {
+        debug!("received client worker message: {}", msg.0);
+    }
+}
+
 impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
     fn handle(&mut self, msg: Result<Frame, WsProtocolError>, ctx: &mut Context<Self>) {
+        self.recent_rx_instant = std::time::Instant::now();
+
         if let Ok(Frame::Text(txt)) = msg {
             let payload: serde_json::Value = match serde_json::from_slice(txt.as_ref()) {
                 Ok(p) => p,
@@ -495,13 +535,33 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 }
             };
             debug!("received: {}", serde_json::to_string(&payload).unwrap());
+
+            let message_ver = match payload["v"].as_i64() {
+                Some(v) => v,
+                None => {
+                    error!("received message with no version declaration");
+                    return
+                }
+            };
+            if message_ver != 0 {
+                error!("received message of unknown format version: {}", message_ver);
+                return
+            }
+
             let cmd = payload["cmd"].as_str().unwrap();
             if cmd == "INSTANCE_LAUNCH" {
+                self.worker_req.send(payload).unwrap();
             }
+        } else if let Ok(Frame::Ping(_)) = msg {
+            debug!("received PING; sending PONG");
+            self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));
+        } else {
+            debug!("unrecognized WebSocket message: {:?}", msg);
         }
     }
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
+        debug!("StreamHandler of WSClient is finished");
         ctx.stop()
     }
 }

@@ -46,7 +46,7 @@ fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     version: u16,
     pub wdeployments: Vec<HashMap<String, serde_json::Value>>,
