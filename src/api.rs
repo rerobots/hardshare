@@ -366,7 +366,6 @@ impl HSAPIClient {
             }
 
         });
-        let res = Arbiter::current().join();
         match sys.run() {
             Ok(()) => Ok(()),
             Err(_) => error(err_rx.recv()?)
