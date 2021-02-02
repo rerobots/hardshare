@@ -351,6 +351,10 @@ pub fn main() -> Result<(), CliError> {
              .short("V")
              .long("version")
              .help("Prints version number and exits"))
+        .arg(Arg::with_name("verbose")
+             .short("v")
+             .long("verbose")
+             .help("Increases verboseness level of logs; ignored if RUST_LOG is defined"))
         .arg(Arg::with_name("printformat")
              .long("format")
              .value_name("FORMAT")
@@ -411,6 +415,15 @@ pub fn main() -> Result<(), CliError> {
                          .help("Permits registration of more than 1 wdeployment; default is to fail if local configuration already has wdeployment declared")));
 
     let matches = app.get_matches();
+
+    if std::env::var("RUST_LOG").is_err() {
+        if matches.is_present("verbose") {
+            std::env::set_var("RUST_LOG", "info");
+        } else {
+            std::env::set_var("RUST_LOG", "warn");
+        }
+    }
+    env_logger::init();
 
     let pformat = match matches.value_of("printformat") {
         Some(given_pformat) => {
