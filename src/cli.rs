@@ -416,14 +416,12 @@ pub fn main() -> Result<(), CliError> {
 
     let matches = app.get_matches();
 
-    if std::env::var("RUST_LOG").is_err() {
-        if matches.is_present("verbose") {
-            std::env::set_var("RUST_LOG", "info");
-        } else {
-            std::env::set_var("RUST_LOG", "warn");
-        }
-    }
-    env_logger::init();
+    let default_loglevel = if matches.is_present("verbose") {
+        "info"
+    } else {
+        "warn"
+    };
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_loglevel)).init();
 
     let pformat = match matches.value_of("printformat") {
         Some(given_pformat) => {
