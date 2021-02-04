@@ -1,3 +1,10 @@
+hardshare client (0.10.1)
+
+  * Fix for periodic disconnects with attach-camera.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Wed, 03 Feb 2021 23:51:30 -0800
+
+
 hardshare client (0.10.0)
 
   * rename: `hardshare terminate` -> `hardshare stop-ad`.
