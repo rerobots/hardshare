@@ -321,8 +321,19 @@ fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 
 fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1)
+    };
+
+    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
-    match ac.stop("127.0.0.1:6666") {
+    match ac.stop(wdid, "127.0.0.1:6666") {
         Ok(()) => Ok(()),
         Err(err) => return CliError::new_std(err, 1)
     }
@@ -407,7 +418,10 @@ pub fn main() -> Result<(), CliError> {
                          .long("permit-all")
                          .help("Permit instantiations by anyone")))
         .subcommand(SubCommand::with_name("stop-ad")
-                    .about("Mark as unavailable; optionally wait for current instance to finish"))
+                    .about("Mark as unavailable; optionally wait for current instance to finish")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment to stop advertising (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
         .subcommand(SubCommand::with_name("register")
                     .about("Register new workspace deployment")
                     .arg(Arg::with_name("permit_more")

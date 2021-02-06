@@ -2,7 +2,7 @@
 // Copyright (C) 2020 rerobots, Inc.
 
 use std::collections::HashMap;
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -81,13 +81,14 @@ impl std::fmt::Display for AccessRules {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
     default_key_index: Option<usize>,
     cached_key: Option<String>,
     origin: String,
     hs_origin: String,
+    wdid_tab: Option<HashMap<String, Addr<WSClient>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -112,6 +113,7 @@ impl HSAPIClient {
                 cached_key: None,
                 origin: String::from(origin),
                 hs_origin: String::from(hs_origin),
+                wdid_tab: None,
             },
             Err(_) => return HSAPIClient {
                 local_config: None,
@@ -119,6 +121,7 @@ impl HSAPIClient {
                 cached_key: None,
                 origin: String::from(origin),
                 hs_origin: String::from(hs_origin),
+                wdid_tab: None,
             }
         };
 
@@ -292,8 +295,8 @@ impl HSAPIClient {
     }
 
 
-    pub fn stop(&self, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let url = format!("http://{}/stop", bindaddr);
+    pub fn stop(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let url = format!("http://{}/stop/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");
         actix::SystemRunner::block_on(&mut sys, async {
             awc::Client::new().post(url).send().await.and_then(|resp| {
@@ -305,57 +308,144 @@ impl HSAPIClient {
     }
 
 
-    pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
-
-        let url = format!("{}/ad/{}", self.hs_origin, wdid);
+    async fn ad(ac: &HSAPIClient, wdid: String) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
+        let authheader = format!("Bearer {}", ac.cached_key.as_ref().unwrap());
+        let url = format!("{}/ad/{}", ac.hs_origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
+
+        let client = awc::Client::builder()
+            .connector(awc::Connector::new().ssl(connector).finish())
+            .header("Authorization", authheader)
+            .finish();
+
+        let (_, framed) = client.ws(url).connect().await?;
+        let (sink, stream) = framed.split();
+
+        let (cworker_tx, cworker_rx) = mpsc::channel();
+        let addr = WSClient::create(|ctx| {
+            WSClient::add_stream(stream, ctx);
+            WSClient {
+                worker_req: cworker_tx,
+                ws_sink: SinkWrite::new(sink, ctx),
+                recent_rx_instant: std::time::Instant::now()  // First instant at first connect
+            }
+        });
+
+        let ws_addr = addr.clone();
+        let ac = ac.clone();
+        std::thread::spawn(move || {
+            cworker(ac, cworker_rx, ws_addr)
+        });
+
+        Ok(addr)
+    }
+
+
+    async fn http_post_start(wdid: actix_web::web::Path<String>, ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>) -> actix_web::HttpResponse {
+        let mut ac_inner = ac.lock().unwrap();
+        if let Some(local_config) = &ac_inner.local_config {
+            let wd_index = match mgmt::find_id_prefix(&local_config, Some(wdid.as_str())) {
+                Ok(wi) => wi,
+                Err(err) => return actix_web::HttpResponse::NotFound().finish()
+            };
+        }
+
+        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
+            if wdid_tab.contains_key(&*wdid) {
+                return actix_web::HttpResponse::Forbidden().finish();
+            }
+        }
+
+        let addr = match HSAPIClient::ad(&*ac_inner, wdid.clone()).await {
+            Ok(a) => a,
+            Err(err) => {
+                error!("{}", err);
+                return actix_web::HttpResponse::InternalServerError().finish();
+            }
+        };
+
+        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
+            wdid_tab.insert(wdid.clone(), addr.clone());
+        }
+
+        actix_web::HttpResponse::Ok().finish()
+    }
+
+
+    fn http_post_stop(wdid: actix_web::web::Path<String>, ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>) -> actix_web::HttpResponse {
+        let mut ac_inner = ac.lock().unwrap();
+        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
+            match wdid_tab.remove(&*wdid) {
+                Some(addr) => {
+                    if wdid_tab.len() == 0 {
+                        addr.do_send(WSClientCommand("STOP DAEMON".into()));
+                    } else {
+                        addr.do_send(WSClientCommand("STOP".into()));
+                    }
+                    actix_web::HttpResponse::Ok().finish()
+                },
+                None => actix_web::HttpResponse::NotFound().finish()
+            }
+        } else {
+            return actix_web::HttpResponse::InternalServerError().finish();
+        }
+    }
+
+
+    pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         if self.cached_key.is_none() {
             return error("No valid API tokens found.");
         }
-        let authheader = format!("Bearer {}", self.cached_key.as_ref().unwrap());
+
+        // Try to start via daemon, if exists
+        let url = format!("http://{}/start/{}", bindaddr, wdid);
+        let mut sys = System::new("dclient");
+        let res = actix::SystemRunner::block_on(&mut sys, async {
+            awc::Client::new().post(url).send().await.and_then(|resp| {
+                Ok(())
+            }).or_else(|err| {
+                Err(err)
+            })
+        });
+        match res {
+            Ok(()) => {
+                info!("started via existing daemon");
+                return Ok(())
+            },
+            Err(err) => warn!("no existing daemon: {}", err)
+        };
+
+        // Else, start new daemon
+        info!("starting new daemon");
         let bindaddr: std::net::SocketAddr = bindaddr.parse()?;
+        let wdid = String::from(wdid);
 
         let sys = System::new("wsclient");
         let (err_notify, err_rx) = mpsc::channel();
-        let ac = self.clone();
+        let ac = Arc::new(Mutex::new(self.clone()));
         Arbiter::spawn(async move {
 
-            let client = awc::Client::builder()
-                .connector(awc::Connector::new().ssl(connector).finish())
-                .header("Authorization", authheader)
-                .finish();
-
-            let (_, framed) = match client.ws(url).connect().await {
-                Ok(r) => r,
+            let mut ac_inner = ac.lock().unwrap();
+            let addr = match HSAPIClient::ad(&*ac_inner, wdid.clone()).await {
+                Ok(a) => a,
                 Err(err) => {
                     err_notify.send(format!("{}", err)).unwrap();
                     System::current().stop_with_code(1);
                     return
                 }
             };
-            let (sink, stream) = framed.split();
-
-            let (cworker_tx, cworker_rx) = mpsc::channel();
-            let addr = WSClient::create(|ctx| {
-                WSClient::add_stream(stream, ctx);
-                WSClient {
-                    worker_req: cworker_tx,
-                    ws_sink: SinkWrite::new(sink, ctx),
-                    recent_rx_instant: std::time::Instant::now()  // First instant at first connect
-                }
-            });
-
-            let ws_addr = addr.clone();
-            std::thread::spawn(move || {
-                cworker(ac, cworker_rx, ws_addr)
-            });
+            let mut wdid_tab = HashMap::new();
+            wdid_tab.insert(wdid.clone(), addr.clone());
+            ac_inner.wdid_tab = Some(wdid_tab);
+            drop(ac_inner);
 
             let mut manip = actix_web::HttpServer::new(move || {
-                let addr = addr.clone();
-                actix_web::App::new().route("/stop", actix_web::web::post().to(move || {
-                    addr.do_send(WSClientCommand("STOP".into()));
-                    actix_web::HttpResponse::Ok()
-                }))
+                let mut ac = Arc::clone(&ac);
+                actix_web::App::new()
+                    .data(ac)
+                    .wrap(actix_web::middleware::Logger::default())
+                    .route("/stop/{wdid:.*}", actix_web::web::post().to(HSAPIClient::http_post_stop))
+                    .route("/start/{wdid:.*}", actix_web::web::post().to(HSAPIClient::http_post_start))
             }).workers(1);
             manip = match manip.bind(bindaddr) {
                 Ok(s) => s,
@@ -449,18 +539,53 @@ impl HSAPIClient {
 }
 
 
-fn cworker(ac: HSAPIClient, wsclient_req: mpsc::Receiver<serde_json::Value>, wsclient_addr: Addr<WSClient>) {
+#[derive(PartialEq, Debug, Clone)]
+enum ConnType {
+    SSHTUN,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+enum CWorkerCommandType {
+    INSTANCE_LAUNCH,
+    INSTANCE_DESTROY,
+    INSTANCE_STATUS,
+}
+
+#[derive(Debug, Clone)]
+struct CWorkerCommand {
+    command: CWorkerCommandType,
+    instance_id: String,  // \in UUID
+    conntype: Option<ConnType>,
+    publickey: Option<String>,
+}
+
+
+fn cworker(ac: HSAPIClient, wsclient_req: mpsc::Receiver<CWorkerCommand>, wsclient_addr: Addr<WSClient>) {
     loop {
         let req = match wsclient_req.recv() {
             Ok(m) => m,
             Err(_) => return
         };
+        debug!("cworker rx: {:?}", req);
+
+        match req.command {
+            CWorkerCommandType::INSTANCE_LAUNCH => {
+
+            },
+            CWorkerCommandType::INSTANCE_DESTROY => {
+
+            },
+            CWorkerCommandType::INSTANCE_STATUS => {
+
+            }
+        }
+
     }
 }
 
 
 struct WSClient {
-    worker_req: mpsc::Sender<serde_json::Value>,
+    worker_req: mpsc::Sender<CWorkerCommand>,
     ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
     recent_rx_instant: std::time::Instant,
 }
@@ -483,7 +608,6 @@ impl Actor for WSClient {
 
     fn stopped(&mut self, ctx: &mut Context<Self>) {
         debug!("WSClient actor stopped");
-        System::current().stop();
     }
 }
 
@@ -508,7 +632,10 @@ impl Handler<WSClientCommand> for WSClient {
         debug!("received client command: {}", msg.0);
         if msg.0 == "STOP" {
             ctx.stop();
-        } else {
+        } else if msg.0 == "STOP DAEMON" {
+            ctx.stop();
+            System::current().stop();
+        }else {
             warn!("unknown client command: {}", msg.0);
         }
     }
@@ -548,10 +675,49 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 return
             }
 
-            let cmd = payload["cmd"].as_str().unwrap();
+            let cmd = match payload["cmd"].as_str() {
+                Some(c) => c,
+                None => {
+                    error!("received message of without `cmd` field");
+                    return
+                }
+            };
+
             if cmd == "INSTANCE_LAUNCH" {
-                self.worker_req.send(payload).unwrap();
+
+                let mid = String::from(payload["mi"].as_str().unwrap());
+                let m = CWorkerCommand {
+                    command: CWorkerCommandType::INSTANCE_LAUNCH,
+                    instance_id: String::from(payload["id"].as_str().unwrap()),
+                    conntype: Some(ConnType::SSHTUN),  // TODO: Support ct != sshtun
+                    publickey: Some(String::from(payload["pr"].as_str().unwrap())),
+                };
+                self.worker_req.send(m).unwrap();
+
+            } else if cmd == "INSTANCE_STATUS" {
+
+                let mid = String::from(payload["mi"].as_str().unwrap());
+                let m = CWorkerCommand {
+                    command: CWorkerCommandType::INSTANCE_STATUS,
+                    instance_id: String::from(payload["id"].as_str().unwrap()),
+                    conntype: None,
+                    publickey: None,
+                };
+                self.worker_req.send(m).unwrap();
+
+            } else if cmd == "INSTANCE_DESTROY" {
+
+                let mid = String::from(payload["mi"].as_str().unwrap());
+                let m = CWorkerCommand {
+                    command: CWorkerCommandType::INSTANCE_DESTROY,
+                    instance_id: String::from(payload["id"].as_str().unwrap()),
+                    conntype: None,
+                    publickey: None,
+                };
+                self.worker_req.send(m).unwrap();
+
             }
+
         } else if let Ok(Frame::Ping(_)) = msg {
             debug!("received PING; sending PONG");
             self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));
