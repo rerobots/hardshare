@@ -226,12 +226,24 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize, Box<dyn std::error::Error>> {
     if let Some(id_prefix) = id_prefix {
 
+        let mut candidates = vec![];
+
         for (j, wd) in config.wdeployments.iter().enumerate() {
-            if wd["id"].as_str().unwrap().starts_with(id_prefix) {
-                return Ok(j);
+            let this_wdid = wd["id"].as_str().unwrap();
+            if this_wdid.starts_with(id_prefix) {
+                candidates.push((j, this_wdid));
             }
         }
-        return error("given prefix does not match precisely 1 workspace deployment");
+        if candidates.len() > 1 {
+            let candidates: Vec<&str> = candidates.iter()
+                .map(|&val| val.1)
+                .collect();
+            return error(format!("given prefix matches more than 1 workspace deployment: {}", candidates.join(", ")).as_str());
+        } else if candidates.len() == 0 {
+            return error("given prefix does not match any workspace deployments");
+        } else {
+            return Ok(candidates[0].0);
+        }
 
     } else {
 
