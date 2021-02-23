@@ -635,7 +635,7 @@ impl Handler<WSClientCommand> for WSClient {
         } else if msg.0 == "STOP DAEMON" {
             ctx.stop();
             System::current().stop();
-        }else {
+        } else {
             warn!("unknown client command: {}", msg.0);
         }
     }
