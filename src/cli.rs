@@ -212,12 +212,116 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
         }
 
     } else if create_if_missing {
+
         if let Err(err) = mgmt::get_local_config(true, false) {
             return CliError::new_std(err, 1);
         }
-    } else {
-        let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
-        return CliError::new(errmessage, 1);
+
+    } else {  // Remaining actions require a local configuration
+
+        let mut local_config = match mgmt::get_local_config(false, false) {
+            Ok(lc) => lc,
+            Err(err) => return CliError::new_std(err, 1)
+        };
+
+        let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+            Ok(wi) => wi,
+            Err(err) => return CliError::new_std(err, 1)
+        };
+
+        if let Some(cprovider) = matches.value_of("cprovider") {
+
+            let selected_cprovider = cprovider.to_lowercase();
+            if !vec!["docker", "podman", "proxy"].contains(&selected_cprovider.as_str()) {
+                return CliError::new("cprovider must be one of the following: docker, podman, proxy", 1);
+            }
+
+            if let Some(wd_cprovider) = local_config.wdeployments[wd_index].get_mut("cprovider") {
+                let selected_cprovider = serde_json::Value::String(selected_cprovider);
+                if *wd_cprovider == selected_cprovider {
+                    return Ok(())
+                }
+                *wd_cprovider = selected_cprovider;
+            } else {
+                warn!("local configuration of {} without prior value of cprovider", local_config.wdeployments[wd_index]["id"]);
+                local_config.wdeployments[wd_index].insert("cprovider".into(), json!(selected_cprovider));
+            }
+
+            if local_config.wdeployments[wd_index]["cprovider"] == "proxy" {
+                let null_img = json!(null);
+                local_config.wdeployments[wd_index].insert("image".into(), null_img);
+            } else {  // cprovider \in {docker, podman}
+                let default_img = json!("rerobots/hs-generic");
+                if let Some(wd_cprovider_img) = local_config.wdeployments[wd_index].get_mut("image") {
+                    if *wd_cprovider_img == json!(null) {
+                        *wd_cprovider_img = default_img;
+                    }
+                } else {
+                    local_config.wdeployments[wd_index].insert("image".into(), default_img);
+                }
+            }
+
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(())
+            }
+
+        } else if let Some(new_image) = matches.value_of("cprovider_img") {
+
+            let cprovider = local_config.wdeployments[wd_index]["cprovider"].as_str().unwrap();
+            match cprovider {
+
+                "podman" => {
+                    let status = std::process::Command::new("podman")
+                        .args(&["image", "exists", new_image])
+                        .status();
+                    let status = match status {
+                        Ok(s) => s,
+                        Err(err) => return CliError::new_stdio(err, 1)
+                    };
+                    if !status.success() {
+                        return CliError::new("given image name is not recognized by cprovider", 1);
+                    }
+
+                    let new_image = json!(new_image);
+                    local_config.wdeployments[wd_index].insert("image".into(), new_image);
+                },
+                "docker" => {
+                    let status = std::process::Command::new("docker")
+                        .args(&["image", "inspect", new_image])
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status();
+                    let status = match status {
+                        Ok(s) => s,
+                        Err(err) => return CliError::new_stdio(err, 1)
+                    };
+                    if !status.success() {
+                        return CliError::new("given image name is not recognized by cprovider", 1);
+                    }
+
+                    let new_image = json!(new_image);
+                    local_config.wdeployments[wd_index].insert("image".into(), new_image);
+                },
+                _ => {
+                    let errmessage = format!("cannot --assign-image for cprovider `{}`", cprovider);
+                    return CliError::new(errmessage.as_str(), 1);
+                }
+
+            }
+
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(())
+            }
+
+        } else {
+
+            let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
+            return CliError::new(errmessage, 1);
+
+        }
+
     }
 
     Ok(())
@@ -393,7 +497,18 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("prune_err_keys")
                          .short("p")
                          .long("prune")
-                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`")))
+                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`"))
+                    .arg(Arg::with_name("cprovider")
+                         .long("cprovider")
+                         .value_name("CPROVIDER")
+                         .help("select a container provider: docker, podman, proxy"))
+                    .arg(Arg::with_name("cprovider_img")
+                         .long("assign-image")
+                         .value_name("IMG")
+                         .help("assign image for cprovider to use (advanced option)"))
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
         .subcommand(SubCommand::with_name("ad")
                     .about("Advertise availability, accept new instances")
                     .arg(Arg::with_name("id_prefix")
