@@ -2,6 +2,7 @@
 // Copyright (C) 2020 rerobots, Inc.
 
 use std::io::prelude::*;
+use std::process::{Command, Stdio};
 
 use serde::Serialize;
 
@@ -272,13 +273,17 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
             match cprovider {
 
                 "podman" => {
-                    let status = std::process::Command::new("podman")
-                        .args(&["image", "exists", new_image])
-                        .status();
+                    let argv = vec!["podman", "image", "exists", new_image];
+                    let mut prog = Command::new(argv[0]);
+
+                    debug!("exec: {:?}", argv);
+                    let status = prog.args(&argv[1..]).status();
                     let status = match status {
                         Ok(s) => s,
                         Err(err) => return CliError::new_stdio(err, 1)
                     };
+                    debug!("exit status: {:?}", status);
+
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
@@ -287,15 +292,20 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                     local_config.wdeployments[wd_index].insert("image".into(), new_image);
                 },
                 "docker" => {
-                    let status = std::process::Command::new("docker")
-                        .args(&["image", "inspect", new_image])
-                        .stdout(std::process::Stdio::null())
-                        .stderr(std::process::Stdio::null())
+                    let argv = vec!["docker", "image", "inspect", new_image];
+                    let mut prog = Command::new(argv[0]);
+
+                    debug!("exec: {:?}", argv);
+                    let status = prog.args(&argv[1..])
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
                         .status();
                     let status = match status {
                         Ok(s) => s,
                         Err(err) => return CliError::new_stdio(err, 1)
                     };
+                    debug!("exit status: {:?}", status);
+
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
