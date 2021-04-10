@@ -84,8 +84,8 @@ impl std::fmt::Display for AccessRules {
 #[derive(Clone)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
-    default_key_index: Option<usize>,
-    cached_key: Option<String>,
+    default_token_index: Option<usize>,
+    cached_api_token: Option<String>,
     origin: String,
     hs_origin: String,
     wdid_tab: Option<HashMap<String, Addr<WSClient>>>,
@@ -109,16 +109,16 @@ impl HSAPIClient {
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
                 local_config: Some(local_config),
-                default_key_index: None,
-                cached_key: None,
+                default_token_index: None,
+                cached_api_token: None,
                 origin: String::from(origin),
                 hs_origin: String::from(hs_origin),
                 wdid_tab: None,
             },
             Err(_) => return HSAPIClient {
                 local_config: None,
-                default_key_index: None,
-                cached_key: None,
+                default_token_index: None,
+                cached_api_token: None,
                 origin: String::from(origin),
                 hs_origin: String::from(hs_origin),
                 wdid_tab: None,
@@ -126,11 +126,11 @@ impl HSAPIClient {
         };
 
         if let Some(local_config) = &hsclient.local_config {
-            if local_config.keys.len() > 0 {
-                hsclient.default_key_index = Some(0);
-                let raw_tok = std::fs::read(&local_config.keys[hsclient.default_key_index.unwrap()]).unwrap();
+            if local_config.api_tokens.len() > 0 {
+                hsclient.default_token_index = Some(0);
+                let raw_tok = std::fs::read(&local_config.api_tokens[hsclient.default_token_index.unwrap()]).unwrap();
                 let tok = String::from_utf8(raw_tok).unwrap();
-                hsclient.cached_key = Some(tok);
+                hsclient.cached_api_token = Some(tok);
             }
         }
 
@@ -144,13 +144,13 @@ impl HSAPIClient {
 
 
     fn create_authclient(&self) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
-        if self.cached_key.is_none() {
+        if self.cached_api_token.is_none() {
             return error("No valid API tokens found.");
         }
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(reqwest::header::AUTHORIZATION,
-                       format!("Bearer {}", self.cached_key.as_ref().unwrap()).parse().unwrap());
+                       format!("Bearer {}", self.cached_api_token.as_ref().unwrap()).parse().unwrap());
         Ok(reqwest::Client::builder()
            .default_headers(headers)
            .build().unwrap())
@@ -309,7 +309,7 @@ impl HSAPIClient {
 
 
     async fn ad(ac: &HSAPIClient, wdid: String) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
-        let authheader = format!("Bearer {}", ac.cached_key.as_ref().unwrap());
+        let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
         let url = format!("{}/ad/{}", ac.hs_origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
 
@@ -393,7 +393,7 @@ impl HSAPIClient {
 
 
     pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
-        if self.cached_key.is_none() {
+        if self.cached_api_token.is_none() {
             return error("No valid API tokens found.");
         }
 
@@ -483,7 +483,7 @@ impl HSAPIClient {
 
         let url = format!("{}/register", self.hs_origin);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
-        let authheader = format!("Bearer {}", self.cached_key.as_ref().unwrap());
+        let authheader = format!("Bearer {}", self.cached_api_token.as_ref().unwrap());
 
         let mut sys = System::new("wclient");
         let res = actix::SystemRunner::block_on(&mut sys, async {

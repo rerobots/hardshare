@@ -53,10 +53,10 @@ pub struct Config {
     pub ssh_key: String,
 
     #[serde(default)]
-    pub keys: Vec<String>,
+    pub api_tokens: Vec<String>,
 
     #[serde(default)]
-    pub err_keys: Option<HashMap<String, String>>,
+    pub err_api_tokens: Option<HashMap<String, String>>,
 }
 
 
@@ -69,20 +69,20 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 }
 
 
-pub fn list_local_keys(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
+pub fn list_local_api_tokens(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
-    return list_local_keys_bp(&base_path, collect_errors);
+    return list_local_api_tokens_bp(&base_path, collect_errors);
 }
 
-fn list_local_keys_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
-     let mut likely_keys = Vec::new();
-    let mut errored_keys = HashMap::new();
+fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
+    let mut likely_tokens = Vec::new();
+    let mut errored_tokens = HashMap::new();
     if !base_path.exists() {
-        return Ok((likely_keys, errored_keys));
+        return Ok((likely_tokens, errored_tokens));
     }
-    let path = base_path.join("keys");
+    let path = base_path.join("tokens");
     if !path.exists() {
-        return Ok((likely_keys, errored_keys));
+        return Ok((likely_tokens, errored_tokens));
     }
 
     let alg = PKeyWithDigest {
@@ -101,28 +101,28 @@ fn list_local_keys_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> R
                 let claims = tok.claims();
                 if claims.registered.expiration.unwrap() < utime {
                     if collect_errors {
-                        errored_keys.insert(String::from(path.to_str().unwrap()), "expired".into());
+                        errored_tokens.insert(String::from(path.to_str().unwrap()), "expired".into());
                     }
                 } else {
-                    likely_keys.push(String::from(path.to_str().unwrap()));
+                    likely_tokens.push(String::from(path.to_str().unwrap()));
                 }
             },
             Err(err) => match err {
                 jwt::error::Error::InvalidSignature => {
                     if collect_errors {
-                        errored_keys.insert(String::from(path.to_str().unwrap()), "invalid signature".into());
+                        errored_tokens.insert(String::from(path.to_str().unwrap()), "invalid signature".into());
                     }
                 }
                 _ => {
                     if collect_errors {
-                        errored_keys.insert(String::from(path.to_str().unwrap()), "unknown error".into());
+                        errored_tokens.insert(String::from(path.to_str().unwrap()), "unknown error".into());
                     }
                 }
             }
         };
     }
 
-    Ok((likely_keys, errored_keys))
+    Ok((likely_tokens, errored_tokens))
 }
 
 
@@ -136,7 +136,7 @@ pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool
     if !base_path.exists() {
         if create_if_empty {
             std::fs::create_dir(&base_path)?;
-            std::fs::create_dir(base_path.join("keys"))?;
+            std::fs::create_dir(base_path.join("tokens"))?;
             std::fs::create_dir(base_path.join("ssh"))?;
         } else {
             return error("no configuration data found");
@@ -149,8 +149,8 @@ pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool
                 version: 0,
                 wdeployments: vec![],
                 ssh_key: "".to_string(),
-                keys: vec![],
-                err_keys: None,
+                api_tokens: vec![],
+                err_api_tokens: None,
             };
             let sshpath = base_path.join("ssh").join("tun");
             let exitcode = Command::new("ssh-keygen")
@@ -172,10 +172,10 @@ pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool
     }
     let config_raw = std::fs::read_to_string(path)?;
     let mut config: Config = serde_json::from_str(config_raw.as_str())?;
-    let res = list_local_keys(collect_errors)?;
-    config.keys = res.0;
+    let res = list_local_api_tokens(collect_errors)?;
+    config.api_tokens = res.0;
     if collect_errors {
-        config.err_keys = Some(res.1);
+        config.err_api_tokens = Some(res.1);
     }
     Ok(config)
 }
@@ -194,7 +194,7 @@ pub fn append_urls(config: &mut Config) {
 
 pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
-    let tokens_dir = base_path.join("keys");
+    let tokens_dir = base_path.join("tokens");
     if !tokens_dir.exists() {
         std::fs::create_dir(&tokens_dir)?
     }
@@ -280,7 +280,7 @@ mod tests {
     use super::Config;
     use super::find_id_prefix;
     use super::get_local_config_bp;
-    use super::list_local_keys_bp;
+    use super::list_local_api_tokens_bp;
 
 
     #[test]
@@ -296,8 +296,8 @@ mod tests {
             version: 0,
             wdeployments: vec![],
             ssh_key: "".to_string(),
-            keys: vec![],
-            err_keys: None,
+            api_tokens: vec![],
+            err_api_tokens: None,
         };
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
 
@@ -346,8 +346,8 @@ mod tests {
     fn no_saved_api_tokens() {
         let td = tempdir().unwrap();
         let base_path = td.path().join(".rerobots");
-        let (likely_keys, errored_keys) = list_local_keys_bp(&base_path, false).unwrap();
-        assert_eq!(likely_keys.len(), 0);
-        assert_eq!(errored_keys.len(), 0);
+        let (likely_tokens, errored_tokens) = list_local_api_tokens_bp(&base_path, false).unwrap();
+        assert_eq!(likely_tokens.len(), 0);
+        assert_eq!(errored_tokens.len(), 0);
     }
 }

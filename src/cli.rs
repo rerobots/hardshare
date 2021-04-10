@@ -115,20 +115,20 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
         }
     }
 
-    writeln!(f, "\nfound keys:")?;
-    if local.keys.len() == 0 {
+    writeln!(f, "\nfound API tokens:")?;
+    if local.api_tokens.len() == 0 {
         writeln!(f, "\t(none)")?;
     } else {
-        for k in local.keys.iter() {
+        for k in local.api_tokens.iter() {
             writeln!(f, "\t{}", k)?;
         }
     }
-    if let Some(err_keys) = &local.err_keys {
-        if err_keys.len() > 0 {
-            writeln!(f, "found possible keys with errors:")?;
+    if let Some(err_tokens) = &local.err_api_tokens {
+        if err_tokens.len() > 0 {
+            writeln!(f, "found possible API tokens with errors:")?;
         }
-        for (err_key_path, err) in err_keys {
-            writeln!(f, "\t {}: {}", err, err_key_path)?;
+        for (err_token_path, err) in err_tokens {
+            writeln!(f, "\t {}: {}", err, err_token_path)?;
         }
     }
 
@@ -196,16 +196,16 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
             Ok(_) => ()
         }
 
-    } else if matches.is_present("prune_err_keys") {
+    } else if matches.is_present("prune_err_tokens") {
 
         let local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1)
         };
 
-        if let Some(err_keys) = &local_config.err_keys {
-            for (err_key_path, _) in err_keys {
-                match std::fs::remove_file(err_key_path) {
+        if let Some(err_tokens) = &local_config.err_api_tokens {
+            for (err_token_path, _) in err_tokens {
+                match std::fs::remove_file(err_token_path) {
                     Err(err) => return CliError::new_stdio(err, 1),
                     Ok(_) => ()
                 };
@@ -501,13 +501,13 @@ pub fn main() -> Result<(), CliError> {
                          .long("create")
                          .help("If no local configuration is found, then create one"))
                     .arg(Arg::with_name("new_api_token")
-                         .long("add-key")
+                         .long("add-token")
                          .value_name("FILE")
                          .help("add new API token"))
-                    .arg(Arg::with_name("prune_err_keys")
+                    .arg(Arg::with_name("prune_err_tokens")
                          .short("p")
                          .long("prune")
-                         .help("delete files in local key directory that are not valid; to get list of files with errors, try `--list`"))
+                         .help("delete files in local API tokens directory that are not valid; to get list of files with errors, try `--list`"))
                     .arg(Arg::with_name("cprovider")
                          .long("cprovider")
                          .value_name("CPROVIDER")
