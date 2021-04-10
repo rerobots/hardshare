@@ -44,7 +44,7 @@ token that you create at https://rerobots.net/tokens and download is saved to
 your local hardshare configuration. As such, the default expiration time might
 be too small for your application. Download the token, and add it::
 
-  hardshare config --add-key path/to/your/jwt.txt
+  hardshare config --add-token path/to/your/jwt.txt
 
 
 SSH keys

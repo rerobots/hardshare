@@ -90,9 +90,9 @@ List local configurations
 ::
 
   local:
-    err_keys: {}
-    keys:
-    - /home/scott/.rerobots/keys/jwt.txt
+    err_api_tokens: {}
+    api_tokens:
+    - /home/scott/.rerobots/tokens/jwt.txt
     ssh_key: /home/scott/.ssh/unodist
     version: 0
     wdeployments:
@@ -131,4 +131,4 @@ Remove any expired API tokens::
 
 Then, `get a new API token <https://rerobots.net/tokens>`_, and add it::
 
-  hardshare config --add-key path/to/your/jwt.txt
+  hardshare config --add-token path/to/your/jwt.txt

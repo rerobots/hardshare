@@ -41,7 +41,7 @@ hardshare client. (Learn how to do this `from the rerobots Web Guide
 initialize a new local configuration, and add the API token to it::
 
   hardshare config -c
-  hardshare config --add-key path/to/your/jwt.txt
+  hardshare config --add-token path/to/your/jwt.txt
 
 Finally, create a new workspace deployment::
 
