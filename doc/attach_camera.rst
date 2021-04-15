@@ -53,7 +53,7 @@ For example, ::
 
   {
       "c9f5e2df-f233-4084-9d01-c7f119e3f9a5": [190, 133, 442, 424],
-      "2a789bea-5f46-4dc0-a8a3-bf26759ca329": [500, 500, 800, 800],
+      "2a789bea-5f46-4dc0-a8a3-bf26759ca329": [500, 500, 800, 800]
   }
 
 would make the rectangle with corners (190, 133) and (442, 424) available as the
