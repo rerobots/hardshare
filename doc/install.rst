@@ -1,4 +1,4 @@
-Installation instructions
+Installation Instructions
 =========================
 
 Summary
@@ -17,7 +17,7 @@ as Ubuntu_. We are working to support other kinds of hosts, including Windows,
 macOS, and FreeBSD.
 
 
-Main aspects
+Main Aspects
 ------------
 
 The main aspects to an operational ``hardshare`` installation:
@@ -35,7 +35,7 @@ To begin, initialize a new configuration::
 
 .. _ssec:api-tokens:
 
-API tokens
+API Tokens
 ``````````
 
 Instructions about managing API tokens are `in the rerobots Web Guide
@@ -47,7 +47,7 @@ be too small for your application. Download the token, and add it::
   hardshare config --add-token path/to/your/jwt.txt
 
 
-SSH keys
+SSH Keys
 ````````
 
 An SSH key is required to create SSH tunnels through which remote users connect
@@ -156,7 +156,7 @@ Then, :ref:`the section about Docker <ssec:preparing-docker-cprovider>` can be
 followed by replacing ``docker`` with ``podman``.
 
 
-Include devices
+Include Devices
 ---------------
 
 For example, ::
@@ -164,7 +164,7 @@ For example, ::
   hardshare config --add-raw-device /dev/ttyUSB0
 
 
-Access rules
+Access Rules
 ------------
 
 Each robot shared through rerobots_ is subject to access rules about who can do
@@ -190,7 +190,7 @@ and your username. To allow other users::
   hardshare rules --permit-all
 
 
-What next?
+What Next?
 ----------
 
 At this stage, you have a ready-to-use hardshare host. Next:

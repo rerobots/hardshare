@@ -32,7 +32,7 @@ check that you have it::
   docker version
 
 
-Create local configuration
+Create Local Configuration
 --------------------------
 
 Get an `API token <https://rerobots.net/tokens>`_ to associate with your
@@ -48,7 +48,7 @@ Finally, create a new workspace deployment::
   hardshare register
 
 
-Start sharing!
+Start Sharing!
 --------------
 
 Start the daemon::
@@ -67,7 +67,7 @@ which should result in output that is similar to the following::
     wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
 
 
-Request instance
+Request Instance
 ----------------
 
 Now that the daemon is active, you can request an instance on your own device
@@ -93,7 +93,7 @@ command-line, stop the daemon::
 Now entering ``hardshare status`` should return ``daemon_found: false``.
 
 
-Check permissions
+Check Permissions
 -----------------
 
 When a new device is registered, the default configuration permits only you
@@ -107,7 +107,7 @@ and your username. To allow other users::
   hardshare rules --permit-all
 
 
-What next?
+What Next?
 ----------
 
 At this stage, you have a ready-to-use hardshare host. Next:

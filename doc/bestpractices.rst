@@ -1,4 +1,4 @@
-Best practices
+Best Practices
 ==============
 
 Manage wdeployment IDs

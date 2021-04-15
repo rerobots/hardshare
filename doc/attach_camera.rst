@@ -1,4 +1,4 @@
-Attach external camera
+Attach External Camera
 ======================
 
 Summary
@@ -32,7 +32,7 @@ or just ``pip``, depending on your Python installation. If that fails, consider
 reading the `Pillow documentation`_.
 
 
-Prepare a new configuration
+Prepare a New Configuration
 ---------------------------
 
 If you have remote access to the array of devices, then the following process
@@ -60,7 +60,7 @@ would make the rectangle with corners (190, 133) and (442, 424) available as the
 camera feed for workspace deployment c9f5e2df-f233-4084-9d01-c7f119e3f9a5, and
 the square with corners (500, 500) and (800, 800) would be for 2a789bea-5f46-4dc0-a8a3-bf26759ca329.
 
-Attach and stop cameras
+Attach and Stop Cameras
 -----------------------
 
 The contents of a map file is provided to the hardshare daemon via the

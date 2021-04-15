@@ -39,7 +39,7 @@ Remote users do not necessarily have rerobots accounts. The kinds of access that
 are possible depend on the permissions assigned by the owner.
 
 
-Lifecycle of instances
+Lifecycle of Instances
 ----------------------
 
 The time during which a user has exclusive access to a workspace deployment is
@@ -64,7 +64,7 @@ DigitalOcean_:
 .. _sandboxes: https://rerobots.net/sandbox
 
 
-Interfaces around instances
+Interfaces Around Instances
 ---------------------------
 
 .. image:: figures/layers-illustration.svg
