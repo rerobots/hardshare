@@ -55,6 +55,10 @@ DigitalOcean_:
 4. The instance is terminated when the remote user is done. (If needed, you can
    force termination at any time.)
 
+The lifecycle of instances is illustrated below. In summary, every instance
+begins at ``INIT``, can be used while ``READY``, and ends at ``TERMINATED``.
+
+For details, read the `rerobots preliminaries <https://help.rerobots.net/prelim.html>`_.
 
 .. image:: figures/instance-lifecycle.svg
 
