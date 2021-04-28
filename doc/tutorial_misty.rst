@@ -32,10 +32,7 @@ Check details via the rerobots CLI
 ----------------------------------
 
 You can check the details associated with your Misty robot deployment through
-the `rerobots CLI <https://rerobots-py.readthedocs.io/en/latest/cli.html>`_.  If
-you do not have it, try ``pip install rerobots`` as described `in the
-introduction to the rerobots CLI <https://rerobots-py.readthedocs.io/en/latest/intro.html>`_.
-
+the `rerobots CLI <https://rerobots-cli.readthedocs.io/>`_.
 The rerobots CLI requires an API token, much like the hardshare client. To find yours locally, ::
 
   hardshare config -l
