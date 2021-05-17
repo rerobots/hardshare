@@ -580,6 +580,7 @@ fn cworker(ac: HSAPIClient, wsclient_req: mpsc::Receiver<CWorkerCommand>, wsclie
             }
         }
 
+        wsclient_addr.do_send(WSClientWorkerMessage("DONE?".into()));
     }
 }
 
@@ -693,6 +694,11 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     publickey: Some(String::from(payload["pr"].as_str().unwrap())),
                 };
                 self.worker_req.send(m).unwrap();
+                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
+                    "v": 0,
+                    "cmd": "ACK",
+                    "mi": mid
+                })).unwrap()));
 
             } else if cmd == "INSTANCE_STATUS" {
 
@@ -704,6 +710,11 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     publickey: None,
                 };
                 self.worker_req.send(m).unwrap();
+                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
+                    "v": 0,
+                    "cmd": "ACK",
+                    "mi": mid
+                })).unwrap()));
 
             } else if cmd == "INSTANCE_DESTROY" {
 
@@ -715,6 +726,11 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     publickey: None,
                 };
                 self.worker_req.send(m).unwrap();
+                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
+                    "v": 0,
+                    "cmd": "ACK",
+                    "mi": mid
+                })).unwrap()));
 
             }
 

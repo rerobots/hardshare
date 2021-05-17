@@ -16,11 +16,6 @@ repository at https://github.com/rerobots/hardshare
 Until version 1.0.0, the API between hardshare clients and rerobots servers
 should be considered "strictly internal" and can change without warning.
 
-Because this project is new and because we have not yet identified the full set
-of substantial use-cases in the wild, there are two protocols. The first is
-based on an HTTP API and WebSockets, and the client is implemented in Python.
-The second is already in development, but has not been announced yet.
-
 
 Navigating the sourcetree
 -------------------------
@@ -58,6 +53,19 @@ then
 
 to generate and update gettext po files. Current translation work is tracked at
 https://github.com/rerobots/hardshare/issues/1
+
+
+Building and Testing
+--------------------
+
+This tool is implemented in [Rust](https://www.rust-lang.org/). To build,
+clone the repository at https://github.com/rerobots/cli.git and
+
+    cargo build
+
+To perform tests,
+
+    cargo test
 
 
 Participating
