@@ -33,7 +33,6 @@ Summary:
 * doc - source of the user guide. Instructions for building are below.
 * robots - code and configuration data for particular robots.
 * py-ws - source code for the main daemon and CLI program. Releases can be installed directly from PyPI at https://pypi.org/project/hardshare/
-* bootstrapping - scripts for configuring new hosts on which to install hardshare clients.
 
 Current testing status for ``master`` branch on Travis CI:
 [![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
