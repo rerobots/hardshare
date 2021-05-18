@@ -20,9 +20,10 @@ should be considered "strictly internal" and can change without warning.
 Navigating the sourcetree
 -------------------------
 
-A [Git LFS](https://git-lfs.github.com/) client is required to clone this
-repository. Note that `git clone` will succeed without `git lfs` available, but
-some large files will not be fetched.
+The main repository is https://github.com/rerobots/hardshare.git
+and cloning requires [Git LFS](https://git-lfs.github.com/).
+Note that `git clone` will succeed without `git lfs` available, but some large
+files will not be fetched.
 
 Besides the root README (you are reading it), the sourcetree contains more
 README files in subdirectories that describe contents therein.
@@ -59,7 +60,6 @@ Building and Testing
 --------------------
 
 This tool is implemented in [Rust](https://www.rust-lang.org/). To build,
-clone the repository at https://github.com/rerobots/cli.git and
 
     cargo build
 
