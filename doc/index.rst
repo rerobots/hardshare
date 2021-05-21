@@ -25,5 +25,6 @@ The source code repository is at https://github.com/rerobots/hardshare
    tutorial_esp32
    tutorial_misty
    help
+   internals
 
 .. _rerobots: https://rerobots.net/

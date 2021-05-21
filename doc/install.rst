@@ -168,4 +168,3 @@ At this stage, you have a ready-to-use hardshare host. Next:
 .. _Ubuntu: https://ubuntu.com/download/desktop
 .. _podman: https://podman.io/
 .. _Pipenv: https://pipenv.pypa.io/
-.. _OpenBSD manual: http://man.openbsd.org/OpenBSD-current/man1/ssh-agent.1
