@@ -1,6 +1,13 @@
 Internals
 =========
 
+Summary
+-------
+
+The following sections show advanced configuration options and internal details
+of the hardshare client.
+
+
 SSH Keys
 --------
 
