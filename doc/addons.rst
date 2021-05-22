@@ -65,9 +65,18 @@ To add it from the CLI::
 and to remove it, ``hardshare addon-vnc --rm``.
 
 
+VS Code
+-------
+
+The add-on ``vscode`` provides management for code-server_ on a per instance
+basis. With it, a core `VS Code`_ IDE is available as a kind of sandbox.
+
+
 .. _rerobots: https://rerobots.net/
 .. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
 .. _RFC 6143: https://tools.ietf.org/html/rfc6143
 .. _HackRF: https://greatscottgadgets.com/hackrf/
 .. _GNU Radio: https://www.gnuradio.org/
 .. _noVNC: https://github.com/novnc/noVNC
+.. _code-server: https://github.com/cdr/code-server
+.. _VS Code: https://github.com/Microsoft/vscode
