@@ -31,10 +31,13 @@ Summary:
 
 * doc - source of the user guide. Instructions for building are below.
 * robots - code and configuration data for particular robots.
-* py-ws - source code for the main daemon and CLI program. Releases can be installed directly from PyPI at https://pypi.org/project/hardshare/
+* src - main source code.
+* py-ws - legacy Python implementation. Releases can be installed directly from https://pypi.org/project/hardshare/ on the Python Package Index.  New releases from py-ws are not planned, and eventually, it will be entirely removed.
 
 Current testing status for ``master`` branch on Travis CI:
 [![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
+
+
 
 
 Building Documentation

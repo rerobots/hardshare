@@ -9,11 +9,13 @@ Introduction
 development. Until version 1.0.0, the protocol can change without warning.
 
 This Python package provides the CLI and WebSocket-based daemon for the client
-side. The official repository is at https://github.com/rerobots/hardshare
-It is listed on PyPI at https://pypi.org/project/hardshare/
-
+side. It is listed on PyPI at https://pypi.org/project/hardshare/
 Recent releases of the full documentation are available at
 https://hardshare.readthedocs.io/
+
+N.B., this Python package is deprecated. New releases are not planned, and
+eventually, it will be entirely replaced by a better client that is in
+development at https://github.com/rerobots/hardshare
 
 
 License
