@@ -16,7 +16,7 @@ Until version 1.0.0, the API between hardshare clients and rerobots servers
 should be considered "strictly internal" and can change without warning.
 
 
-Navigating the sourcetree
+Navigating the Sourcetree
 -------------------------
 
 The main repository is https://github.com/rerobots/hardshare.git
@@ -37,7 +37,7 @@ Current testing status for ``master`` branch on Travis CI:
 [![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
 
 
-Building documentation
+Building Documentation
 ----------------------
 
     cd doc
