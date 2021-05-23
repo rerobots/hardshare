@@ -12,7 +12,6 @@ where you will find instructions about installation and sharing your robots!
 
 If you want to contribute to development, then read more below, and clone the
 repository at https://github.com/rerobots/hardshare
-
 Until version 1.0.0, the API between hardshare clients and rerobots servers
 should be considered "strictly internal" and can change without warning.
 
