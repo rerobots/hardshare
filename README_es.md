@@ -11,5 +11,5 @@ Si es un usuario nuevo o potencial, comience a leer https://hardshare.readthedoc
 donde encontrará instrucciones sobre cómo instalar y compartir sus robots!
 
 
-Navigar el Código
+Navegar el Código
 -----------------
