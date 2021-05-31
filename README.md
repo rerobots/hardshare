@@ -35,7 +35,7 @@ Summary:
 * py-ws - legacy Python implementation. Releases can be installed directly from https://pypi.org/project/hardshare/ on the Python Package Index.  New releases from py-ws are not planned, and eventually, it will be entirely removed.
 
 Current testing status for ``master`` branch on Travis CI:
-[![build status](https://travis-ci.org/rerobots/hardshare.svg?branch=master)](https://travis-ci.org/rerobots/hardshare)
+[![build status](https://travis-ci.com/rerobots/hardshare.svg?branch=master)](https://travis-ci.com/rerobots/hardshare)
 
 
 
