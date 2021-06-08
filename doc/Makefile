@@ -4,7 +4,7 @@ all:
 
 gettext-update:
 	sphinx-build -b gettext . _build/gettext
-	sphinx-intl update -p _build/gettext -l es
+	sphinx-intl update -p _build/gettext -w 80 -l es
 
 clean:
 	@rm -rf _build
