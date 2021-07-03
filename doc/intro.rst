@@ -45,8 +45,7 @@ Lifecycle of Instances
 The time during which a user has exclusive access to a workspace deployment is
 known as an `instance <https://help.rerobots.net/prelim.html>`_.  The process of
 requesting, getting credentials, and terminating an instance is similar to how
-you might get a "compute node" from a "cloud computing" company, like Packet_ or
-DigitalOcean_:
+you might get a "compute node" from a "cloud computing" company:
 
 1. Someone requests access using the unique ID of the workspace deployment.
 2. The remote user is connected through a container that you host locally.
@@ -63,8 +62,6 @@ For details, read the `rerobots preliminaries <https://help.rerobots.net/prelim.
 .. image:: figures/instance-lifecycle.svg
 
 
-.. _Packet: https://www.packet.com/
-.. _DigitalOcean: https://www.digitalocean.com/
 .. _sandboxes: https://rerobots.net/sandbox
 
 
