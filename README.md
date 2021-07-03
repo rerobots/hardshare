@@ -38,8 +38,6 @@ Current testing status for ``master`` branch on Travis CI:
 [![build status](https://travis-ci.com/rerobots/hardshare.svg?branch=master)](https://travis-ci.com/github/rerobots/hardshare)
 
 
-
-
 Building Documentation
 ----------------------
 
