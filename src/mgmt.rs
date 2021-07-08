@@ -238,23 +238,19 @@ pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize,
             let candidates: Vec<&str> = candidates.iter()
                 .map(|&val| val.1)
                 .collect();
-            return error(format!("given prefix matches more than 1 workspace deployment: {}", candidates.join(", ")).as_str());
-        } else if candidates.len() == 0 {
-            return error("given prefix does not match any workspace deployments");
+            error(format!("given prefix matches more than 1 workspace deployment: {}", candidates.join(", ")).as_str())
+        } else if candidates.is_empty() {
+            error("given prefix does not match any workspace deployments")
         } else {
-            return Ok(candidates[0].0);
+            Ok(candidates[0].0)
         }
 
+    } else if config.wdeployments.len() == 1 {
+        Ok(0)
+    } else if config.wdeployments.is_empty() {
+        error("no workspace deployment in local configuration.")
     } else {
-
-        if config.wdeployments.len() == 1 {
-            Ok(0)
-        } else if config.wdeployments.len() == 0 {
-            return error("no workspace deployment in local configuration.");
-        } else {
-            return error("ambiguous command: more than 1 workspace deployment defined.");
-        }
-
+        error("ambiguous command: more than 1 workspace deployment defined.")
     }
 }
 

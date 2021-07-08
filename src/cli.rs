@@ -39,19 +39,19 @@ impl std::fmt::Debug for CliError {
 
 impl CliError {
     fn new(msg: &str, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(String::from(msg)), exitcode: exitcode })
+        Err(CliError { msg: Some(String::from(msg)), exitcode })
     }
 
     fn new_std(err: Box<dyn std::error::Error>, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
+        Err(CliError { msg: Some(format!("{}", err)), exitcode })
     }
 
     fn new_stdio(err: std::io::Error, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(format!("{}", err)), exitcode: exitcode })
+        Err(CliError { msg: Some(format!("{}", err)), exitcode })
     }
 
     fn newrc(exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: None, exitcode: exitcode })
+        Err(CliError { msg: None, exitcode })
     }
 }
 
