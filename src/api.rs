@@ -126,7 +126,7 @@ impl HSAPIClient {
         };
 
         if let Some(local_config) = &hsclient.local_config {
-            if local_config.api_tokens.len() > 0 {
+            if !local_config.api_tokens.is_empty() {
                 hsclient.default_token_index = Some(0);
                 let raw_tok = std::fs::read(&local_config.api_tokens[hsclient.default_token_index.unwrap()]).unwrap();
                 let tok = String::from_utf8(raw_tok).unwrap();
@@ -284,7 +284,7 @@ impl HSAPIClient {
                 let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
                 return error(payload["error_message"].as_str().unwrap())
             } else if res.status() == 404 {
-                return error(format!("not found"))
+                return error("not found".to_string())
             } else if res.status() != 200 {
                 return error(format!("server indicated error: {}", res.status()))
             }
@@ -365,7 +365,7 @@ impl HSAPIClient {
         };
 
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
-            wdid_tab.insert(wdid.clone(), addr.clone());
+            wdid_tab.insert(wdid.clone(), addr);
         }
 
         actix_web::HttpResponse::Ok().finish()
@@ -377,7 +377,7 @@ impl HSAPIClient {
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
             match wdid_tab.remove(&*wdid) {
                 Some(addr) => {
-                    if wdid_tab.len() == 0 {
+                    if wdid_tab.is_empty() {
                         addr.do_send(WSClientCommand("STOP DAEMON".into()));
                     } else {
                         addr.do_send(WSClientCommand("STOP".into()));
@@ -387,7 +387,7 @@ impl HSAPIClient {
                 None => actix_web::HttpResponse::NotFound().finish()
             }
         } else {
-            return actix_web::HttpResponse::InternalServerError().finish();
+            actix_web::HttpResponse::InternalServerError().finish()
         }
     }
 
@@ -474,7 +474,7 @@ impl HSAPIClient {
 
     pub fn register_new(&mut self, at_most_1: bool) -> Result<String, Box<dyn std::error::Error>> {
         if let Some(local_config) = &self.local_config {
-            if at_most_1 && local_config.wdeployments.len() > 0 {
+            if at_most_1 && !local_config.wdeployments.is_empty() {
                 return error("local configuration already declares a workspace deployment (to register more, `hardshare register --permit-more`)");
             }
         } else {

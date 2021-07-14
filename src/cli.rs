@@ -93,7 +93,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
     }
 
     writeln!(f, "workspace deployments defined in local configuration:")?;
-    if local.wdeployments.len() == 0 {
+    if local.wdeployments.is_empty() {
         writeln!(f, "\t(none)")?;
     } else {
         for wd in local.wdeployments.iter() {
@@ -106,7 +106,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
             if wd["cprovider"] == "docker" || wd["cprovider"] == "podman" {
                 writeln!(f, "\timg: {}", wd["image"].as_str().unwrap())?;
             }
-            if wd["terminate"].as_array().unwrap().len() > 0 {
+            if !wd["terminate"].as_array().unwrap().is_empty() {
                 writeln!(f, "\tterminate:")?;
                 for terminate_p in wd["terminate"].as_array().unwrap().iter() {
                     writeln!(f, "\t\t{}", terminate_p.as_str().unwrap())?;
@@ -116,7 +116,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
     }
 
     writeln!(f, "\nfound API tokens:")?;
-    if local.api_tokens.len() == 0 {
+    if local.api_tokens.is_empty() {
         writeln!(f, "\t(none)")?;
     } else {
         for k in local.api_tokens.iter() {
@@ -124,7 +124,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
         }
     }
     if let Some(err_tokens) = &local.err_api_tokens {
-        if err_tokens.len() > 0 {
+        if !err_tokens.is_empty() {
             writeln!(f, "found possible API tokens with errors:")?;
         }
         for (err_token_path, err) in err_tokens {
@@ -134,7 +134,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
 
     if let Some(remote_config) = remote {
         let rc_wds = &remote_config["deployments"].as_array().unwrap();
-        if rc_wds.len() == 0 {
+        if rc_wds.is_empty() {
             writeln!(f, "\nno registered workspace deployments with this user account")?;
         } else {
             writeln!(f, "\nregistered workspace deployments with this user account:")?;
@@ -394,7 +394,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             confirmation = confirmation.trim().to_lowercase();
             if confirmation == "y" || confirmation == "yes" {
                 break;
-            } else if confirmation.len() == 0 || confirmation == "n" || confirmation == "no" {
+            } else if confirmation.is_empty() || confirmation == "n" || confirmation == "no" {
                 return CliError::newrc(1);
             }
         }
@@ -429,7 +429,7 @@ fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.run(wdid, "127.0.0.1:6666") {
         Ok(()) => Ok(()),
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => CliError::new_std(err, 1)
     }
 }
 
@@ -449,7 +449,7 @@ fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.stop(wdid, "127.0.0.1:6666") {
         Ok(()) => Ok(()),
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => CliError::new_std(err, 1)
     }
 }
 
@@ -462,7 +462,7 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             println!("{}", new_wdid);
             Ok(())
         },
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => CliError::new_std(err, 1)
     }
 }
 

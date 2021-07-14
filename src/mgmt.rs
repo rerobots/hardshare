@@ -71,7 +71,7 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 
 pub fn list_local_api_tokens(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
-    return list_local_api_tokens_bp(&base_path, collect_errors);
+    list_local_api_tokens_bp(&base_path, collect_errors)
 }
 
 fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
@@ -129,7 +129,7 @@ fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool
 
 pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
-    return get_local_config_bp(&base_path, create_if_empty, collect_errors);
+    get_local_config_bp(&base_path, create_if_empty, collect_errors)
 }
 
 pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
