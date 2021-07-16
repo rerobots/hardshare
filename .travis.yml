@@ -13,6 +13,7 @@ before_install:
   - openssl genpkey -algorithm RSA -out keys/testing-secret.pem && openssl pkey -in keys/testing-secret.pem -pubout -out keys/webui-public.pem
 
 script:
+    - cargo clippy --tests -- -D clippy::all
     - cargo build --verbose
     - cargo test --verbose
 
