@@ -66,6 +66,11 @@ To perform tests,
 
     cargo test
 
+To check code style,
+
+    cargo +nightly fmt -- --check
+    cargo clippy --tests -- -D clippy::all
+
 
 Participating
 -------------
