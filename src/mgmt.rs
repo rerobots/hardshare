@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
-extern crate serde_json;
 extern crate serde;
-use serde::{Serialize, Deserialize};
+extern crate serde_json;
+use serde::{Deserialize, Serialize};
 
 extern crate home;
 
@@ -15,9 +15,9 @@ use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
 
 extern crate jwt;
-use jwt::{Token, Header, Claims};
-use jwt::VerifyWithKey;
 use jwt::algorithm::openssl::PKeyWithDigest;
+use jwt::VerifyWithKey;
+use jwt::{Claims, Header, Token};
 
 
 // TODO: this should eventually be placed in a public key store
@@ -42,7 +42,9 @@ impl std::fmt::Debug for MgmtError {
 }
 
 fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
-    Err(Box::new(MgmtError { msg: String::from(msg) }))
+    Err(Box::new(MgmtError {
+        msg: String::from(msg),
+    }))
 }
 
 
@@ -63,18 +65,25 @@ pub struct Config {
 fn get_base_path() -> Option<std::path::PathBuf> {
     let home_dir = match home::home_dir() {
         Some(s) => s,
-        None => return None
+        None => return None,
     };
     Some(home_dir.join(".rerobots"))
 }
 
 
-pub fn list_local_api_tokens(collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
+type api_tokens_info = (Vec<String>, HashMap<String, String>);
+
+pub fn list_local_api_tokens(
+    collect_errors: bool,
+) -> Result<api_tokens_info, Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
     list_local_api_tokens_bp(&base_path, collect_errors)
 }
 
-fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool) -> Result<(Vec<String>, HashMap<String, String>), Box<dyn std::error::Error>> {
+fn list_local_api_tokens_bp(
+    base_path: &std::path::PathBuf,
+    collect_errors: bool,
+) -> Result<api_tokens_info, Box<dyn std::error::Error>> {
     let mut likely_tokens = Vec::new();
     let mut errored_tokens = HashMap::new();
     if !base_path.exists() {
@@ -94,31 +103,41 @@ fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool
 
     for entry in std::fs::read_dir(path)? {
         let path = entry?.path();
-        let rawtok = String::from(String::from_utf8(std::fs::read(&path).unwrap()).unwrap().trim());
-        let result: Result<Token<Header, Claims, _>, jwt::error::Error> = rawtok.verify_with_key(&alg);
+        let rawtok = String::from(
+            String::from_utf8(std::fs::read(&path).unwrap())
+                .unwrap()
+                .trim(),
+        );
+        let result: Result<Token<Header, Claims, _>, jwt::error::Error> =
+            rawtok.verify_with_key(&alg);
         match result {
             Ok(tok) => {
                 let claims = tok.claims();
                 if claims.registered.expiration.unwrap() < utime {
                     if collect_errors {
-                        errored_tokens.insert(String::from(path.to_str().unwrap()), "expired".into());
+                        errored_tokens
+                            .insert(String::from(path.to_str().unwrap()), "expired".into());
                     }
                 } else {
                     likely_tokens.push(String::from(path.to_str().unwrap()));
                 }
-            },
+            }
             Err(err) => match err {
                 jwt::error::Error::InvalidSignature => {
                     if collect_errors {
-                        errored_tokens.insert(String::from(path.to_str().unwrap()), "invalid signature".into());
+                        errored_tokens.insert(
+                            String::from(path.to_str().unwrap()),
+                            "invalid signature".into(),
+                        );
                     }
                 }
                 _ => {
                     if collect_errors {
-                        errored_tokens.insert(String::from(path.to_str().unwrap()), "unknown error".into());
+                        errored_tokens
+                            .insert(String::from(path.to_str().unwrap()), "unknown error".into());
                     }
                 }
-            }
+            },
         };
     }
 
@@ -126,13 +145,19 @@ fn list_local_api_tokens_bp(base_path: &std::path::PathBuf, collect_errors: bool
 }
 
 
-
-pub fn get_local_config(create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
+pub fn get_local_config(
+    create_if_empty: bool,
+    collect_errors: bool,
+) -> Result<Config, Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
     get_local_config_bp(&base_path, create_if_empty, collect_errors)
 }
 
-pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool, collect_errors: bool) -> Result<Config, Box<dyn std::error::Error>> {
+pub fn get_local_config_bp(
+    base_path: &std::path::PathBuf,
+    create_if_empty: bool,
+    collect_errors: bool,
+) -> Result<Config, Box<dyn std::error::Error>> {
     if !base_path.exists() {
         if create_if_empty {
             std::fs::create_dir(&base_path)?;
@@ -154,8 +179,10 @@ pub fn get_local_config_bp(base_path: &std::path::PathBuf, create_if_empty: bool
             };
             let sshpath = base_path.join("ssh").join("tun");
             let exitcode = Command::new("ssh-keygen")
-                .arg("-N").arg("")
-                .arg("-f").arg(&sshpath)
+                .arg("-N")
+                .arg("")
+                .arg("-f")
+                .arg(&sshpath)
                 .stdout(Stdio::piped())
                 .spawn()
                 .expect("failed to call ssh-keygen")
@@ -185,8 +212,10 @@ pub fn append_urls(config: &mut Config) {
     let prefix = "https://rerobots.net/workspace/";
     for wd in config.wdeployments.iter_mut() {
         if !wd.contains_key("url") {
-            wd.insert("url".to_string(),
-                      serde_json::Value::String(format!("{}{}", prefix, wd["id"].as_str().unwrap())));
+            wd.insert(
+                "url".to_string(),
+                serde_json::Value::String(format!("{}{}", prefix, wd["id"].as_str().unwrap())),
+            );
         }
     }
 }
@@ -201,7 +230,9 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let from_filename = std::path::Path::new(path).file_name().unwrap();
     let mut target_path = tokens_dir.join(from_filename);
     if target_path.exists() {
-        let utime = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
+        let utime = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
         let candidate = format!("{}-{}", target_path.to_str().unwrap(), utime);
         target_path = std::path::PathBuf::from(candidate);
     }
@@ -215,7 +246,7 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    if let Err(_) = std::fs::rename(path, &target_path) {
+    if std::fs::rename(path, &target_path).is_err() {
         std::fs::copy(path, &target_path)?;
         std::fs::remove_file(path)?;
     }
@@ -223,9 +254,11 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
-pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize, Box<dyn std::error::Error>> {
+pub fn find_id_prefix(
+    config: &Config,
+    id_prefix: Option<&str>,
+) -> Result<usize, Box<dyn std::error::Error>> {
     if let Some(id_prefix) = id_prefix {
-
         let mut candidates = vec![];
 
         for (j, wd) in config.wdeployments.iter().enumerate() {
@@ -235,16 +268,19 @@ pub fn find_id_prefix(config: &Config, id_prefix: Option<&str>) -> Result<usize,
             }
         }
         if candidates.len() > 1 {
-            let candidates: Vec<&str> = candidates.iter()
-                .map(|&val| val.1)
-                .collect();
-            error(format!("given prefix matches more than 1 workspace deployment: {}", candidates.join(", ")).as_str())
+            let candidates: Vec<&str> = candidates.iter().map(|&val| val.1).collect();
+            error(
+                format!(
+                    "given prefix matches more than 1 workspace deployment: {}",
+                    candidates.join(", ")
+                )
+                .as_str(),
+            )
         } else if candidates.is_empty() {
             error("given prefix does not match any workspace deployments")
         } else {
             Ok(candidates[0].0)
         }
-
     } else if config.wdeployments.len() == 1 {
         Ok(0)
     } else if config.wdeployments.is_empty() {
@@ -273,10 +309,10 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use tempfile::tempdir;
 
-    use super::Config;
     use super::find_id_prefix;
     use super::get_local_config_bp;
     use super::list_local_api_tokens_bp;
+    use super::Config;
 
 
     #[test]
@@ -297,7 +333,8 @@ mod tests {
         };
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
 
-        let local_config: Config = serde_json::from_str(r#"
+        let local_config: Config = serde_json::from_str(
+            r#"
             {
                 "version": 0,
                 "wdeployments": [
@@ -313,7 +350,9 @@ mod tests {
                     }
                 ],
                 "ssh_key": "/home/scott/.rerobots/ssh/tun"
-            }"#).unwrap();
+            }"#,
+        )
+        .unwrap();
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
         let wd_index = find_id_prefix(&local_config, Some("2")).unwrap();
         assert_eq!(wd_index, 0);

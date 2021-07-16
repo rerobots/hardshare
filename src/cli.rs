@@ -23,7 +23,7 @@ impl std::fmt::Display for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.msg {
             Some(m) => write!(f, "{}", m),
-            None => write!(f, "")
+            None => write!(f, ""),
         }
     }
 }
@@ -32,26 +32,38 @@ impl std::fmt::Debug for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.msg {
             Some(m) => write!(f, "{}", m),
-            None => write!(f, "")
+            None => write!(f, ""),
         }
     }
 }
 
 impl CliError {
     fn new(msg: &str, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(String::from(msg)), exitcode })
+        Err(CliError {
+            msg: Some(String::from(msg)),
+            exitcode,
+        })
     }
 
     fn new_std(err: Box<dyn std::error::Error>, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(format!("{}", err)), exitcode })
+        Err(CliError {
+            msg: Some(format!("{}", err)),
+            exitcode,
+        })
     }
 
     fn new_stdio(err: std::io::Error, exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: Some(format!("{}", err)), exitcode })
+        Err(CliError {
+            msg: Some(format!("{}", err)),
+            exitcode,
+        })
     }
 
     fn newrc(exitcode: i32) -> Result<(), CliError> {
-        Err(CliError { msg: None, exitcode })
+        Err(CliError {
+            msg: None,
+            exitcode,
+        })
     }
 }
 
@@ -64,18 +76,28 @@ enum PrintingFormat {
 }
 
 
-fn print_config(local: &mgmt::Config, remote: &Option<serde_json::Value>, pformat: PrintingFormat) -> Result<(), Box<dyn std::error::Error>> {
+fn print_config(
+    local: &mgmt::Config,
+    remote: &Option<serde_json::Value>,
+    pformat: PrintingFormat,
+) -> Result<(), Box<dyn std::error::Error>> {
     print_config_w(&mut std::io::stdout(), local, remote, pformat)?;
     Ok(())
 }
 
 
-fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<serde_json::Value>, pformat: PrintingFormat) -> Result<(), Box<dyn std::error::Error>> {
+fn print_config_w<T: Write>(
+    f: &mut T,
+    local: &mgmt::Config,
+    remote: &Option<serde_json::Value>,
+    pformat: PrintingFormat,
+) -> Result<(), Box<dyn std::error::Error>> {
     if pformat != PrintingFormat::DEFAULT {
         fn serializer<T: Serialize>(x: &T, pformat: PrintingFormat) -> String {
             if pformat == PrintingFormat::JSON {
                 serde_json::to_string(x).unwrap()
-            } else {  // if pformat == PrintingFormat::YAML
+            } else {
+                // if pformat == PrintingFormat::YAML
                 serde_yaml::to_string(x).unwrap()
             }
         }
@@ -89,7 +111,7 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
         } else {
             writeln!(f, "{}", serializer(&local, pformat))?;
         }
-        return Ok(())
+        return Ok(());
     }
 
     writeln!(f, "workspace deployments defined in local configuration:")?;
@@ -97,12 +119,15 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
         writeln!(f, "\t(none)")?;
     } else {
         for wd in local.wdeployments.iter() {
-            writeln!(f, "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
-                     wd["id"].as_str().unwrap(),
-                     wd["url"].as_str().unwrap(),
-                     wd["owner"].as_str().unwrap(),
-                     wd["cprovider"].as_str().unwrap(),
-                     wd["cargs"])?;
+            writeln!(
+                f,
+                "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
+                wd["id"].as_str().unwrap(),
+                wd["url"].as_str().unwrap(),
+                wd["owner"].as_str().unwrap(),
+                wd["cprovider"].as_str().unwrap(),
+                wd["cargs"]
+            )?;
             if wd["cprovider"] == "docker" || wd["cprovider"] == "podman" {
                 writeln!(f, "\timg: {}", wd["image"].as_str().unwrap())?;
             }
@@ -135,9 +160,15 @@ fn print_config_w<T: Write>(f: &mut T, local: &mgmt::Config, remote: &Option<ser
     if let Some(remote_config) = remote {
         let rc_wds = &remote_config["deployments"].as_array().unwrap();
         if rc_wds.is_empty() {
-            writeln!(f, "\nno registered workspace deployments with this user account")?;
+            writeln!(
+                f,
+                "\nno registered workspace deployments with this user account"
+            )?;
         } else {
-            writeln!(f, "\nregistered workspace deployments with this user account:")?;
+            writeln!(
+                f,
+                "\nregistered workspace deployments with this user account:"
+            )?;
             for wd in rc_wds.iter() {
                 writeln!(f, "{}", wd["id"].as_str().unwrap())?;
                 writeln!(f, "\tcreated: {}", wd["date_created"].as_str().unwrap())?;
@@ -167,10 +198,9 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
     let include_dissolved = matches.is_present("includedissolved");
 
     if matches.is_present("list") {
-
         let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
             Ok(lc) => lc,
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         };
         mgmt::append_urls(&mut local_config);
 
@@ -182,78 +212,78 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Err(err) => {
                     let mut err_message = err;
                     err_message += "\nTo get only the local configuration, do\n\n    hardshare config -l --local";
-                    return CliError::new(err_message.as_str(), 1)
+                    return CliError::new(err_message.as_str(), 1);
                 }
             });
         }
 
         print_config(&local_config, &remote_config, pformat).unwrap();
-
     } else if let Some(new_token_path) = matches.value_of("new_api_token") {
-
-        match mgmt::add_token_file(new_token_path) {
-            Err(err) => return CliError::new_std(err, 1),
-            Ok(_) => ()
+        if let Err(err) = mgmt::add_token_file(new_token_path) {
+            return CliError::new_std(err, 1);
         }
-
     } else if matches.is_present("prune_err_tokens") {
-
         let local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         };
 
         if let Some(err_tokens) = &local_config.err_api_tokens {
-            for (err_token_path, _) in err_tokens {
-                match std::fs::remove_file(err_token_path) {
-                    Err(err) => return CliError::new_stdio(err, 1),
-                    Ok(_) => ()
-                };
+            for err_token_path in err_tokens.keys() {
+                if let Err(err) = std::fs::remove_file(err_token_path) {
+                    return CliError::new_stdio(err, 1);
+                }
             }
         }
-
     } else if create_if_missing {
-
         if let Err(err) = mgmt::get_local_config(true, false) {
             return CliError::new_std(err, 1);
         }
-
-    } else {  // Remaining actions require a local configuration
+    } else {
+        // Remaining actions require a local configuration
 
         let mut local_config = match mgmt::get_local_config(false, false) {
             Ok(lc) => lc,
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         };
 
         let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
             Ok(wi) => wi,
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         };
 
         if let Some(cprovider) = matches.value_of("cprovider") {
-
             let selected_cprovider = cprovider.to_lowercase();
             if !vec!["docker", "podman", "proxy"].contains(&selected_cprovider.as_str()) {
-                return CliError::new("cprovider must be one of the following: docker, podman, proxy", 1);
+                return CliError::new(
+                    "cprovider must be one of the following: docker, podman, proxy",
+                    1,
+                );
             }
 
             if let Some(wd_cprovider) = local_config.wdeployments[wd_index].get_mut("cprovider") {
                 let selected_cprovider = serde_json::Value::String(selected_cprovider);
                 if *wd_cprovider == selected_cprovider {
-                    return Ok(())
+                    return Ok(());
                 }
                 *wd_cprovider = selected_cprovider;
             } else {
-                warn!("local configuration of {} without prior value of cprovider", local_config.wdeployments[wd_index]["id"]);
-                local_config.wdeployments[wd_index].insert("cprovider".into(), json!(selected_cprovider));
+                warn!(
+                    "local configuration of {} without prior value of cprovider",
+                    local_config.wdeployments[wd_index]["id"]
+                );
+                local_config.wdeployments[wd_index]
+                    .insert("cprovider".into(), json!(selected_cprovider));
             }
 
             if local_config.wdeployments[wd_index]["cprovider"] == "proxy" {
                 let null_img = json!(null);
                 local_config.wdeployments[wd_index].insert("image".into(), null_img);
-            } else {  // cprovider \in {docker, podman}
+            } else {
+                // cprovider \in {docker, podman}
                 let default_img = json!("rerobots/hs-generic");
-                if let Some(wd_cprovider_img) = local_config.wdeployments[wd_index].get_mut("image") {
+                if let Some(wd_cprovider_img) = local_config.wdeployments[wd_index].get_mut("image")
+                {
                     if *wd_cprovider_img == json!(null) {
                         *wd_cprovider_img = default_img;
                     }
@@ -264,14 +294,13 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
-                Ok(()) => Ok(())
-            }
-
+                Ok(()) => Ok(()),
+            };
         } else if let Some(new_image) = matches.value_of("cprovider_img") {
-
-            let cprovider = local_config.wdeployments[wd_index]["cprovider"].as_str().unwrap();
+            let cprovider = local_config.wdeployments[wd_index]["cprovider"]
+                .as_str()
+                .unwrap();
             match cprovider {
-
                 "podman" => {
                     let argv = vec!["podman", "image", "exists", new_image];
                     let mut prog = Command::new(argv[0]);
@@ -280,7 +309,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                     let status = prog.args(&argv[1..]).status();
                     let status = match status {
                         Ok(s) => s,
-                        Err(err) => return CliError::new_stdio(err, 1)
+                        Err(err) => return CliError::new_stdio(err, 1),
                     };
                     debug!("exit status: {:?}", status);
 
@@ -290,19 +319,20 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
                     let new_image = json!(new_image);
                     local_config.wdeployments[wd_index].insert("image".into(), new_image);
-                },
+                }
                 "docker" => {
                     let argv = vec!["docker", "image", "inspect", new_image];
                     let mut prog = Command::new(argv[0]);
 
                     debug!("exec: {:?}", argv);
-                    let status = prog.args(&argv[1..])
+                    let status = prog
+                        .args(&argv[1..])
                         .stdout(Stdio::null())
                         .stderr(Stdio::null())
                         .status();
                     let status = match status {
                         Ok(s) => s,
-                        Err(err) => return CliError::new_stdio(err, 1)
+                        Err(err) => return CliError::new_stdio(err, 1),
                     };
                     debug!("exit status: {:?}", status);
 
@@ -312,26 +342,21 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
                     let new_image = json!(new_image);
                     local_config.wdeployments[wd_index].insert("image".into(), new_image);
-                },
+                }
                 _ => {
                     let errmessage = format!("cannot --assign-image for cprovider `{}`", cprovider);
                     return CliError::new(errmessage.as_str(), 1);
                 }
-
             }
 
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
-                Ok(()) => Ok(())
-            }
-
+                Ok(()) => Ok(()),
+            };
         } else {
-
             let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
-
         }
-
     }
 
     Ok(())
@@ -341,20 +366,21 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
         Ok(wi) => wi,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     if matches.is_present("list_rules") {
-
         let ac = api::HSAPIClient::new();
-        let mut ruleset = match ac.get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
+        let mut ruleset = match ac
+            .get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap())
+        {
             Ok(r) => r,
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         };
 
         if ruleset.comment.is_none() {
@@ -362,34 +388,30 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
 
         println!("{}", ruleset);
-
     } else if matches.is_present("drop_all_rules") {
-
         let ac = api::HSAPIClient::new();
         match ac.drop_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
             Ok(_) => (),
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         }
-
     } else if matches.is_present("permit_me") {
-
         let ac = api::HSAPIClient::new();
         let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
-        let username = local_config.wdeployments[wd_index]["owner"].as_str().unwrap();
+        let username = local_config.wdeployments[wd_index]["owner"]
+            .as_str()
+            .unwrap();
         match ac.add_access_rule(wdid, username) {
             Ok(_) => (),
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         }
-
     } else if matches.is_present("permit_all") {
-
         let mut confirmation = String::new();
         loop {
             print!("Do you want to permit access by anyone? [y/N] ");
             std::io::stdout().flush().expect("failed to flush stdout");
             match std::io::stdin().read_line(&mut confirmation) {
                 Ok(n) => n,
-                Err(err) => return CliError::new_stdio(err, 1)
+                Err(err) => return CliError::new_stdio(err, 1),
             };
             confirmation = confirmation.trim().to_lowercase();
             if confirmation == "y" || confirmation == "yes" {
@@ -403,9 +425,8 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
         match ac.add_access_rule(wdid, "*") {
             Ok(_) => (),
-            Err(err) => return CliError::new_std(err, 1)
+            Err(err) => return CliError::new_std(err, 1),
         }
-
     } else {
         return CliError::new("Use `hardshare rules` with a switch. For example, `hardshare rules -l`\nor to get a help message, enter\n\n    hardshare help rules", 1);
     }
@@ -417,19 +438,19 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
         Ok(wi) => wi,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
     match ac.run(wdid, "127.0.0.1:6666") {
         Ok(()) => Ok(()),
-        Err(err) => CliError::new_std(err, 1)
+        Err(err) => CliError::new_std(err, 1),
     }
 }
 
@@ -437,19 +458,19 @@ fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
         Ok(wi) => wi,
-        Err(err) => return CliError::new_std(err, 1)
+        Err(err) => return CliError::new_std(err, 1),
     };
 
     let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
     match ac.stop(wdid, "127.0.0.1:6666") {
         Ok(()) => Ok(()),
-        Err(err) => CliError::new_std(err, 1)
+        Err(err) => CliError::new_std(err, 1),
     }
 }
 
@@ -461,8 +482,8 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Ok(new_wdid) => {
             println!("{}", new_wdid);
             Ok(())
-        },
-        Err(err) => CliError::new_std(err, 1)
+        }
+        Err(err) => CliError::new_std(err, 1),
     }
 }
 
@@ -560,7 +581,8 @@ pub fn main() -> Result<(), CliError> {
     } else {
         "warn"
     };
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_loglevel)).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_loglevel))
+        .init();
 
     let pformat = match matches.value_of("printformat") {
         Some(given_pformat) => {
@@ -570,15 +592,16 @@ pub fn main() -> Result<(), CliError> {
             } else if given_pformat_lower == "yaml" {
                 PrintingFormat::YAML
             } else {
-                return CliError::new(format!("unrecognized format: {}", given_pformat).as_str(), 1)
+                return CliError::new(
+                    format!("unrecognized format: {}", given_pformat).as_str(),
+                    1,
+                );
             }
-        },
-        None => PrintingFormat::DEFAULT
+        }
+        None => PrintingFormat::DEFAULT,
     };
 
-    if matches.is_present("version") {
-        println!(crate_version!());
-    } else if let Some(_) = matches.subcommand_matches("version") {
+    if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
         return config_subcommand(matches, pformat);
@@ -602,9 +625,9 @@ pub fn main() -> Result<(), CliError> {
 mod tests {
     use tempfile::tempdir;
 
-    use crate::mgmt;
-    use super::PrintingFormat;
     use super::print_config_w;
+    use super::PrintingFormat;
+    use crate::mgmt;
 
 
     #[test]
@@ -615,7 +638,8 @@ mod tests {
 
         let mut buf: Vec<u8> = vec![];
         print_config_w(&mut buf, &lconf, &None, PrintingFormat::JSON).unwrap();
-        let buf_parsing_result: Result<serde_json::Value, serde_json::Error> = serde_json::from_slice(&buf);
+        let buf_parsing_result: Result<serde_json::Value, serde_json::Error> =
+            serde_json::from_slice(&buf);
         assert!(buf_parsing_result.is_ok());
     }
 }

@@ -2,7 +2,7 @@
 // Copyright (C) 2020 rerobots, Inc.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -17,13 +17,13 @@ use awc::{
 use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
 
-use openssl::ssl::{SslMethod, SslConnector};
+use openssl::ssl::{SslConnector, SslMethod};
 
 extern crate reqwest;
 
-extern crate serde_json;
 extern crate serde;
-use serde::{Serialize, Deserialize};
+extern crate serde_json;
+use serde::{Deserialize, Serialize};
 
 extern crate tokio;
 use tokio::runtime::Runtime;
@@ -50,9 +50,11 @@ impl std::fmt::Debug for ClientError {
 
 fn error<T, S>(msg: S) -> Result<T, Box<dyn std::error::Error>>
 where
-    S: ToString
+    S: ToString,
 {
-    Err(Box::new(ClientError { msg: msg.to_string() }))
+    Err(Box::new(ClientError {
+        msg: msg.to_string(),
+    }))
 }
 
 
@@ -71,7 +73,7 @@ pub struct AccessRules {
     pub rules: Vec<AccessRule>,
 
     #[serde(default)]
-    pub comment: Option<String>
+    pub comment: Option<String>,
 }
 
 impl std::fmt::Display for AccessRules {
@@ -92,19 +94,17 @@ pub struct HSAPIClient {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RemoteConfig {
-
-}
+pub struct RemoteConfig {}
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
         let hs_origin = match option_env!("REROBOTS_HS_ORIGIN") {
             Some(u) => u,
-            None => "https://hs.rerobots.net"
+            None => "https://hs.rerobots.net",
         };
         let origin = match option_env!("REROBOTS_ORIGIN") {
             Some(u) => u,
-            None => "https://api.rerobots.net"
+            None => "https://api.rerobots.net",
         };
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
@@ -115,20 +115,24 @@ impl HSAPIClient {
                 hs_origin: String::from(hs_origin),
                 wdid_tab: None,
             },
-            Err(_) => return HSAPIClient {
-                local_config: None,
-                default_token_index: None,
-                cached_api_token: None,
-                origin: String::from(origin),
-                hs_origin: String::from(hs_origin),
-                wdid_tab: None,
+            Err(_) => {
+                return HSAPIClient {
+                    local_config: None,
+                    default_token_index: None,
+                    cached_api_token: None,
+                    origin: String::from(origin),
+                    hs_origin: String::from(hs_origin),
+                    wdid_tab: None,
+                }
             }
         };
 
         if let Some(local_config) = &hsclient.local_config {
             if !local_config.api_tokens.is_empty() {
                 hsclient.default_token_index = Some(0);
-                let raw_tok = std::fs::read(&local_config.api_tokens[hsclient.default_token_index.unwrap()]).unwrap();
+                let raw_tok =
+                    std::fs::read(&local_config.api_tokens[hsclient.default_token_index.unwrap()])
+                        .unwrap();
                 let tok = String::from_utf8(raw_tok).unwrap();
                 hsclient.cached_api_token = Some(tok);
             }
@@ -149,18 +153,22 @@ impl HSAPIClient {
         }
 
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(reqwest::header::AUTHORIZATION,
-                       format!("Bearer {}", self.cached_api_token.as_ref().unwrap()).parse().unwrap());
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", self.cached_api_token.as_ref().unwrap())
+                .parse()
+                .unwrap(),
+        );
         Ok(reqwest::Client::builder()
-           .default_headers(headers)
-           .build().unwrap())
+            .default_headers(headers)
+            .build()
+            .unwrap())
     }
 
 
     pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-
             let hslisturl = if include_dissolved {
                 "/list?with_dissolved"
             } else {
@@ -169,22 +177,26 @@ impl HSAPIClient {
 
             let client = match self.create_authclient() {
                 Ok(c) => c,
-                Err(err) => return Err(format!("{}", err))
+                Err(err) => return Err(format!("{}", err)),
             };
 
             let res = match client.get(self.url(hslisturl)).send().await {
                 Ok(r) => r,
-                Err(err) => return Err(format!("{}", err))
+                Err(err) => return Err(format!("{}", err)),
             };
 
             let mut payload: serde_json::Value;
             if res.status() == 200 {
                 payload = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
             } else if res.status() == 400 {
-                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                let payload: serde_json::Value =
+                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
                 return Err(String::from(payload["error_message"].as_str().unwrap()));
             } else {
-                return Err(format!("error contacting hardshare server: {}", res.status()));
+                return Err(format!(
+                    "error contacting hardshare server: {}",
+                    res.status()
+                ));
             }
 
             let listurl_path = if include_dissolved {
@@ -196,20 +208,24 @@ impl HSAPIClient {
 
             let res = match client.get(&apilisturl).send().await {
                 Ok(r) => r,
-                Err(err) => return Err(format!("{}", err))
+                Err(err) => return Err(format!("{}", err)),
             };
 
             if res.status() == 200 {
-                let apipayload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                let apipayload: serde_json::Value =
+                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
                 for wd in payload["deployments"].as_array_mut().unwrap().iter_mut() {
                     wd["desc"] = apipayload["attr"][wd["id"].as_str().unwrap()]["desc"].clone();
                 }
-
             } else if res.status() == 400 {
-                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                let payload: serde_json::Value =
+                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
                 return Err(String::from(payload["error_message"].as_str().unwrap()));
             } else {
-                return Err(format!("error contacting core API server: {}", res.status()));
+                return Err(format!(
+                    "error contacting core API server: {}",
+                    res.status()
+                ));
             }
 
             Ok(payload)
@@ -217,19 +233,27 @@ impl HSAPIClient {
     }
 
 
-    async fn get_access_rules_a(&self, client: &reqwest::Client, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let url = reqwest::Url::parse(format!("{}/deployment/{}/rules", self.origin, wdid).as_str()).unwrap();
+    async fn get_access_rules_a(
+        &self,
+        client: &reqwest::Client,
+        wdid: &str,
+    ) -> Result<AccessRules, Box<dyn std::error::Error>> {
+        let url =
+            reqwest::Url::parse(format!("{}/deployment/{}/rules", self.origin, wdid).as_str())
+                .unwrap();
         let res = client.get(url).send().await?;
         if res.status() == 200 {
-
             let payload: AccessRules = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
             Ok(payload)
-
         } else if res.status() == 400 {
-            let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+            let payload: serde_json::Value =
+                serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
             error(payload["error_message"].as_str().unwrap())
         } else {
-            error(format!("error contacting core API server: {}", res.status()))
+            error(format!(
+                "error contacting core API server: {}",
+                res.status()
+            ))
         }
     }
 
@@ -237,10 +261,8 @@ impl HSAPIClient {
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-
             let client = self.create_authclient()?;
             self.get_access_rules_a(&client, wdid).await
-
         })
     }
 
@@ -248,49 +270,53 @@ impl HSAPIClient {
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-
             let client = self.create_authclient()?;
 
             let ruleset = self.get_access_rules_a(&client, wdid).await?;
             for rule in ruleset.rules.iter() {
-
-                let url = reqwest::Url::parse(format!("{}/deployment/{}/rule/{}", self.origin, wdid, rule.id).as_str()).unwrap();
+                let url = reqwest::Url::parse(
+                    format!("{}/deployment/{}/rule/{}", self.origin, wdid, rule.id).as_str(),
+                )
+                .unwrap();
                 let res = client.delete(url).send().await?;
                 if res.status() != 200 {
-                    return error(format!("error deleting rule {}: {}", rule.id, res.status()))
+                    return error(format!("error deleting rule {}: {}", rule.id, res.status()));
                 }
-
             }
 
             Ok(())
-
         })
     }
 
 
-    pub fn add_access_rule(&self, wdid: &str, to_user: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn add_access_rule(
+        &self,
+        wdid: &str,
+        to_user: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let rt = Runtime::new().unwrap();
         rt.block_on(async {
-
             let mut body = HashMap::new();
             body.insert("cap", "CAP_INSTANTIATE");
             body.insert("user", to_user);
 
             let client = self.create_authclient()?;
 
-            let url = reqwest::Url::parse(format!("{}/deployment/{}/rule", self.origin, wdid).as_str()).unwrap();
+            let url =
+                reqwest::Url::parse(format!("{}/deployment/{}/rule", self.origin, wdid).as_str())
+                    .unwrap();
             let res = client.post(url).json(&body).send().await?;
             if res.status() == 400 {
-                let payload: serde_json::Value = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-                return error(payload["error_message"].as_str().unwrap())
+                let payload: serde_json::Value =
+                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                return error(payload["error_message"].as_str().unwrap());
             } else if res.status() == 404 {
-                return error("not found".to_string())
+                return error("not found".to_string());
             } else if res.status() != 200 {
-                return error(format!("server indicated error: {}", res.status()))
+                return error(format!("server indicated error: {}", res.status()));
             }
 
             Ok(())
-
         })
     }
 
@@ -299,16 +325,20 @@ impl HSAPIClient {
         let url = format!("http://{}/stop/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");
         actix::SystemRunner::block_on(&mut sys, async {
-            awc::Client::new().post(url).send().await.and_then(|resp| {
-                Ok(())
-            }).or_else(|err| {
-                error(err)
-            })
+            awc::Client::new()
+                .post(url)
+                .send()
+                .await
+                .map(|resp| ())
+                .or_else(error)
         })
     }
 
 
-    async fn ad(ac: &HSAPIClient, wdid: String) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
+    async fn ad(
+        ac: &HSAPIClient,
+        wdid: String,
+    ) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
         let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
         let url = format!("{}/ad/{}", ac.hs_origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
@@ -327,26 +357,27 @@ impl HSAPIClient {
             WSClient {
                 worker_req: cworker_tx,
                 ws_sink: SinkWrite::new(sink, ctx),
-                recent_rx_instant: std::time::Instant::now()  // First instant at first connect
+                recent_rx_instant: std::time::Instant::now(), // First instant at first connect
             }
         });
 
         let ws_addr = addr.clone();
         let ac = ac.clone();
-        std::thread::spawn(move || {
-            cworker(ac, cworker_rx, ws_addr)
-        });
+        std::thread::spawn(move || cworker(ac, cworker_rx, ws_addr));
 
         Ok(addr)
     }
 
 
-    async fn http_post_start(wdid: actix_web::web::Path<String>, ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>) -> actix_web::HttpResponse {
+    async fn http_post_start(
+        wdid: actix_web::web::Path<String>,
+        ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
+    ) -> actix_web::HttpResponse {
         let mut ac_inner = ac.lock().unwrap();
         if let Some(local_config) = &ac_inner.local_config {
             let wd_index = match mgmt::find_id_prefix(&local_config, Some(wdid.as_str())) {
                 Ok(wi) => wi,
-                Err(err) => return actix_web::HttpResponse::NotFound().finish()
+                Err(err) => return actix_web::HttpResponse::NotFound().finish(),
             };
         }
 
@@ -372,7 +403,10 @@ impl HSAPIClient {
     }
 
 
-    fn http_post_stop(wdid: actix_web::web::Path<String>, ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>) -> actix_web::HttpResponse {
+    fn http_post_stop(
+        wdid: actix_web::web::Path<String>,
+        ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
+    ) -> actix_web::HttpResponse {
         let mut ac_inner = ac.lock().unwrap();
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
             match wdid_tab.remove(&*wdid) {
@@ -383,8 +417,8 @@ impl HSAPIClient {
                         addr.do_send(WSClientCommand("STOP".into()));
                     }
                     actix_web::HttpResponse::Ok().finish()
-                },
-                None => actix_web::HttpResponse::NotFound().finish()
+                }
+                None => actix_web::HttpResponse::NotFound().finish(),
             }
         } else {
             actix_web::HttpResponse::InternalServerError().finish()
@@ -401,18 +435,19 @@ impl HSAPIClient {
         let url = format!("http://{}/start/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");
         let res = actix::SystemRunner::block_on(&mut sys, async {
-            awc::Client::new().post(url).send().await.and_then(|resp| {
-                Ok(())
-            }).or_else(|err| {
-                Err(err)
-            })
+            awc::Client::new()
+                .post(url)
+                .send()
+                .await
+                .map(|resp| ())
+                .map_err(|err| err)
         });
         match res {
             Ok(()) => {
                 info!("started via existing daemon");
-                return Ok(())
-            },
-            Err(err) => warn!("no existing daemon: {}", err)
+                return Ok(());
+            }
+            Err(err) => warn!("no existing daemon: {}", err),
         };
 
         // Else, start new daemon
@@ -424,14 +459,13 @@ impl HSAPIClient {
         let (err_notify, err_rx) = mpsc::channel();
         let ac = Arc::new(Mutex::new(self.clone()));
         Arbiter::spawn(async move {
-
             let mut ac_inner = ac.lock().unwrap();
             let addr = match HSAPIClient::ad(&*ac_inner, wdid.clone()).await {
                 Ok(a) => a,
                 Err(err) => {
                     err_notify.send(format!("{}", err)).unwrap();
                     System::current().stop_with_code(1);
-                    return
+                    return;
                 }
             };
             let mut wdid_tab = HashMap::new();
@@ -444,30 +478,39 @@ impl HSAPIClient {
                 actix_web::App::new()
                     .data(ac)
                     .wrap(actix_web::middleware::Logger::default())
-                    .route("/stop/{wdid:.*}", actix_web::web::post().to(HSAPIClient::http_post_stop))
-                    .route("/start/{wdid:.*}", actix_web::web::post().to(HSAPIClient::http_post_start))
-            }).workers(1);
+                    .route(
+                        "/stop/{wdid:.*}",
+                        actix_web::web::post().to(HSAPIClient::http_post_stop),
+                    )
+                    .route(
+                        "/start/{wdid:.*}",
+                        actix_web::web::post().to(HSAPIClient::http_post_start),
+                    )
+            })
+            .workers(1);
             manip = match manip.bind(bindaddr) {
                 Ok(s) => s,
                 Err(err) => {
-                    err_notify.send(format!("failed to bind to {}; {}", bindaddr, err)).unwrap();
+                    err_notify
+                        .send(format!("failed to bind to {}; {}", bindaddr, err))
+                        .unwrap();
                     System::current().stop_with_code(1);
-                    return
+                    return;
                 }
             };
             match manip.run().await {
                 Ok(()) => (),
                 Err(err) => {
-                    err_notify.send(format!("failed to start listener: {}", err)).unwrap();
+                    err_notify
+                        .send(format!("failed to start listener: {}", err))
+                        .unwrap();
                     System::current().stop_with_code(1);
-                    return
                 }
             }
-
         });
         match sys.run() {
             Ok(()) => Ok(()),
-            Err(_) => error(err_rx.recv()?)
+            Err(_) => error(err_rx.recv()?),
         }
     }
 
@@ -493,20 +536,22 @@ impl HSAPIClient {
                 .finish();
             let mut resp = client.post(url).send().await?;
             if resp.status() == 200 {
-                let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
                 let mut new_wd = HashMap::new();
                 new_wd.insert("id".into(), json!(payload["id"].as_str().unwrap()));
                 new_wd.insert("owner".into(), json!(payload["owner"].as_str().unwrap()));
                 Ok(new_wd)
             } else if resp.status() == 400 {
-                let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
                 error(String::from(payload["error_message"].as_str().unwrap()))
             } else {
                 error(format!("server indicated error: {}", resp.status()))
             }
         });
-        if res.is_err() {
-            return Err(res.unwrap_err());
+        if let Err(err) = res {
+            return Err(err);
         }
         let mut new_wd = res.unwrap();
 
@@ -554,30 +599,28 @@ enum CWorkerCommandType {
 #[derive(Debug, Clone)]
 struct CWorkerCommand {
     command: CWorkerCommandType,
-    instance_id: String,  // \in UUID
+    instance_id: String, // \in UUID
     conntype: Option<ConnType>,
     publickey: Option<String>,
 }
 
 
-fn cworker(ac: HSAPIClient, wsclient_req: mpsc::Receiver<CWorkerCommand>, wsclient_addr: Addr<WSClient>) {
+fn cworker(
+    ac: HSAPIClient,
+    wsclient_req: mpsc::Receiver<CWorkerCommand>,
+    wsclient_addr: Addr<WSClient>,
+) {
     loop {
         let req = match wsclient_req.recv() {
             Ok(m) => m,
-            Err(_) => return
+            Err(_) => return,
         };
         debug!("cworker rx: {:?}", req);
 
         match req.command {
-            CWorkerCommandType::INSTANCE_LAUNCH => {
-
-            },
-            CWorkerCommandType::INSTANCE_DESTROY => {
-
-            },
-            CWorkerCommandType::INSTANCE_STATUS => {
-
-            }
+            CWorkerCommandType::INSTANCE_LAUNCH => {}
+            CWorkerCommandType::INSTANCE_DESTROY => {}
+            CWorkerCommandType::INSTANCE_STATUS => {}
         }
 
         wsclient_addr.do_send(WSClientWorkerMessage("DONE?".into()));
@@ -668,40 +711,43 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 Some(v) => v,
                 None => {
                     error!("received message with no version declaration");
-                    return
+                    return;
                 }
             };
             if message_ver != 0 {
-                error!("received message of unknown format version: {}", message_ver);
-                return
+                error!(
+                    "received message of unknown format version: {}",
+                    message_ver
+                );
+                return;
             }
 
             let cmd = match payload["cmd"].as_str() {
                 Some(c) => c,
                 None => {
                     error!("received message of without `cmd` field");
-                    return
+                    return;
                 }
             };
 
             if cmd == "INSTANCE_LAUNCH" {
-
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
                     command: CWorkerCommandType::INSTANCE_LAUNCH,
                     instance_id: String::from(payload["id"].as_str().unwrap()),
-                    conntype: Some(ConnType::SSHTUN),  // TODO: Support ct != sshtun
+                    conntype: Some(ConnType::SSHTUN), // TODO: Support ct != sshtun
                     publickey: Some(String::from(payload["pr"].as_str().unwrap())),
                 };
                 self.worker_req.send(m).unwrap();
-                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
-                    "v": 0,
-                    "cmd": "ACK",
-                    "mi": mid
-                })).unwrap()));
-
+                self.ws_sink.write(Message::Text(
+                    serde_json::to_string(&json!({
+                        "v": 0,
+                        "cmd": "ACK",
+                        "mi": mid
+                    }))
+                    .unwrap(),
+                ));
             } else if cmd == "INSTANCE_STATUS" {
-
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
                     command: CWorkerCommandType::INSTANCE_STATUS,
@@ -710,14 +756,15 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     publickey: None,
                 };
                 self.worker_req.send(m).unwrap();
-                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
-                    "v": 0,
-                    "cmd": "ACK",
-                    "mi": mid
-                })).unwrap()));
-
+                self.ws_sink.write(Message::Text(
+                    serde_json::to_string(&json!({
+                        "v": 0,
+                        "cmd": "ACK",
+                        "mi": mid
+                    }))
+                    .unwrap(),
+                ));
             } else if cmd == "INSTANCE_DESTROY" {
-
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
                     command: CWorkerCommandType::INSTANCE_DESTROY,
@@ -726,14 +773,15 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     publickey: None,
                 };
                 self.worker_req.send(m).unwrap();
-                self.ws_sink.write(Message::Text(serde_json::to_string(&json!({
-                    "v": 0,
-                    "cmd": "ACK",
-                    "mi": mid
-                })).unwrap()));
-
+                self.ws_sink.write(Message::Text(
+                    serde_json::to_string(&json!({
+                        "v": 0,
+                        "cmd": "ACK",
+                        "mi": mid
+                    }))
+                    .unwrap(),
+                ));
             }
-
         } else if let Ok(Frame::Ping(_)) = msg {
             debug!("received PING; sending PONG");
             self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));

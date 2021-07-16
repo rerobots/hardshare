@@ -4,14 +4,16 @@
 use std::io::prelude::*;
 
 use assert_cmd::Command;
-use tempfile::{NamedTempFile, tempdir};
+use tempfile::{tempdir, NamedTempFile};
 
 
 #[test]
 fn prints_version() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd.arg("-V").assert();
-    assert.stdout(format!("{}\n", env!("CARGO_PKG_VERSION"))).success();
+    assert
+        .stdout(format!("{}\n", env!("CARGO_PKG_VERSION")))
+        .success();
 }
 
 
@@ -28,7 +30,11 @@ fn add_token_does_not_exist() {
     let ntf = NamedTempFile::new().unwrap();
     println!("{:?}", ntf.path().join("notexist"));
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
-    let assert = cmd.arg("config").arg("--add-key").arg(ntf.path().join("notexist")).assert();
+    let assert = cmd
+        .arg("config")
+        .arg("--add-key")
+        .arg(ntf.path().join("notexist"))
+        .assert();
     assert.failure().code(1);
 }
 
@@ -37,6 +43,11 @@ fn add_token_does_not_exist() {
 fn list_config_does_not_exist() {
     let tmphome = tempdir().unwrap();
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
-    let assert = cmd.env("HOME", tmphome.path()).arg("config").arg("--local").arg("-l").assert();
+    let assert = cmd
+        .env("HOME", tmphome.path())
+        .arg("config")
+        .arg("--local")
+        .arg("-l")
+        .assert();
     assert.failure().code(1);
 }
