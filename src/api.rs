@@ -98,21 +98,31 @@ pub struct RemoteConfig {}
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
+        #[cfg(not(test))]
         let hs_origin = match option_env!("REROBOTS_HS_ORIGIN") {
             Some(u) => u,
             None => "https://hs.rerobots.net",
-        };
+        }
+        .to_string();
+        #[cfg(not(test))]
         let origin = match option_env!("REROBOTS_ORIGIN") {
             Some(u) => u,
             None => "https://api.rerobots.net",
-        };
+        }
+        .to_string();
+
+        #[cfg(test)]
+        let hs_origin = mockito::server_url();
+        #[cfg(test)]
+        let origin = mockito::server_url();
+
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
                 local_config: Some(local_config),
                 default_token_index: None,
                 cached_api_token: None,
-                origin: String::from(origin),
-                hs_origin: String::from(hs_origin),
+                origin,
+                hs_origin,
                 wdid_tab: None,
             },
             Err(_) => {
@@ -120,8 +130,8 @@ impl HSAPIClient {
                     local_config: None,
                     default_token_index: None,
                     cached_api_token: None,
-                    origin: String::from(origin),
-                    hs_origin: String::from(hs_origin),
+                    origin,
+                    hs_origin,
                     wdid_tab: None,
                 }
             }
@@ -797,3 +807,28 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
 }
 
 impl actix::io::WriteHandler<WsProtocolError> for WSClient {}
+
+
+#[cfg(test)]
+mod tests {
+    use mockito::mock;
+
+    use super::HSAPIClient;
+
+    #[test]
+    fn list_no_rules() {
+        let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
+        let path = format!("/deployment/{}/rules", wdid);
+        let _m = mock("GET", path.as_str())
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"rules": []}"#)
+            .create();
+
+        let mut ac = HSAPIClient::new();
+        ac.cached_api_token = Some("fake".to_string());
+        let ruleset = ac.get_access_rules(wdid).unwrap();
+
+        assert_eq!(ruleset.rules.len(), 0)
+    }
+}
