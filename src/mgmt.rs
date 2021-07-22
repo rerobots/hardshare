@@ -71,11 +71,11 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 }
 
 
-type api_tokens_info = (Vec<String>, HashMap<String, String>);
+type APITokensInfo = (Vec<String>, HashMap<String, String>);
 
 pub fn list_local_api_tokens(
     collect_errors: bool,
-) -> Result<api_tokens_info, Box<dyn std::error::Error>> {
+) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
     list_local_api_tokens_bp(&base_path, collect_errors)
 }
@@ -83,7 +83,7 @@ pub fn list_local_api_tokens(
 fn list_local_api_tokens_bp(
     base_path: &std::path::PathBuf,
     collect_errors: bool,
-) -> Result<api_tokens_info, Box<dyn std::error::Error>> {
+) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
     let mut likely_tokens = Vec::new();
     let mut errored_tokens = HashMap::new();
     if !base_path.exists() {
