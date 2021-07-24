@@ -601,9 +601,11 @@ enum ConnType {
 
 #[derive(PartialEq, Debug, Clone)]
 enum CWorkerCommandType {
-    INSTANCE_LAUNCH,
-    INSTANCE_DESTROY,
-    INSTANCE_STATUS,
+    InstanceLaunch,
+    InstanceDestroy,
+    InstanceStatus,
+    HubAccept,
+    HubPing,
 }
 
 #[derive(Debug, Clone)]
@@ -628,9 +630,16 @@ fn cworker(
         debug!("cworker rx: {:?}", req);
 
         match req.command {
-            CWorkerCommandType::INSTANCE_LAUNCH => {}
-            CWorkerCommandType::INSTANCE_DESTROY => {}
-            CWorkerCommandType::INSTANCE_STATUS => {}
+            CWorkerCommandType::InstanceLaunch => {
+            }
+            CWorkerCommandType::InstanceDestroy => {
+            }
+            CWorkerCommandType::InstanceStatus => {
+            }
+            CWorkerCommandType::HubAccept => {
+            }
+            CWorkerCommandType::HubPing => {
+            }
         }
 
         wsclient_addr.do_send(WSClientWorkerMessage("DONE?".into()));
@@ -743,7 +752,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             if cmd == "INSTANCE_LAUNCH" {
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
-                    command: CWorkerCommandType::INSTANCE_LAUNCH,
+                    command: CWorkerCommandType::InstanceLaunch,
                     instance_id: String::from(payload["id"].as_str().unwrap()),
                     conntype: Some(ConnType::SSHTUN), // TODO: Support ct != sshtun
                     publickey: Some(String::from(payload["pr"].as_str().unwrap())),
@@ -760,7 +769,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             } else if cmd == "INSTANCE_STATUS" {
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
-                    command: CWorkerCommandType::INSTANCE_STATUS,
+                    command: CWorkerCommandType::InstanceStatus,
                     instance_id: String::from(payload["id"].as_str().unwrap()),
                     conntype: None,
                     publickey: None,
@@ -777,7 +786,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             } else if cmd == "INSTANCE_DESTROY" {
                 let mid = String::from(payload["mi"].as_str().unwrap());
                 let m = CWorkerCommand {
-                    command: CWorkerCommandType::INSTANCE_DESTROY,
+                    command: CWorkerCommandType::InstanceDestroy,
                     instance_id: String::from(payload["id"].as_str().unwrap()),
                     conntype: None,
                     publickey: None,
