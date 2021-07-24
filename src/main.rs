@@ -16,6 +16,10 @@ mod mgmt;
 
 
 fn main() {
+    #[cfg(unix)]
+    {
+        openssl_probe::init_ssl_cert_env_vars();
+    }
     match cli::main() {
         Ok(_) => std::process::exit(0),
         Err(err) => {

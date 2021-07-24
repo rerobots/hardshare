@@ -28,6 +28,12 @@ version = "2.33.0"
 default-features = false
 features = [ "color" ]
 
+[target."cfg(unix)".dependencies]
+openssl-probe = "0.1.4"
+
+[profile.release]
+panic = "abort"
+
 [dev-dependencies]
 assert_cmd = "1.0"
 tempfile = "3.1"
