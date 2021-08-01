@@ -19,14 +19,9 @@ use futures::stream::{SplitSink, StreamExt};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
-extern crate reqwest;
-
 extern crate serde;
 extern crate serde_json;
 use serde::{Deserialize, Serialize};
-
-extern crate tokio;
-use tokio::runtime::Runtime;
 
 use crate::mgmt;
 
@@ -96,6 +91,42 @@ pub struct HSAPIClient {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RemoteConfig {}
 
+
+fn create_client(token: Option<String>) -> Result<awc::Client, Box<dyn std::error::Error>> {
+    if token.is_none() {
+        return error("No valid API tokens found.");
+    }
+
+    let connector = SslConnector::builder(SslMethod::tls())?.build();
+    let client = awc::Client::builder().connector(awc::Connector::new().ssl(connector).finish());
+    Ok(client
+        .header("Authorization", format!("Bearer {}", token.unwrap()))
+        .finish())
+}
+
+
+async fn get_access_rules_a(
+    client: &awc::Client,
+    origin: &str,
+    wdid: &str,
+) -> Result<AccessRules, Box<dyn std::error::Error>> {
+    let url = format!("{}/deployment/{}/rules", origin, wdid);
+    let mut resp = client.get(url).send().await?;
+    if resp.status() == 200 {
+        let payload: AccessRules = serde_json::from_slice(resp.body().await?.as_ref())?;
+        Ok(payload)
+    } else if resp.status() == 400 {
+        let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
+        error(payload["error_message"].as_str().unwrap())
+    } else {
+        error(format!(
+            "error contacting core API server: {}",
+            resp.status()
+        ))
+    }
+}
+
+
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
         #[cfg(not(test))]
@@ -152,60 +183,37 @@ impl HSAPIClient {
     }
 
 
-    fn url(&self, path: &str) -> reqwest::Url {
-        reqwest::Url::parse((self.hs_origin.clone() + path).as_str()).unwrap()
-    }
-
-
-    fn create_authclient(&self) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
-        if self.cached_api_token.is_none() {
-            return error("No valid API tokens found.");
-        }
-
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert(
-            reqwest::header::AUTHORIZATION,
-            format!("Bearer {}", self.cached_api_token.as_ref().unwrap())
-                .parse()
-                .unwrap(),
-        );
-        Ok(reqwest::Client::builder()
-            .default_headers(headers)
-            .build()
-            .unwrap())
-    }
-
-
-    pub fn get_remote_config(&self, include_dissolved: bool) -> Result<serde_json::Value, String> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+    pub fn get_remote_config(
+        &self,
+        include_dissolved: bool,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let api_token = self.cached_api_token.clone();
+        let hs_origin = self.hs_origin.clone();
+        let origin = self.origin.clone();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
             let hslisturl = if include_dissolved {
                 "/list?with_dissolved"
             } else {
                 "/list"
             };
 
-            let client = match self.create_authclient() {
-                Ok(c) => c,
-                Err(err) => return Err(format!("{}", err)),
-            };
+            let client = create_client(api_token)?;
 
-            let res = match client.get(self.url(hslisturl)).send().await {
-                Ok(r) => r,
-                Err(err) => return Err(format!("{}", err)),
-            };
+            let url = format!("{}{}", hs_origin, hslisturl);
 
+            let mut resp = client.get(url).send().await?;
             let mut payload: serde_json::Value;
-            if res.status() == 200 {
-                payload = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-            } else if res.status() == 400 {
+            if resp.status() == 200 {
+                payload = serde_json::from_slice(resp.body().await?.as_ref())?;
+            } else if resp.status() == 400 {
                 let payload: serde_json::Value =
-                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-                return Err(String::from(payload["error_message"].as_str().unwrap()));
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                return error(String::from(payload["error_message"].as_str().unwrap()));
             } else {
-                return Err(format!(
+                return error(format!(
                     "error contacting hardshare server: {}",
-                    res.status()
+                    resp.status()
                 ));
             }
 
@@ -214,27 +222,23 @@ impl HSAPIClient {
             } else {
                 "/hardshare/list"
             };
-            let apilisturl = format!("{}{}", self.origin, listurl_path);
+            let apilisturl = format!("{}{}", origin, listurl_path);
 
-            let res = match client.get(&apilisturl).send().await {
-                Ok(r) => r,
-                Err(err) => return Err(format!("{}", err)),
-            };
-
-            if res.status() == 200 {
+            let mut resp = client.get(apilisturl).send().await?;
+            if resp.status() == 200 {
                 let apipayload: serde_json::Value =
-                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
                 for wd in payload["deployments"].as_array_mut().unwrap().iter_mut() {
                     wd["desc"] = apipayload["attr"][wd["id"].as_str().unwrap()]["desc"].clone();
                 }
-            } else if res.status() == 400 {
+            } else if resp.status() == 400 {
                 let payload: serde_json::Value =
-                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-                return Err(String::from(payload["error_message"].as_str().unwrap()));
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                return error(String::from(payload["error_message"].as_str().unwrap()));
             } else {
-                return Err(format!(
+                return error(format!(
                     "error contacting core API server: {}",
-                    res.status()
+                    resp.status()
                 ));
             }
 
@@ -243,54 +247,36 @@ impl HSAPIClient {
     }
 
 
-    async fn get_access_rules_a(
-        &self,
-        client: &reqwest::Client,
-        wdid: &str,
-    ) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let url =
-            reqwest::Url::parse(format!("{}/deployment/{}/rules", self.origin, wdid).as_str())
-                .unwrap();
-        let res = client.get(url).send().await?;
-        if res.status() == 200 {
-            let payload: AccessRules = serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-            Ok(payload)
-        } else if res.status() == 400 {
-            let payload: serde_json::Value =
-                serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
-            error(payload["error_message"].as_str().unwrap())
-        } else {
-            error(format!(
-                "error contacting core API server: {}",
-                res.status()
-            ))
-        }
-    }
-
-
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let client = self.create_authclient()?;
-            self.get_access_rules_a(&client, wdid).await
+        let api_token = self.cached_api_token.clone();
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = create_client(api_token)?;
+            get_access_rules_a(&client, &origin, &wdid).await
         })
     }
 
 
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
-            let client = self.create_authclient()?;
+        let api_token = self.cached_api_token.clone();
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = create_client(api_token)?;
 
-            let ruleset = self.get_access_rules_a(&client, wdid).await?;
+            let ruleset = get_access_rules_a(&client, &origin, &wdid).await?;
             for rule in ruleset.rules.iter() {
-                let url = reqwest::Url::parse(
-                    format!("{}/deployment/{}/rule/{}", self.origin, wdid, rule.id).as_str(),
-                )
-                .unwrap();
-                let res = client.delete(url).send().await?;
-                if res.status() != 200 {
-                    return error(format!("error deleting rule {}: {}", rule.id, res.status()));
+                let url = format!("{}/deployment/{}/rule/{}", origin, wdid, rule.id);
+                let mut resp = client.delete(url).send().await?;
+                if resp.status() != 200 {
+                    return error(format!(
+                        "error deleting rule {}: {}",
+                        rule.id,
+                        resp.status()
+                    ));
                 }
             }
 
@@ -304,26 +290,31 @@ impl HSAPIClient {
         wdid: &str,
         to_user: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+        let td = std::time::Duration::new(10, 0);
+        let api_token = self.cached_api_token.clone();
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let origin = self.origin.clone();
+        let to_user = to_user.to_string();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
             let mut body = HashMap::new();
             body.insert("cap", "CAP_INSTANTIATE");
-            body.insert("user", to_user);
+            body.insert("user", to_user.as_str());
 
-            let client = self.create_authclient()?;
+            let client = create_client(api_token)?;
 
-            let url =
-                reqwest::Url::parse(format!("{}/deployment/{}/rule", self.origin, wdid).as_str())
-                    .unwrap();
-            let res = client.post(url).json(&body).send().await?;
-            if res.status() == 400 {
+            let url = format!("{}/deployment/{}/rule", origin, wdid);
+            let client_req = client.post(url).timeout(td);
+            let mut resp = client_req.send_json(&body).await?;
+            if resp.status() == 400 {
                 let payload: serde_json::Value =
-                    serde_json::from_slice(&res.bytes().await.unwrap()).unwrap();
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
                 return error(payload["error_message"].as_str().unwrap());
-            } else if res.status() == 404 {
+            } else if resp.status() == 404 {
                 return error("not found".to_string());
-            } else if res.status() != 200 {
-                return error(format!("server indicated error: {}", res.status()));
+            } else if resp.status() != 200 {
+                return error(format!("server indicated error: {}", resp.status()));
             }
 
             Ok(())
