@@ -360,6 +360,14 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 }
 
 
+fn config_addon_subcommand(
+    matches: &clap::ArgMatches,
+    pformat: PrintingFormat,
+) -> Result<(), CliError> {
+    Ok(())
+}
+
+
 fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
@@ -537,6 +545,9 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
+        .subcommand(SubCommand::with_name("config-addon")
+                    .about("Manage add-ons (mistyproxy, vnc, ...)")
+                    )
         .subcommand(SubCommand::with_name("ad")
                     .about("Advertise availability, accept new instances")
                     .arg(Arg::with_name("id_prefix")
@@ -602,6 +613,8 @@ pub fn main() -> Result<(), CliError> {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
         return config_subcommand(matches, pformat);
+    } else if let Some(matches) = matches.subcommand_matches("config-addon") {
+        return config_addon_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("rules") {
         return rules_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("ad") {
