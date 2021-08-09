@@ -78,6 +78,20 @@ impl std::fmt::Display for AccessRules {
 }
 
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum AddOn {
+    MistyProxy,
+}
+
+impl std::fmt::Display for AddOn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AddOn::MistyProxy => write!(f, "mistyproxy"),
+        }
+    }
+}
+
+
 #[derive(Clone)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
@@ -318,6 +332,47 @@ impl HSAPIClient {
             }
 
             Ok(())
+        })
+    }
+
+
+    pub fn get_addon_config(
+        &self,
+        wdid: &str,
+        addon: &AddOn,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let api_token = self.cached_api_token.clone();
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let addon = addon.clone();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = create_client(api_token)?;
+            let url = format!("{}/deployment/{}", origin, wdid);
+            let mut resp = client.get(url).send().await?;
+            if resp.status() == 200 {
+                let mut payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                let has_addon = payload["supported_addons"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|x| x.as_str().unwrap() == addon.to_string());
+                if !has_addon {
+                    error(format!("add-on {} is not enabled", addon))
+                } else {
+                    Ok(payload["addons_config"][addon.to_string()].take())
+                }
+            } else if resp.status() == 400 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                error(payload["error_message"].as_str().unwrap())
+            } else {
+                error(format!(
+                    "error contacting core API server: {}",
+                    resp.status()
+                ))
+            }
         })
     }
 

@@ -364,6 +364,41 @@ fn config_addon_subcommand(
     matches: &clap::ArgMatches,
     pformat: PrintingFormat,
 ) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let addon = match matches.value_of("addon") {
+        Some("mistyproxy") => api::AddOn::MistyProxy,
+        Some(_) => return CliError::new("unknown add-on", 1),
+        _ => return CliError::new("add-on must be specified with `-a`", 1),
+    };
+
+    let ac = api::HSAPIClient::new();
+
+    if matches.is_present("remove") {
+    } else if matches.is_present("list") {
+        let addon_config = match ac.get_addon_config(
+            local_config.wdeployments[wd_index]["id"].as_str().unwrap(),
+            &addon,
+        ) {
+            Ok(r) => r,
+            Err(err) => return CliError::new_std(err, 1),
+        };
+        if pformat == PrintingFormat::JSON {
+            println!("{}", serde_json::to_string(&addon_config).unwrap())
+        } else {
+            println!("{}", serde_yaml::to_string(&addon_config).unwrap())
+        }
+    } else if addon == api::AddOn::MistyProxy {
+    }
+
     Ok(())
 }
 
@@ -495,6 +530,7 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
+        .max_term_width(80)
         .about("Command-line interface for the hardshare client")
         .subcommand(SubCommand::with_name("version")
                     .about("Prints version number and exits"))
@@ -547,7 +583,23 @@ pub fn main() -> Result<(), CliError> {
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
         .subcommand(SubCommand::with_name("config-addon")
                     .about("Manage add-ons (mistyproxy, vnc, ...)")
-                    )
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment for add-ons (can be unique prefix)"))
+                    .arg(Arg::with_name("addon")
+                         .short("a")
+                         .value_name("ADDON")
+                         .help("name of the add-on"))
+                    .arg(Arg::with_name("list")
+                         .short("l")
+                         .help("Lists configuration of add-on"))
+                    .arg(Arg::with_name("ipv4")
+                         .long("ip")
+                         .value_name("ADDR")
+                         .help("mistyproxy: IP address of Misty robot"))
+                    .arg(Arg::with_name("remove")
+                         .long("rm")
+                         .help("remove add-on from workspace deployment; instances will not be able to use the add-on specified with `-a`")))
         .subcommand(SubCommand::with_name("ad")
                     .about("Advertise availability, accept new instances")
                     .arg(Arg::with_name("id_prefix")
