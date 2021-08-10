@@ -383,6 +383,12 @@ fn config_addon_subcommand(
     let ac = api::HSAPIClient::new();
 
     if matches.is_present("remove") {
+        if let Err(err) = ac.remove_addon(
+            local_config.wdeployments[wd_index]["id"].as_str().unwrap(),
+            &addon,
+        ) {
+            return CliError::new_std(err, 1);
+        }
     } else if matches.is_present("list") {
         let addon_config = match ac.get_addon_config(
             local_config.wdeployments[wd_index]["id"].as_str().unwrap(),
