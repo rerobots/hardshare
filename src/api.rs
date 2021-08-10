@@ -1024,6 +1024,7 @@ impl actix::io::WriteHandler<WsProtocolError> for WSClient {}
 mod tests {
     use mockito::mock;
 
+    use super::AddOn;
     use super::HSAPIClient;
 
     #[test]
@@ -1041,5 +1042,33 @@ mod tests {
         let ruleset = ac.get_access_rules(wdid).unwrap();
 
         assert_eq!(ruleset.rules.len(), 0)
+    }
+
+    #[test]
+    fn get_mistyproxy_config() {
+        let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
+        let path = format!("/deployment/{}", wdid);
+        let addr = "192.168.1.7";
+        let payload = json!({
+            "supported_addons": ["mistyproxy"],
+            "addons_config": {
+                "mistyproxy": {
+                    "ip": addr
+                }
+            }
+        });
+        let _m = mock("GET", path.as_str())
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(payload.to_string())
+            .create();
+
+        let mut ac = HSAPIClient::new();
+        ac.cached_api_token = Some("fake".to_string());
+        let addonsc = ac.get_addon_config(wdid, &AddOn::MistyProxy).unwrap();
+
+        assert!(addonsc.as_object().unwrap().contains_key("ip"));
+        let returned_addr = addonsc["ip"].as_str().unwrap();
+        assert_eq!(addr, returned_addr);
     }
 }
