@@ -444,6 +444,95 @@ impl HSAPIClient {
     }
 
 
+    fn upsert_addon(
+        &self,
+        wdid: &str,
+        addon: &AddOn,
+        config: Option<serde_json::Value>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let td = std::time::Duration::new(10, 0);
+        let api_token = self.cached_api_token.clone();
+        let hs_origin = self.hs_origin.clone();
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let addon = addon.clone();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = create_client(api_token)?;
+            let url = format!("{}/deployment/{}", origin, wdid);
+            let mut resp = client.get(url).send().await?;
+            if resp.status() == 200 {
+                let mut payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                let this_addon = addon.to_string();
+                let mut supported_addons: Vec<String> = payload["supported_addons"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|x| String::from(x.as_str().unwrap()))
+                    .collect();
+                if !supported_addons.contains(&this_addon) {
+                    supported_addons.push(this_addon.clone());
+                }
+                let mut update_payload: HashMap<String, serde_json::Value> = HashMap::new();
+                update_payload.insert("supported_addons".into(), supported_addons.into());
+                if payload.as_object().unwrap().contains_key("addons_config") {
+                    let mut addons_config = payload["addons_config"].take();
+                    update_payload.insert("addons_config".into(), addons_config);
+                }
+                if let Some(this_addon_config) = config {
+                    match update_payload.get_mut("addons_config") {
+                        Some(addonsc) => {
+                            addonsc
+                                .as_object_mut()
+                                .unwrap()
+                                .insert(this_addon, this_addon_config);
+                        }
+                        None => {
+                            let addons_config = json!({
+                                "addons_config": {
+                                    this_addon: this_addon_config
+                                }
+                            });
+                            update_payload.insert("addons_config".into(), addons_config);
+                        }
+                    }
+                }
+
+                let url = format!("{}/wd/{}", hs_origin, wdid);
+                let resp = client
+                    .post(url)
+                    .timeout(td)
+                    .send_json(&update_payload)
+                    .await?;
+                if resp.status() == 200 {
+                    Ok(())
+                } else {
+                    error(format!(
+                        "error contacting hardshare server: {}",
+                        resp.status()
+                    ))
+                }
+            } else if resp.status() == 400 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                error(payload["error_message"].as_str().unwrap())
+            } else {
+                error(format!(
+                    "error contacting core API server: {}",
+                    resp.status()
+                ))
+            }
+        })
+    }
+
+
+    pub fn add_mistyproxy(&self, wdid: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mistyproxy_config = json!({ "ip": addr });
+        self.upsert_addon(wdid, &AddOn::MistyProxy, Some(mistyproxy_config))
+    }
+
+
     pub fn stop(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{}/stop/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");

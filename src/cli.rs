@@ -381,19 +381,14 @@ fn config_addon_subcommand(
     };
 
     let ac = api::HSAPIClient::new();
+    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
 
     if matches.is_present("remove") {
-        if let Err(err) = ac.remove_addon(
-            local_config.wdeployments[wd_index]["id"].as_str().unwrap(),
-            &addon,
-        ) {
+        if let Err(err) = ac.remove_addon(wdid, &addon) {
             return CliError::new_std(err, 1);
         }
     } else if matches.is_present("list") {
-        let addon_config = match ac.get_addon_config(
-            local_config.wdeployments[wd_index]["id"].as_str().unwrap(),
-            &addon,
-        ) {
+        let addon_config = match ac.get_addon_config(wdid, &addon) {
             Ok(r) => r,
             Err(err) => return CliError::new_std(err, 1),
         };
@@ -403,6 +398,13 @@ fn config_addon_subcommand(
             println!("{}", serde_yaml::to_string(&addon_config).unwrap())
         }
     } else if addon == api::AddOn::MistyProxy {
+        if matches.is_present("ipv4") {
+            if let Err(err) = ac.add_mistyproxy(wdid, matches.value_of("ipv4").unwrap()) {
+                return CliError::new_std(err, 1);
+            }
+        } else {
+            return CliError::new("No command. Try `hardshare help config-addon`", 1);
+        }
     }
 
     Ok(())
@@ -602,7 +604,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("ipv4")
                          .long("ip")
                          .value_name("ADDR")
-                         .help("mistyproxy: IP address of Misty robot"))
+                         .help("mistyproxy: declare IP address of Misty robot"))
                     .arg(Arg::with_name("remove")
                          .long("rm")
                          .help("remove add-on from workspace deployment; instances will not be able to use the add-on specified with `-a`")))
