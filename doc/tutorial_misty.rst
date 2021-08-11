@@ -21,6 +21,11 @@ For example, if the Misty robot is available on the local network at IP address
 
   hardshare config-addon -a mistyproxy --ip 192.168.0.144
 
+To change the target address, use the same command with the new address.
+To get the address of the Misty robot as known to hardshare, ::
+
+  hardshare config-addon -a mistyproxy -l
+
 
 Check details via the rerobots CLI
 ----------------------------------
