@@ -26,5 +26,6 @@ The source code repository is at https://github.com/rerobots/hardshare
    tutorial_misty
    help
    internals
+   develop
 
 .. _rerobots: https://rerobots.net/
