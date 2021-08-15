@@ -5,7 +5,7 @@ Summary
 -------
 
 The following sections show advanced configuration options and internal details
-of the hardshare client.
+of the hardshare client. Most users can safely skip this.
 
 
 SSH Keys
