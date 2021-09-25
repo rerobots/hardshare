@@ -459,6 +459,12 @@ class HSAPIClient:
                 }))
                 await self.current.destroy_instance()
                 self.current = None
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'ACK',
+                    'req': 'INSTANCE_DESTROY',
+                    'st': 'DONE',
+                }))
 
         elif payload['cmd'] == 'INSTANCE_STATUS':
             if self.current is None:

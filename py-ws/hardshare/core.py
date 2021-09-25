@@ -223,7 +223,14 @@ class WorkspaceInstance:
         if self.tunnelkey_public:
             payload['key'] = self.tunnelkey_public
         await ws_send(json.dumps(payload))
-        res = await ws_recv.get()
+        for trial in range(3):
+            try:
+                res = await asyncio.wait_for(ws_recv.get(), 20)
+                break
+            except asyncio.CancelledError:
+                return
+            except Exception as err:
+                logger.warning('caught {}: {}'.format(type(err), err))
         assert res['v'] == 0
         assert res['id'] == self.instance_id
         assert res['cmd'] == 'TH_ACCEPT'
@@ -257,7 +264,18 @@ class WorkspaceInstance:
 
         if self.tunnelhub is None:
             logger.info('attempting to associate with a tunnel hub')
-            await self.find_tunnelhub(ws_send, ws_recv)
+            try:
+                await asyncio.wait_for(self.find_tunnelhub(ws_send, ws_recv), 45)
+            except Exception as err:
+                logger.warning('caught {}: {}'.format(type(err), err))
+                logger.error('failed to find tunnel hub; marking as INIT_FAIL')
+                self.status = 'INIT_FAIL'
+                await ws_send(json.dumps({
+                    'v': 0,
+                    'cmd': 'INSTANCE_STATUS',
+                    's': self.status,  # == INIT_FAIL
+                }))
+                return
             assert self.tunnelhub is not None
             logger.info('associated with tunnel hub {}'.format(self.tunnelhub['id']))
 
