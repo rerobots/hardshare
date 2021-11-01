@@ -58,7 +58,8 @@ https://github.com/rerobots/hardshare/issues/1
 Building and Testing
 --------------------
 
-This tool is implemented in [Rust](https://www.rust-lang.org/). To build,
+This tool is implemented in [Rust](https://www.rust-lang.org/), and releases are
+posted to the crate registry at <https://crates.io/crates/hardshare>. To build,
 
     cargo build
 
