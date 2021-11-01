@@ -1,3 +1,11 @@
+hardshare client (0.11.0)
+
+  * First release of new implementation of CLI.
+    Not yet supported: `ad`, `attach-camera`, and related commands.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Sun, 31 Oct 2021 19:17:48 -0700
+
+
 hardshare client (0.10.1)
 
   * Fix for periodic disconnects with attach-camera.
