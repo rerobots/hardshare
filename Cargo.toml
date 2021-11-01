@@ -1,5 +1,6 @@
 [package]
 name = "hardshare"
+description = "share your hardware through the rerobots infrastructure"
 homepage = "https://hardshare.dev/"
 repository = "https://github.com/rerobots/hardshare"
 license = "Apache-2.0"
