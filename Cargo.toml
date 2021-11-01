@@ -1,5 +1,8 @@
 [package]
 name = "hardshare"
+homepage = "https://hardshare.dev/"
+repository = "https://github.com/rerobots/hardshare"
+license = "Apache-2.0"
 version = "0.11.0-devel"
 authors = ["Scott C. Livingston <scott@rerobots.net>"]
 edition = "2018"
