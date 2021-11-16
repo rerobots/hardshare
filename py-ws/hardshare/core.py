@@ -214,16 +214,18 @@ class WorkspaceInstance:
     async def find_tunnelhub(self, ws_send, ws_recv):
         assert self.tunnelhub is None
         logger.debug('sending TH_SEARCH')
+        message_id = str(uuid.uuid4())
         payload = {
             'v': 0,
             'cmd': 'TH_SEARCH',
             'id': self.instance_id,
             'mo': self.conntype,
+            'mi': message_id,
         }
         if self.tunnelkey_public:
             payload['key'] = self.tunnelkey_public
-        await ws_send(json.dumps(payload))
         for trial in range(3):
+            await ws_send(json.dumps(payload))
             try:
                 res = await asyncio.wait_for(ws_recv.get(), 20)
                 break

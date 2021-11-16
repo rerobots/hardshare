@@ -505,7 +505,8 @@ class HSAPIClient:
             if (self.current is None or 'id' not in payload
                 or self.current_wdeployment['id'] != payload['id']
                 or self.current.tunnelhub is None
-                or self.current.tunnelhub['id'] != payload['thid']):
+                or self.current.tunnelhub['id'] != payload['thid']
+                or self.current.instance_id != payload['inid']):
                 resp['cmd'] = 'NACK'
             else:
                 resp['cmd'] = 'ACK'
