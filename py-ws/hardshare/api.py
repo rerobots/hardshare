@@ -40,7 +40,7 @@ class HSAPIClient:
             self.loop = asyncio.get_event_loop()
         else:
             self.loop = event_loop
-        self.base_uri = 'https://hs.rerobots.net'
+        self.base_uri = 'https://api.rerobots.net/hardshare'
         self.session = None
         logger.debug('instantiating client object for hardshare server at {}'
                      .format(self.base_uri))
@@ -79,25 +79,11 @@ class HSAPIClient:
 
     def get_remote_config(self, include_dissolved=True):
         if include_dissolved:
-            res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list?with_dissolved'))
-        else:
-            res = self.loop.run_until_complete(self.session.get(self.base_uri + '/list'))
-        if res.status == 200:
-            payload = self.loop.run_until_complete(res.json())
-        elif res.status == 400:
-            err = self.loop.run_until_complete(res.json())['error_message']
-            return {'err': err}
-        else:
-            raise Error('error contacting hardshare server: {}'.format(res.status))
-        if include_dissolved:
             res = self.loop.run_until_complete(self.session.get('https://api.rerobots.net/hardshare/list?with_dissolved'))
         else:
             res = self.loop.run_until_complete(self.session.get('https://api.rerobots.net/hardshare/list'))
         if res.status == 200:
-            hlist = self.loop.run_until_complete(res.json())
-            for jj, wd in enumerate(payload['deployments']):
-                payload['deployments'][jj]['desc'] = hlist['attr'][wd['id']]['desc']
-            return payload
+            return self.loop.run_until_complete(res.json())
         elif res.status == 400:
             err = self.loop.run_until_complete(res.json())['error_message']
             return {'err': err}

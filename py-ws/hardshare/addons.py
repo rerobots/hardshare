@@ -255,7 +255,7 @@ async def __update_supported_async(wdeployment_id, tok, addons, config=None, rm=
                 if 'addons_config' not in update_payload:
                     update_payload['addons_config'] = dict()
                 update_payload['addons_config'].update(config)
-        res = await session.post('https://hs.rerobots.net/wd/{}'.format(wdeployment_id), json=update_payload)
+        res = await session.post('https://api.rerobots.net/hardshare/wd/{}'.format(wdeployment_id), json=update_payload)
         assert res.status == 200
 
 

@@ -886,11 +886,11 @@ def main(argv=None):
                         else:
                             print(config['remote']['err'])
                         return 1
-                    if len(config['remote']['deployments']) == 0:
+                    if len(config['remote']['wdeployments']) == 0:
                         print('\nno registered workspace deployments with this user account')
                     else:
                         print('\nregistered workspace deployments with this user account:')
-                        for wd in config['remote']['deployments']:
+                        for wd in config['remote']['wdeployments']:
                             print('{}'.format(wd['id']))
                             print('\tcreated: {}'.format(wd['date_created']))
                             if wd['desc'] is not None:
