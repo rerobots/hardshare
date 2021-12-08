@@ -81,7 +81,7 @@ pub fn list_local_api_tokens(
 }
 
 fn list_local_api_tokens_bp(
-    base_path: &std::path::PathBuf,
+    base_path: &std::path::Path,
     collect_errors: bool,
 ) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
     let mut likely_tokens = Vec::new();
@@ -154,7 +154,7 @@ pub fn get_local_config(
 }
 
 pub fn get_local_config_bp(
-    base_path: &std::path::PathBuf,
+    base_path: &std::path::Path,
     create_if_empty: bool,
     collect_errors: bool,
 ) -> Result<Config, Box<dyn std::error::Error>> {

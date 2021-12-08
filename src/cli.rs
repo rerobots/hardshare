@@ -156,7 +156,7 @@ fn print_config_w<T: Write>(
     }
 
     if let Some(remote_config) = remote {
-        let rc_wds = &remote_config["deployments"].as_array().unwrap();
+        let rc_wds = &remote_config["wdeployments"].as_array().unwrap();
         if rc_wds.is_empty() {
             writeln!(
                 f,

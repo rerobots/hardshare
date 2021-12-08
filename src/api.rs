@@ -98,7 +98,6 @@ pub struct HSAPIClient {
     default_token_index: Option<usize>,
     cached_api_token: Option<String>,
     origin: String,
-    hs_origin: String,
     wdid_tab: Option<HashMap<String, Addr<WSClient>>>,
 }
 
@@ -143,21 +142,8 @@ async fn get_access_rules_a(
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
-        #[cfg(not(test))]
-        let hs_origin = match option_env!("REROBOTS_HS_ORIGIN") {
-            Some(u) => u,
-            None => "https://hs.rerobots.net",
-        }
-        .to_string();
-        #[cfg(not(test))]
-        let origin = match option_env!("REROBOTS_ORIGIN") {
-            Some(u) => u,
-            None => "https://api.rerobots.net",
-        }
-        .to_string();
+        let origin = option_env!("REROBOTS_ORIGIN").unwrap_or("https://api.rerobots.net").to_string();
 
-        #[cfg(test)]
-        let hs_origin = mockito::server_url();
         #[cfg(test)]
         let origin = mockito::server_url();
 
@@ -167,7 +153,6 @@ impl HSAPIClient {
                 default_token_index: None,
                 cached_api_token: None,
                 origin,
-                hs_origin,
                 wdid_tab: None,
             },
             Err(_) => {
@@ -176,7 +161,6 @@ impl HSAPIClient {
                     default_token_index: None,
                     cached_api_token: None,
                     origin,
-                    hs_origin,
                     wdid_tab: None,
                 }
             }
@@ -202,61 +186,31 @@ impl HSAPIClient {
         include_dissolved: bool,
     ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         let api_token = self.cached_api_token.clone();
-        let hs_origin = self.hs_origin.clone();
         let origin = self.origin.clone();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let hslisturl = if include_dissolved {
-                "/list?with_dissolved"
-            } else {
-                "/list"
-            };
-
-            let client = create_client(api_token)?;
-
-            let url = format!("{}{}", hs_origin, hslisturl);
-
-            let mut resp = client.get(url).send().await?;
-            let mut payload: serde_json::Value;
-            if resp.status() == 200 {
-                payload = serde_json::from_slice(resp.body().await?.as_ref())?;
-            } else if resp.status() == 400 {
-                let payload: serde_json::Value =
-                    serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(String::from(payload["error_message"].as_str().unwrap()));
-            } else {
-                return error(format!(
-                    "error contacting hardshare server: {}",
-                    resp.status()
-                ));
-            }
-
             let listurl_path = if include_dissolved {
                 "/hardshare/list?with_dissolved"
             } else {
                 "/hardshare/list"
             };
-            let apilisturl = format!("{}{}", origin, listurl_path);
+            let url = format!("{}{}", origin, listurl_path);
 
-            let mut resp = client.get(apilisturl).send().await?;
+            let client = create_client(api_token)?;
+
+            let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
-                let apipayload: serde_json::Value =
-                    serde_json::from_slice(resp.body().await?.as_ref())?;
-                for wd in payload["deployments"].as_array_mut().unwrap().iter_mut() {
-                    wd["desc"] = apipayload["attr"][wd["id"].as_str().unwrap()]["desc"].clone();
-                }
+                Ok(serde_json::from_slice(resp.body().await?.as_ref())?)
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(String::from(payload["error_message"].as_str().unwrap()));
+                error(String::from(payload["error_message"].as_str().unwrap()))
             } else {
-                return error(format!(
+                error(format!(
                     "error contacting core API server: {}",
                     resp.status()
-                ));
+                ))
             }
-
-            Ok(payload)
         })
     }
 
@@ -384,7 +338,6 @@ impl HSAPIClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let td = std::time::Duration::new(10, 0);
         let api_token = self.cached_api_token.clone();
-        let hs_origin = self.hs_origin.clone();
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
@@ -413,7 +366,7 @@ impl HSAPIClient {
                             update_payload.insert("addons_config".into(), addons_config);
                         }
                         update_payload.insert("supported_addons".into(), supported_addons.into());
-                        let url = format!("{}/wd/{}", hs_origin, wdid);
+                        let url = format!("{}/hardshare/wd/{}", origin, wdid);
                         let resp = client
                             .post(url)
                             .timeout(td)
@@ -452,7 +405,6 @@ impl HSAPIClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let td = std::time::Duration::new(10, 0);
         let api_token = self.cached_api_token.clone();
-        let hs_origin = self.hs_origin.clone();
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
@@ -499,7 +451,7 @@ impl HSAPIClient {
                     }
                 }
 
-                let url = format!("{}/wd/{}", hs_origin, wdid);
+                let url = format!("{}/hardshare/wd/{}", origin, wdid);
                 let resp = client
                     .post(url)
                     .timeout(td)
@@ -552,7 +504,7 @@ impl HSAPIClient {
         wdid: String,
     ) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
         let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
-        let url = format!("{}/ad/{}", ac.hs_origin, wdid);
+        let url = format!("{}/hardshare/ad/{}", ac.origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
 
         let client = awc::Client::builder()
@@ -587,7 +539,7 @@ impl HSAPIClient {
     ) -> actix_web::HttpResponse {
         let mut ac_inner = ac.lock().unwrap();
         if let Some(local_config) = &ac_inner.local_config {
-            let wd_index = match mgmt::find_id_prefix(&local_config, Some(wdid.as_str())) {
+            let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
                 Ok(wi) => wi,
                 Err(err) => return actix_web::HttpResponse::NotFound().finish(),
             };
@@ -736,7 +688,7 @@ impl HSAPIClient {
             return error("cannot register without initial local configuration. (try `hardshare config --create`)");
         }
 
-        let url = format!("{}/register", self.hs_origin);
+        let url = format!("{}/hardshare/register", self.origin);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
         let authheader = format!("Bearer {}", self.cached_api_token.as_ref().unwrap());
 
@@ -789,7 +741,7 @@ impl HSAPIClient {
         let wdid = String::from(new_wd["id"].as_str().unwrap());
         if let Some(local_config) = &mut self.local_config {
             local_config.wdeployments.push(new_wd);
-            mgmt::modify_local(&local_config)?;
+            mgmt::modify_local(local_config)?;
         }
         Ok(wdid)
     }
