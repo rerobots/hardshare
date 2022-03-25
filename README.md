@@ -72,6 +72,10 @@ To check code style,
     cargo +nightly fmt -- --check
     cargo clippy --tests -- -D clippy::all
 
+To build for release on x86-64 Linux,
+
+    cargo build --target x86_64-unknown-linux-musl --release --locked
+
 
 Participating
 -------------
