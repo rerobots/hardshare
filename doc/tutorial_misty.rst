@@ -118,6 +118,104 @@ Blockly_ editor if ``misty-blockly`` is selected. An example is shown in the
 video at https://vimeo.com/488264658
 
 
+Example misty-py template
+-------------------------
+
+.. highlight:: python
+
+::
+
+  import time
+
+  import requests
+
+
+  MPURL = '{{ mistyhttps }}'
+
+
+  def drive_fwd(mpurl, duration):
+      """Drive forward for given duration (ms)
+      """
+      params = {
+	  'LinearVelocity': 15,
+	  'AngularVelocity': 0,
+	  'TimeMS': duration,
+      }
+      res = requests.post(mpurl + '/api/drive/time', json=params)
+      if not res.ok:
+	  print('response from POST /api/drive/time:',
+		res.status_code,
+		res.reason)
+
+
+  # Drive forward for 2 seconds (2000 milliseconds)
+  drive_fwd(mpurl, 2000)
+  time.sleep(2)
+
+  # Change the color of the chest LED to green
+  # https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#changeled
+  res = requests.post(MPURL + '/api/led', json={
+      'red': 0,
+      'green': 255,
+      'blue': 0,
+  })
+  assert res.ok, 'response from POST /api/led: {} {}'.format(res.status_code, res.reason)
+
+  # Tilt the head forward
+  # https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movehead
+  res = requests.post(MPURL + '/api/head', json={
+      'Pitch': 20,
+      'Roll': 0,
+      'Yaw': 0,
+      'Velocity': 3,
+  })
+  assert res.ok, 'response from POST /api/head: {} {}'.format(res.status_code, res.reason)
+
+  # Sleep for 5 seconds to allow more time for human to observe results
+  time.sleep(5)
+
+  # Tilt the head back
+  # https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movehead
+  res = requests.post(MPURL + '/api/head', json={
+      'Pitch': 0,
+      'Roll': 0,
+      'Yaw': 0,
+      'Velocity': 3,
+  })
+  assert res.ok, 'response from POST /api/head: {} {}'.format(res.status_code, res.reason)
+
+  # Change the color of the chest LED to purple
+  # https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#changeled
+  res = requests.post(MPURL + '/api/led', json={
+      'red': 255,
+      'green': 0,
+      'blue': 255,
+  })
+  assert res.ok, 'response from POST /api/led: {} {}'.format(res.status_code, res.reason)
+
+
+  # Move the arms
+  # https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movearms
+  res = requests.post(MPURL + '/api/arms/set', json={
+      'LeftArmPosition': -20,
+      'RightArmPosition': -20,
+      'LeftArmVelocity': 40,
+      'RightArmVelocity': 40,
+  })
+  assert res.ok, 'response from POST /api/arms/set: {} {}'.format(res.status_code, res.reason)
+
+  # Sleep for 2 seconds to allow arms to complete motion
+  time.sleep(2)
+
+  res = requests.post(MPURL + '/api/arms/set', json={
+      'LeftArmPosition': 90,
+      'RightArmPosition': 90,
+      'LeftArmVelocity': 40,
+      'RightArmVelocity': 40,
+  })
+  assert res.ok, 'response from POST /api/arms/set: {} {}'.format(res.status_code, res.reason)
+
+
 Hosting more than 1 Misty
 -------------------------
 
