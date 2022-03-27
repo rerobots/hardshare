@@ -1,7 +1,7 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::process::{Command, Stdio};
 
 extern crate serde;
@@ -54,11 +54,19 @@ pub struct Config {
     pub wdeployments: Vec<HashMap<String, serde_json::Value>>,
     pub ssh_key: String,
 
+    // organization name | () -> [path0, path1, ...]
+    // where "()" indicates no org
     #[serde(default)]
-    pub api_tokens: Vec<String>,
+    pub api_tokens: HashMap<String, Vec<String>>,
 
     #[serde(default)]
     pub err_api_tokens: Option<HashMap<String, String>>,
+
+    #[serde(default)]
+    pub default_org: Option<String>,
+
+    #[serde(default)]
+    pub known_orgs: Vec<String>,
 }
 
 
@@ -71,7 +79,7 @@ fn get_base_path() -> Option<std::path::PathBuf> {
 }
 
 
-type APITokensInfo = (Vec<String>, HashMap<String, String>);
+type APITokensInfo = (HashMap<String, Vec<String>>, HashMap<String, String>);
 
 pub fn list_local_api_tokens(
     collect_errors: bool,
@@ -84,7 +92,7 @@ fn list_local_api_tokens_bp(
     base_path: &std::path::Path,
     collect_errors: bool,
 ) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
-    let mut likely_tokens = Vec::new();
+    let mut likely_tokens = HashMap::new();
     let mut errored_tokens = HashMap::new();
     if !base_path.exists() {
         return Ok((likely_tokens, errored_tokens));
@@ -94,51 +102,40 @@ fn list_local_api_tokens_bp(
         return Ok((likely_tokens, errored_tokens));
     }
 
-    let alg = PKeyWithDigest {
-        digest: MessageDigest::sha256(),
-        key: PKey::public_key_from_pem(WEBUI_PUBLIC_KEY).unwrap(),
-    };
-    let now = std::time::SystemTime::now();
-    let utime = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-
     for entry in std::fs::read_dir(path)? {
-        let path = entry?.path();
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            warn!("skipping subdirectory in tokens directory");
+            continue;
+        }
+        let path = entry.path();
         let rawtok = String::from(
             String::from_utf8(std::fs::read(&path).unwrap())
                 .unwrap()
                 .trim(),
         );
-        let result: Result<Token<Header, Claims, _>, jwt::error::Error> =
-            rawtok.verify_with_key(&alg);
-        match result {
-            Ok(tok) => {
-                let claims = tok.claims();
-                if claims.registered.expiration.unwrap() < utime {
-                    if collect_errors {
-                        errored_tokens
-                            .insert(String::from(path.to_str().unwrap()), "expired".into());
-                    }
+        match get_jwt_claims(&rawtok) {
+            Ok(claims) => {
+                let path = String::from(path.to_str().unwrap());
+                let org;
+                if claims.contains_key("org") {
+                    org = claims["org"].as_str().unwrap();
                 } else {
-                    likely_tokens.push(String::from(path.to_str().unwrap()));
+                    org = "()";
+                }
+                if likely_tokens.contains_key(org) {
+                    let org_tokens = likely_tokens.get_mut(org).unwrap();
+                    org_tokens.push(path);
+                } else {
+                    likely_tokens.insert(org.into(), vec![path]);
                 }
             }
-            Err(err) => match err {
-                jwt::error::Error::InvalidSignature => {
-                    if collect_errors {
-                        errored_tokens.insert(
-                            String::from(path.to_str().unwrap()),
-                            "invalid signature".into(),
-                        );
-                    }
+            Err(err) => {
+                if collect_errors {
+                    errored_tokens.insert(String::from(path.to_str().unwrap()), err);
                 }
-                _ => {
-                    if collect_errors {
-                        errored_tokens
-                            .insert(String::from(path.to_str().unwrap()), "unknown error".into());
-                    }
-                }
-            },
-        };
+            }
+        }
     }
 
     Ok((likely_tokens, errored_tokens))
@@ -174,8 +171,10 @@ pub fn get_local_config_bp(
                 version: 0,
                 wdeployments: vec![],
                 ssh_key: "".to_string(),
-                api_tokens: vec![],
+                api_tokens: HashMap::new(),
                 err_api_tokens: None,
+                default_org: None,
+                known_orgs: vec![],
             };
             let sshpath = base_path.join("ssh").join("tun");
             let exitcode = Command::new("ssh-keygen")
@@ -221,7 +220,24 @@ pub fn append_urls(config: &mut Config) {
 }
 
 
-pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    let rawtok = String::from(
+        String::from_utf8(std::fs::read(&path).unwrap())
+            .unwrap()
+            .trim(),
+    );
+    let org;
+    match get_jwt_claims(&rawtok) {
+        Ok(claims) => {
+            if claims.contains_key("org") {
+                org = Some(String::from(claims["org"].as_str().unwrap()))
+            } else {
+                org = None
+            }
+        }
+        Err(err) => return error(err.as_str()),
+    };
+
     let base_path = get_base_path().unwrap();
     let tokens_dir = base_path.join("tokens");
     if !tokens_dir.exists() {
@@ -250,7 +266,7 @@ pub fn add_token_file(path: &str) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::copy(path, &target_path)?;
         std::fs::remove_file(path)?;
     }
-    Ok(())
+    Ok(org)
 }
 
 
@@ -305,8 +321,36 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, String> {
+    let alg = PKeyWithDigest {
+        digest: MessageDigest::sha256(),
+        key: PKey::public_key_from_pem(WEBUI_PUBLIC_KEY).unwrap(),
+    };
+    let now = std::time::SystemTime::now();
+    let utime = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let result: Result<BTreeMap<String, serde_json::Value>, jwt::error::Error> =
+        rawtok.verify_with_key(&alg);
+    match result {
+        Ok(claims) => {
+            let exp = claims["exp"].as_u64().unwrap();
+            if exp < utime {
+                Err("expired".into())
+            } else {
+                Ok(claims)
+            }
+        }
+        Err(err) => match err {
+            jwt::error::Error::InvalidSignature => Err("invalid signature".into()),
+            _ => Err("unknown error".into()),
+        },
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use tempfile::tempdir;
 
     use super::find_id_prefix;
@@ -328,8 +372,10 @@ mod tests {
             version: 0,
             wdeployments: vec![],
             ssh_key: "".to_string(),
-            api_tokens: vec![],
+            api_tokens: HashMap::new(),
             err_api_tokens: None,
+            default_org: None,
+            known_orgs: vec![],
         };
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
 

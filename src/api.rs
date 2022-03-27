@@ -95,7 +95,6 @@ impl std::fmt::Display for AddOn {
 #[derive(Clone)]
 pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
-    default_token_index: Option<usize>,
     cached_api_token: Option<String>,
     origin: String,
     wdid_tab: Option<HashMap<String, Addr<WSClient>>>,
@@ -142,7 +141,9 @@ async fn get_access_rules_a(
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
-        let origin = option_env!("REROBOTS_ORIGIN").unwrap_or("https://api.rerobots.net").to_string();
+        let origin = option_env!("REROBOTS_ORIGIN")
+            .unwrap_or("https://api.rerobots.net")
+            .to_string();
 
         #[cfg(test)]
         let origin = mockito::server_url();
@@ -150,7 +151,6 @@ impl HSAPIClient {
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
                 local_config: Some(local_config),
-                default_token_index: None,
                 cached_api_token: None,
                 origin,
                 wdid_tab: None,
@@ -158,7 +158,6 @@ impl HSAPIClient {
             Err(_) => {
                 return HSAPIClient {
                     local_config: None,
-                    default_token_index: None,
                     cached_api_token: None,
                     origin,
                     wdid_tab: None,
@@ -167,11 +166,14 @@ impl HSAPIClient {
         };
 
         if let Some(local_config) = &hsclient.local_config {
-            if !local_config.api_tokens.is_empty() {
-                hsclient.default_token_index = Some(0);
-                let raw_tok =
-                    std::fs::read(&local_config.api_tokens[hsclient.default_token_index.unwrap()])
-                        .unwrap();
+            let org_name = match &local_config.default_org {
+                Some(default_org) => default_org.as_str(),
+                None => "()",
+            };
+            if local_config.api_tokens.contains_key(org_name)
+                && !local_config.api_tokens[org_name].is_empty()
+            {
+                let raw_tok = std::fs::read(&local_config.api_tokens[org_name][0]).unwrap();
                 let tok = String::from_utf8(raw_tok).unwrap();
                 hsclient.cached_api_token = Some(tok);
             }
@@ -750,7 +752,7 @@ impl HSAPIClient {
 
 #[derive(PartialEq, Debug, Clone)]
 enum ConnType {
-    SSHTUN,
+    SshTun,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -908,7 +910,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 let m = CWorkerCommand {
                     command: CWorkerCommandType::InstanceLaunch,
                     instance_id: String::from(payload["id"].as_str().unwrap()),
-                    conntype: Some(ConnType::SSHTUN), // TODO: Support ct != sshtun
+                    conntype: Some(ConnType::SshTun), // TODO: Support ct != sshtun
                     publickey: Some(String::from(payload["pr"].as_str().unwrap())),
                 };
                 self.worker_req.send(m).unwrap();

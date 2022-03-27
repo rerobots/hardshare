@@ -68,9 +68,9 @@ impl CliError {
 
 #[derive(PartialEq, Debug)]
 enum PrintingFormat {
-    DEFAULT,
-    YAML,
-    JSON,
+    Default,
+    Yaml,
+    Json,
 }
 
 
@@ -90,12 +90,12 @@ fn print_config_w<T: Write>(
     remote: &Option<serde_json::Value>,
     pformat: PrintingFormat,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if pformat != PrintingFormat::DEFAULT {
+    if pformat != PrintingFormat::Default {
         fn serializer<T: Serialize>(x: &T, pformat: PrintingFormat) -> String {
-            if pformat == PrintingFormat::JSON {
+            if pformat == PrintingFormat::Json {
                 serde_json::to_string(x).unwrap()
             } else {
-                // if pformat == PrintingFormat::YAML
+                // if pformat == PrintingFormat::Yaml
                 serde_yaml::to_string(x).unwrap()
             }
         }
@@ -138,12 +138,29 @@ fn print_config_w<T: Write>(
         }
     }
 
+    write!(f, "\ndefault org: ")?;
+    match &local.default_org {
+        Some(dorg) => writeln!(f, "{}", dorg),
+        None => writeln!(f, "(none)"),
+    };
+
     writeln!(f, "\nfound API tokens:")?;
     if local.api_tokens.is_empty() {
         writeln!(f, "\t(none)")?;
     } else {
-        for k in local.api_tokens.iter() {
-            writeln!(f, "\t{}", k)?;
+        if local.api_tokens.contains_key("()") {
+            for path in local.api_tokens["()"].iter() {
+                writeln!(f, "\t{}", path)?;
+            }
+        }
+        for (org, org_tokens) in local.api_tokens.iter() {
+            if org == "()" {
+                continue;
+            }
+            writeln!(f, "\t{}:", org)?;
+            for path in org_tokens.iter() {
+                writeln!(f, "\t\t{}", path)?;
+            }
         }
     }
     if let Some(err_tokens) = &local.err_api_tokens {
@@ -216,9 +233,23 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
         print_config(&local_config, &remote_config, pformat).unwrap();
     } else if let Some(new_token_path) = matches.value_of("new_api_token") {
-        if let Err(err) = mgmt::add_token_file(new_token_path) {
-            return CliError::new_std(err, 1);
+        let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
+            Ok(lc) => lc,
+            Err(err) => return CliError::new_std(err, 1),
+        };
+        match mgmt::add_token_file(new_token_path) {
+            Ok(Some(org_name)) => {
+                if !local_config.known_orgs.contains(&org_name) {
+                    local_config.known_orgs.push(org_name);
+                }
+            }
+            Ok(None) => {}
+            Err(err) => return CliError::new_std(err, 1),
         }
+        return match mgmt::modify_local(&local_config) {
+            Err(err) => CliError::new_std(err, 1),
+            Ok(()) => Ok(()),
+        };
     } else if matches.is_present("prune_err_tokens") {
         let local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
@@ -392,7 +423,7 @@ fn config_addon_subcommand(
             Ok(r) => r,
             Err(err) => return CliError::new_std(err, 1),
         };
-        if pformat == PrintingFormat::JSON {
+        if pformat == PrintingFormat::Json {
             println!("{}", serde_json::to_string(&addon_config).unwrap())
         } else {
             println!("{}", serde_yaml::to_string(&addon_config).unwrap())
@@ -536,6 +567,24 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let mut local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+    let org_name = String::from(matches.value_of("org_name").unwrap());
+    if local_config.known_orgs.contains(&org_name) {
+        local_config.default_org = Some(org_name);
+    } else {
+        return CliError::new(format!("unknown organization \"{}\"", org_name).as_str(), 1);
+    }
+    return match mgmt::modify_local(&local_config) {
+        Err(err) => CliError::new_std(err, 1),
+        Ok(()) => Ok(()),
+    };
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -640,7 +689,12 @@ pub fn main() -> Result<(), CliError> {
                     .about("Register new workspace deployment")
                     .arg(Arg::with_name("permit_more")
                          .long("permit-more")
-                         .help("Permits registration of more than 1 wdeployment; default is to fail if local configuration already has wdeployment declared")));
+                         .help("Permits registration of more than 1 wdeployment; default is to fail if local configuration already has wdeployment declared")))
+        .subcommand(SubCommand::with_name("declare-org")
+                    .about("Declare default organization for commands; for example, `register` will mark the owner as this organization or, if none, the user")
+                    .arg(Arg::with_name("org_name")
+                         .value_name("ORG")))
+        ;
 
     let matches = app.get_matches();
 
@@ -656,9 +710,9 @@ pub fn main() -> Result<(), CliError> {
         Some(given_pformat) => {
             let given_pformat_lower = given_pformat.to_lowercase();
             if given_pformat_lower == "json" {
-                PrintingFormat::JSON
+                PrintingFormat::Json
             } else if given_pformat_lower == "yaml" {
-                PrintingFormat::YAML
+                PrintingFormat::Yaml
             } else {
                 return CliError::new(
                     format!("unrecognized format: {}", given_pformat).as_str(),
@@ -666,7 +720,7 @@ pub fn main() -> Result<(), CliError> {
                 );
             }
         }
-        None => PrintingFormat::DEFAULT,
+        None => PrintingFormat::Default,
     };
 
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
@@ -683,6 +737,8 @@ pub fn main() -> Result<(), CliError> {
         return stop_ad_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("register") {
         return register_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("declare-org") {
+        return declare_default_org_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
@@ -707,7 +763,7 @@ mod tests {
         let lconf = mgmt::get_local_config_bp(&base_path, true, false).unwrap();
 
         let mut buf: Vec<u8> = vec![];
-        print_config_w(&mut buf, &lconf, &None, PrintingFormat::JSON).unwrap();
+        print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json).unwrap();
         let buf_parsing_result: Result<serde_json::Value, serde_json::Error> =
             serde_json::from_slice(&buf);
         assert!(buf_parsing_result.is_ok());
