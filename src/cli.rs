@@ -572,12 +572,21 @@ fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliE
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
     };
-    let org_name = String::from(matches.value_of("org_name").unwrap());
-    if local_config.known_orgs.contains(&org_name) {
-        local_config.default_org = Some(org_name);
-    } else {
-        return CliError::new(format!("unknown organization \"{}\"", org_name).as_str(), 1);
-    }
+    let org_name = match matches.value_of("org_name") {
+        Some(n) => {
+            if n.is_empty() {
+                None
+            } else {
+                let n = String::from(n);
+                if !local_config.known_orgs.contains(&n) {
+                    return CliError::new(format!("unknown organization \"{}\"", n).as_str(), 1);
+                }
+                Some(n)
+            }
+        }
+        None => None
+    };
+    local_config.default_org = org_name;
     return match mgmt::modify_local(&local_config) {
         Err(err) => CliError::new_std(err, 1),
         Ok(()) => Ok(()),
