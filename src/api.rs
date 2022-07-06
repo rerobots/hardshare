@@ -174,7 +174,7 @@ impl HSAPIClient {
                 && !local_config.api_tokens[org_name].is_empty()
             {
                 let raw_tok = std::fs::read(&local_config.api_tokens[org_name][0]).unwrap();
-                let tok = String::from_utf8(raw_tok).unwrap();
+                let tok = String::from_utf8(raw_tok).unwrap().trim().to_string();
                 hsclient.cached_api_token = Some(tok);
             }
         }
