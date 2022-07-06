@@ -222,8 +222,7 @@ pub fn append_urls(config: &mut Config) {
 
 pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let rawtok = String::from(
-        String::from_utf8(std::fs::read(&path).unwrap())
-            .unwrap()
+        String::from_utf8(std::fs::read(&path)?)?
             .trim(),
     );
     let org;
