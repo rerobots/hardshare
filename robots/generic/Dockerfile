@@ -8,16 +8,16 @@
 
 FROM ubuntu:18.04
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && apt-get -y install \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install \
        openssh-server \
        openvpn \
        avahi-daemon \
        nano \
     && mkdir -p /var/run/sshd
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && apt-get -y install \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install \
        python3 \
        python3-aiohttp
 
