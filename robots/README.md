@@ -11,4 +11,4 @@ through templates that require some modification on a case-by-case basis.
 generic
 -------
 
-single-host, Ubuntu 18.04 Docker container that is known to work on Raspberry Pi
+single-host, Ubuntu 20.04 Docker container that is known to work on Raspberry Pi
