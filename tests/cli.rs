@@ -28,7 +28,6 @@ fn config_requires_arg() {
 #[test]
 fn add_token_does_not_exist() {
     let ntf = NamedTempFile::new().unwrap();
-    println!("{:?}", ntf.path().join("notexist"));
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd
         .arg("config")
