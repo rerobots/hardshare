@@ -1,0 +1,37 @@
+---
+source: tests/cli.rs
+assertion_line: 26
+expression: "String::from_utf8(output.stdout).unwrap()"
+---
+hardshare 
+Command-line interface for the hardshare client
+
+USAGE:
+    hardshare [FLAGS] [OPTIONS] [SUBCOMMAND]
+
+FLAGS:
+    -h, --help       Prints help information
+    -v, --verbose    Increases verboseness level of logs; ignored if RUST_LOG is
+                     defined
+    -V, --version    Prints version number and exits
+
+OPTIONS:
+        --format <FORMAT>    special output formatting (default is no special
+                             formatting); options: YAML , JSON
+
+SUBCOMMANDS:
+    ad              Advertise availability, accept new instances
+    config          Manage local and remote configuration
+    config-addon    Manage add-ons (mistyproxy, vnc, ...)
+    declare-org     Declare default organization for commands; for example,
+                    `register` will mark the owner as this organization or,
+                    if none, the user
+    help            Prints this message or the help of the given
+                    subcommand(s)
+    register        Register new workspace deployment
+    rules           Modify access rules (also known as capabilities or
+                    permissions)
+    stop-ad         Mark as unavailable; optionally wait for current
+                    instance to finish
+    version         Prints version number and exits
+
