@@ -1,0 +1,38 @@
+---
+source: tests/cli.rs
+assertion_line: 36
+expression: "String::from_utf8(output.stdout).unwrap()"
+---
+hardshare-config 
+Manage local and remote configuration
+
+USAGE:
+    hardshare config [FLAGS] [OPTIONS] [ID]
+
+FLAGS:
+    -c, --create               If no local configuration is found, then create
+                               one
+    -h, --help                 Prints help information
+        --include-dissolved    Include configuration data of dissolved workspace
+                               deployments
+    -l, --list                 Lists configuration
+        --local                Only show local configuration data
+    -p, --prune                delete files in local API tokens directory that
+                               are not valid; to get list of files with errors,
+                               try `--list`
+    -V, --version              Prints version information
+
+OPTIONS:
+        --cprovider <CPROVIDER>
+            select a container provider: docker, podman, proxy
+
+        --assign-image <IMG>
+            assign image for cprovider to use (advanced option)
+
+        --add-token <FILE>         add new API token
+
+ARGS:
+    <ID>    id of workspace deployment for configuration changes (can be
+            unique prefix); this argument is not required if there is only 1
+            workspace deployment
+

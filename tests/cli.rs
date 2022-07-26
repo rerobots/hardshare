@@ -28,6 +28,16 @@ fn prints_help() {
 
 
 #[test]
+fn prints_help_config() {
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("help").arg("config").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!(String::from_utf8(output.stdout).unwrap());
+}
+
+
+#[test]
 fn config_requires_arg() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd.arg("config").assert();
