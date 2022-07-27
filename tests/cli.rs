@@ -24,6 +24,20 @@ fn prints_help() {
     let output = assert.get_output().clone();
     assert.success();
     insta::assert_display_snapshot!(String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: -h
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("-h").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help", String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: --help
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("--help").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help", String::from_utf8(output.stdout).unwrap());
 }
 
 
@@ -34,6 +48,20 @@ fn prints_help_config() {
     let output = assert.get_output().clone();
     assert.success();
     insta::assert_display_snapshot!(String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: -h
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("config").arg("-h").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help_config", String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: --help
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("config").arg("--help").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help_config", String::from_utf8(output.stdout).unwrap());
 }
 
 
