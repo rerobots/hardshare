@@ -1025,4 +1025,25 @@ mod tests {
         let returned_addr = addonsc["ip"].as_str().unwrap();
         assert_eq!(addr, returned_addr);
     }
+
+    #[test]
+    fn register_new() {
+        let expecte_new_wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
+        let path = "/hardshare/register";
+        let expected_res = json!({
+            "id": expecte_new_wdid,
+            "owner": "scott"
+        });
+        let _m = mock("POST", path)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(expected_res.to_string())
+            .create();
+
+        let mut ac = HSAPIClient::new();
+        ac.cached_api_token = Some("fake".to_string());
+        let res = ac.register_new(false).unwrap();
+
+        assert_eq!(res, expecte_new_wdid);
+    }
 }
