@@ -392,6 +392,16 @@ mod tests {
                         "terminate": [],
                         "init_inside": [],
                         "container_name": "rrc"
+                    },
+                    {
+                        "id": "68a1be97-9365-4007-b726-14c56bd69eef",
+                        "owner": "bilbo",
+                        "cprovider": "podman",
+                        "cargs": [],
+                        "image": "rerobots/hs-generic",
+                        "terminate": [],
+                        "init_inside": [],
+                        "container_name": "rrc"
                     }
                 ],
                 "ssh_key": "/home/scott/.rerobots/ssh/tun"
@@ -401,6 +411,8 @@ mod tests {
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
         let wd_index = find_id_prefix(&local_config, Some("2")).unwrap();
         assert_eq!(wd_index, 0);
+        let wd_index = find_id_prefix(&local_config, Some("6")).unwrap();
+        assert_eq!(wd_index, 1);
     }
 
 
