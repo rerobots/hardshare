@@ -69,6 +69,20 @@ pub struct Config {
     pub known_orgs: Vec<String>,
 }
 
+impl Config {
+    pub fn new() -> Config {
+        Config {
+            version: 0,
+            wdeployments: vec![],
+            ssh_key: "".to_string(),
+            api_tokens: HashMap::new(),
+            err_api_tokens: None,
+            default_org: None,
+            known_orgs: vec![],
+        }
+    }
+}
+
 
 fn get_base_path() -> Option<std::path::PathBuf> {
     let home_dir = match home::home_dir() {
@@ -167,15 +181,7 @@ pub fn get_local_config_bp(
     let path = base_path.join("main");
     if !path.exists() {
         if create_if_empty {
-            let mut init = Config {
-                version: 0,
-                wdeployments: vec![],
-                ssh_key: "".to_string(),
-                api_tokens: HashMap::new(),
-                err_api_tokens: None,
-                default_org: None,
-                known_orgs: vec![],
-            };
+            let mut init = Config::new();
             let sshpath = base_path.join("ssh").join("tun");
             let exitcode = Command::new("ssh-keygen")
                 .arg("-N")
@@ -367,15 +373,7 @@ mod tests {
 
     #[test]
     fn find_id() {
-        let local_config = Config {
-            version: 0,
-            wdeployments: vec![],
-            ssh_key: "".to_string(),
-            api_tokens: HashMap::new(),
-            err_api_tokens: None,
-            default_org: None,
-            known_orgs: vec![],
-        };
+        let local_config = Config::new();
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
 
         let local_config: Config = serde_json::from_str(
