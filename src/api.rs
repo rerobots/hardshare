@@ -978,6 +978,7 @@ impl actix::io::WriteHandler<WsProtocolError> for WSClient {}
 mod tests {
     use mockito::mock;
 
+    use super::mgmt;
     use super::AddOn;
     use super::HSAPIClient;
 
@@ -1042,8 +1043,11 @@ mod tests {
 
         let mut ac = HSAPIClient::new();
         ac.cached_api_token = Some("fake".to_string());
-        let res = ac.register_new(false).unwrap();
-
+        ac.local_config = Some(mgmt::Config::new());
+        let res = ac.register_new(true).unwrap();
         assert_eq!(res, expecte_new_wdid);
+
+        let res = ac.register_new(true);
+        assert!(res.is_err());
     }
 }
