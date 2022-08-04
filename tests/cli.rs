@@ -66,6 +66,30 @@ fn prints_help_config() {
 
 
 #[test]
+fn prints_help_register() {
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("help").arg("register").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help_register", String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: -h
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("register").arg("-h").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help_register", String::from_utf8(output.stdout).unwrap());
+
+    // Alternative style: --help
+    let mut cmd = Command::cargo_bin("hardshare").unwrap();
+    let assert = cmd.arg("register").arg("--help").assert();
+    let output = assert.get_output().clone();
+    assert.success();
+    insta::assert_display_snapshot!("prints_help_register", String::from_utf8(output.stdout).unwrap());
+}
+
+
+#[test]
 fn config_requires_arg() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd.arg("config").assert();

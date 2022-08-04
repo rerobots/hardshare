@@ -1,0 +1,18 @@
+---
+source: tests/cli.rs
+assertion_line: 74
+expression: "String::from_utf8(output.stdout).unwrap()"
+---
+hardshare-register 
+Register new workspace deployment
+
+USAGE:
+    hardshare register [FLAGS]
+
+FLAGS:
+    -h, --help           Prints help information
+        --permit-more    Permits registration of more than 1 wdeployment;
+                         default is to fail if local configuration already has
+                         wdeployment declared
+    -V, --version        Prints version information
+
