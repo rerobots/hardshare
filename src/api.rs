@@ -141,13 +141,23 @@ async fn get_access_rules_a(
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
+        #[cfg(test)]
+        let origin = mockito::server_url();
+
+        #[cfg(test)]
+        let mut hsclient = HSAPIClient {
+            local_config: None,
+            cached_api_token: None,
+            origin,
+            wdid_tab: None,
+        };
+
+        #[cfg(not(test))]
         let origin = option_env!("REROBOTS_ORIGIN")
             .unwrap_or("https://api.rerobots.net")
             .to_string();
 
-        #[cfg(test)]
-        let origin = mockito::server_url();
-
+        #[cfg(not(test))]
         let mut hsclient = match mgmt::get_local_config(false, false) {
             Ok(local_config) => HSAPIClient {
                 local_config: Some(local_config),
@@ -743,6 +753,8 @@ impl HSAPIClient {
         let wdid = String::from(new_wd["id"].as_str().unwrap());
         if let Some(local_config) = &mut self.local_config {
             local_config.wdeployments.push(new_wd);
+
+            #[cfg(not(test))]
             mgmt::modify_local(local_config)?;
         }
         Ok(wdid)
@@ -1029,25 +1041,39 @@ mod tests {
 
     #[test]
     fn register_new() {
-        let expecte_new_wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
+        let expected_new_wdids = vec![
+            "68a1be97-9365-4007-b726-14c56bd69eef",
+            "2d6039bc-7c83-4d46-8567-c8df4711c386",
+        ];
+
         let path = "/hardshare/register";
-        let expected_res = json!({
-            "id": expecte_new_wdid,
+        let expected_res: Vec<serde_json::Value> = expected_new_wdids.iter().map(|wdid| json!({
+            "id": wdid,
             "owner": "scott"
-        });
+        })).collect();
         let _m = mock("POST", path)
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(expected_res.to_string())
+            .with_body(expected_res[0].to_string())
+            .create();
+        let _m2 = mock("POST", path)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(expected_res[1].to_string())
             .create();
 
         let mut ac = HSAPIClient::new();
         ac.cached_api_token = Some("fake".to_string());
         ac.local_config = Some(mgmt::Config::new());
         let res = ac.register_new(true).unwrap();
-        assert_eq!(res, expecte_new_wdid);
+        assert_eq!(res, expected_new_wdids[0]);
 
         let res = ac.register_new(true);
         assert!(res.is_err());
+
+        let res = ac.register_new(false);
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), expected_new_wdids[1]);
+        assert_eq!(ac.local_config.unwrap().wdeployments.len(), 2);
     }
 }
