@@ -451,5 +451,8 @@ mod tests {
     fn detect_expired_token() {
         const expired_tok: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJvcmciOiJTdGFnaW5nVXNlclRlYW0iLCJzdWIiOiJzdGFnaW5nX3VzZXIiLCJpc3MiOiJyZXJvYm90cy5uZXQiLCJhdWQiOiJyZXJvYm90cy5uZXQiLCJleHAiOjE2NTg4NjgwMzIsIm5iZiI6MTY1ODgzMjAzMn0.Wq8vZ6XYs-pSmszcchXJPm3PnNGHtyM9ZktbjqMXgXl_TEdDrOH7HBYlYhoyNoyNwK4RkEqBxJLybH2qUmiSL7ljGIpKMhvpg6Rdytlx3tD7g__EeGusGO-4KrvCBGojTtSH4tm8jYxRmZVJXAfyqYqh3ZBickXwG-kWxNlz-vT3oAmVn4oSr5H0cf4WPS95uDo0X0j2nYroHyhHEuBIh2wy-8bcvolMweyKaa4Vo6h-bU4hiqQ3RHXJM7achzw_DIi3_eMVfJzsT1i1TovbCTNicUzwXGJcZJPBsQgU1KhD463rsv8N-o8o0oF3qU61n7oDQJGW8mbtzyFKIopTYZ3njWYZpkELS3ElKHVT92iVbOVlgGaicxxxFeg2Zz7fp6fFQWCZBWuoVwCguyoVG91XnEmk1Dlw7o9Bxmrgpmyyavg2A066CgV4b3YbrJaiOj1p8vITh3cTV2ca4iS2tUegYA1lEyJnmDPu09bdLC-hDR1MTBusu_jMOT7G1L_2z1a-SulgQbUBONU1387jgU6lr-1IoEZfYNVsdXCunqG6tcJXp-RXGQpekwm4wClBXpXGcYslYaIsMNnZrS_te43TYijkXiwZmp4wIFhmm9CcZNJ9vWFlw2KY5p5ilP4uE81a5LcM5jin4FdC1DE3qfJvN7hvYid80JfelsbopNE";
         assert_eq!(get_jwt_claims(expired_tok), Err("expired".into()));
+        let mut tok = String::from(expired_tok);
+        tok.push_str("F");
+        assert_eq!(get_jwt_claims(tok.as_str()), Err("invalid signature".into()));
     }
 }
