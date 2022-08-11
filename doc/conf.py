@@ -17,7 +17,7 @@ source_suffx = '.rst'
 exclude_patterns = ['_build']
 master_doc = 'index'
 
-language = None
+language = 'en'
 pygments_style = 'sphinx'
 html_theme = 'alabaster'
 html_static_path = ['_static']
