@@ -26,7 +26,7 @@ IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
 
 The "rerobots infrastructure" is stuff described at https://help.rerobots.net/
 and includes facilities like `a Python client library
-<https://rerobots-py.readthedocs.io/en/latest/>`_ and sandboxes_.
+<https://pypi.org/project/rerobots/>`_ and sandboxes_.
 
 The hardshare client is the part that manages the lifecycle of remote access,
 including advertising that the robot is available, creating SSH tunnels to a

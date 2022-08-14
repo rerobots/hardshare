@@ -69,11 +69,11 @@ msgstr ""
 msgid ""
 "The \"rerobots infrastructure\" is stuff described at "
 "https://help.rerobots.net/ and includes facilities like `a Python client "
-"library <https://rerobots-py.readthedocs.io/en/latest/>`_ and sandboxes_."
+"library <https://pypi.org/project/rerobots/>`_ and sandboxes_."
 msgstr ""
 "La \"rerobots infraestructura\" se describe en https://help.rerobots.net/ e "
 "incluye herramientas como `un paquete de software de cliente Python <https"
-"://rerobots-py.readthedocs.io/en/latest/>`_ y sandboxes_."
+"://pypi.org/project/rerobots/>`_ y sandboxes_."
 
 #: ../../intro.rst:31
 msgid ""
