@@ -238,6 +238,8 @@ will declare the address. Notice that the above command has a prefix of the ID
 ``2d6039bc-7c83-4d46-8567-c8df4711c387``. For convenience, most ``hardshare``
 commands accept a unique prefix where a workspace deployment ID is required.
 
+Registering more than 1 requires your account to have so many allocated.
+
 
 .. _Blockly: https://developers.google.com/blockly/
 .. _Misty: https://www.mistyrobotics.com/
