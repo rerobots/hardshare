@@ -116,6 +116,7 @@ At this stage, you have a ready-to-use hardshare host. Next:
 * Go to https://rerobots.net/hardshare and create your first sandbox.
 * If you have a PlatformIO_-compatible board (for example, ESP32_), do the :doc:`tutorial_esp32`.
 * If you have a Misty_ robot, do the :doc:`tutorial_misty`.
+* Tell us what you are building! https://rerobots.net/contact
 
 
 .. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
