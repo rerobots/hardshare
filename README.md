@@ -4,7 +4,7 @@ hardshare
 Introduction
 ------------
 
-**hardshare** is a system for sharing your robot hardware through the
+**hardshare** is a system for sharing your hardware through the
 [rerobots](https://rerobots.net) infrastructure.
 
 If you are a new or potential user, then begin reading at https://docs.hardshare.dev/
