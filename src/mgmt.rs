@@ -363,9 +363,9 @@ mod tests {
     use tempfile::tempdir;
 
     use super::find_id_prefix;
+    use super::get_jwt_claims;
     use super::get_local_config_bp;
     use super::list_local_api_tokens_bp;
-    use super::get_jwt_claims;
     use super::Config;
 
 
@@ -453,6 +453,9 @@ mod tests {
         assert_eq!(get_jwt_claims(expired_tok), Err("expired".into()));
         let mut tok = String::from(expired_tok);
         tok.push_str("F");
-        assert_eq!(get_jwt_claims(tok.as_str()), Err("invalid signature".into()));
+        assert_eq!(
+            get_jwt_claims(tok.as_str()),
+            Err("invalid signature".into())
+        );
     }
 }

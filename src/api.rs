@@ -1047,10 +1047,15 @@ mod tests {
         ];
 
         let path = "/hardshare/register";
-        let expected_res: Vec<serde_json::Value> = expected_new_wdids.iter().map(|wdid| json!({
-            "id": wdid,
-            "owner": "scott"
-        })).collect();
+        let expected_res: Vec<serde_json::Value> = expected_new_wdids
+            .iter()
+            .map(|wdid| {
+                json!({
+                    "id": wdid,
+                    "owner": "scott"
+                })
+            })
+            .collect();
         let _m = mock("POST", path)
             .with_status(200)
             .with_header("content-type", "application/json")

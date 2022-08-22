@@ -584,7 +584,7 @@ fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliE
                 Some(n)
             }
         }
-        None => None
+        None => None,
     };
     local_config.default_org = org_name;
     return match mgmt::modify_local(&local_config) {
