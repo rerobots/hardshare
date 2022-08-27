@@ -616,7 +616,6 @@ impl HSAPIClient {
                 .send()
                 .await
                 .map(|resp| ())
-                .map_err(|err| err)
         });
         match res {
             Ok(()) => {
