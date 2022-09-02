@@ -79,7 +79,7 @@ It will look like
 ``https://rerobots.net/workspace/b47cd57c-833b-47c1-964d-79e5e6f00dba`` but with
 a different ID. After requesting the instance, it should go from ``INIT`` to
 ``READY``. If something breaks, for example arriving at ``INIT_FAIL`` status,
-terminate the instance from https://rerobots.net/instances and then read
+then read
 :doc:`install` or :doc:`help`. For example, the first ``INIT`` can appear slow
 because a Docker image is downloaded, :ref:`as described elsewhere
 <ssec:install-preparing-cprovider>`.
