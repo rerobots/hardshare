@@ -55,7 +55,8 @@ you might get a "compute node" from a "cloud computing" company:
    force termination at any time.)
 
 The lifecycle of instances is illustrated below. In summary, every instance
-begins at ``INIT``, can be used while ``READY``, and ends at ``TERMINATED``.
+begins at ``INIT``, can be used while ``READY``. If there is an error during
+initialization, the instance is marked as ``INIT_FAIL``.
 
 For details, read the `rerobots preliminaries <https://help.rerobots.net/prelim.html>`_.
 
