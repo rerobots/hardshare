@@ -56,7 +56,9 @@ you might get a "compute node" from a "cloud computing" company:
 
 The lifecycle of instances is illustrated below. In summary, every instance
 begins at ``INIT``, can be used while ``READY``. If there is an error during
-initialization, the instance is marked as ``INIT_FAIL``.
+initialization, the instance is marked as ``INIT_FAIL``. While ``READY``, the
+instance can be terminated (that is, permanently stopped), either automatically
+when it expires or manually by the user or owner.
 
 For details, read the `rerobots preliminaries <https://help.rerobots.net/prelim.html>`_.
 
