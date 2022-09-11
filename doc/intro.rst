@@ -83,4 +83,4 @@ monitor input and output streams.
 The default configuration of a new hardshare client installation does not
 enforce any contracts. Instances in this case have unfiltered access to
 hardware. This can be a good first choice in trusted settings, such as a team
-working closely together at a company.
+working closely together at the same company.
