@@ -5,8 +5,8 @@ Add-ons
 
 All workspace deployments provided by rerobots_ and all devices provided by
 hardshare users support the core API. Additional features, referred to as
-*add-ons*, can also be made available if sufficient hardware requirements are
-satisfied.
+*add-ons*, can also be provided by hardshare owners if sufficient hardware
+requirements are satisfied.
 
 
 cam
