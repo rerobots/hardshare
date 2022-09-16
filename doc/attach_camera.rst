@@ -23,13 +23,12 @@ through a system package manager first. For example, on Ubuntu::
 
   sudo apt-get install python3-opencv
 
-If that fails, consider reading `detailed instructions to install
-OpenCV`_. Next, try to install `Pillow from PyPI`_::
+If that fails, read `detailed instructions to install OpenCV`_.
+Next, try to install `Pillow from PyPI`_::
 
-  pip3 install Pillow
+  pip install Pillow
 
-or just ``pip``, depending on your Python installation. If that fails, consider
-reading the `Pillow documentation`_.
+If that fails, read the `Pillow documentation`_.
 
 
 Prepare a New Configuration
