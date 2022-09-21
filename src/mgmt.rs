@@ -230,10 +230,7 @@ pub fn append_urls(config: &mut Config) {
 
 
 pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let rawtok = String::from(
-        String::from_utf8(std::fs::read(&path)?)?
-            .trim(),
-    );
+    let rawtok = String::from(String::from_utf8(std::fs::read(&path)?)?.trim());
     let org;
     match get_jwt_claims(&rawtok) {
         Ok(claims) => {
