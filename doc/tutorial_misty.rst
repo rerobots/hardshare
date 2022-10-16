@@ -93,7 +93,7 @@ Make a sandbox
 --------------
 
 At this stage, your workspace deployment with a Misty robot is ready for the
-kind of low-level access demonstrated in the tutorial at https://help.rerobots.net/tutorial_proxy_fixedmisty.html
+kind of low-level access demonstrated in the tutorial at https://docs.rerobots.net/tutorials/proxy_fixedmisty
 
 To provide a faster and simpler (and also more constrained) experience for
 remote users of your Misty, you can make a sandbox.

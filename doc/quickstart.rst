@@ -37,7 +37,7 @@ Create Local Configuration
 
 Get an `API token <https://rerobots.net/tokens>`_ to associate with your
 hardshare client. (Learn how to do this `from the rerobots Web Guide
-<https://help.rerobots.net/webui.html#making-and-revoking-api-tokens>`_.) Then,
+<https://docs.rerobots.net/webui/making-and-revoking-api-tokens>`_.) Then,
 initialize a new local configuration, and add the API token to it::
 
   hardshare config -c

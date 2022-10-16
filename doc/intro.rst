@@ -20,11 +20,11 @@ As illustrated above, the main parts are:
 The word "robot" is broadly interpreted here: essentially, it is a device or
 collection of devices that are connected somehow. The robot and the surrounding
 environment are together known as a `workspace deployment
-<https://help.rerobots.net/prelim.html>`_. Robots that are owned and managed by
+<https://docs.rerobots.net/prelim>`_. Robots that are owned and managed by
 the company rerobots are always presented as workspace deployments with unique
 IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
 
-The "rerobots infrastructure" is stuff described at https://help.rerobots.net/
+The "rerobots infrastructure" is stuff described at https://docs.rerobots.net/
 and includes facilities like `a Python client library
 <https://pypi.org/project/rerobots/>`_ and sandboxes_.
 
@@ -43,7 +43,7 @@ Lifecycle of Instances
 ----------------------
 
 The time during which a user has exclusive access to a workspace deployment is
-known as an `instance <https://help.rerobots.net/prelim.html>`_.  The process of
+known as an `instance <https://docs.rerobots.net/prelim>`_.  The process of
 requesting, getting credentials, and terminating an instance is similar to how
 you might get a "compute node" from a "cloud computing" company:
 
@@ -60,7 +60,7 @@ initialization, the instance is marked as ``INIT_FAIL``. While ``READY``, the
 instance can be terminated (that is, permanently stopped), either automatically
 when it expires or manually by the user or owner.
 
-For details, read the `rerobots preliminaries <https://help.rerobots.net/prelim.html>`_.
+For details, read the `rerobots preliminaries <https://docs.rerobots.net/prelim>`_.
 
 .. image:: figures/instance-lifecycle.svg
 
