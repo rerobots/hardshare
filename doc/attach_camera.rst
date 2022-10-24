@@ -59,6 +59,21 @@ would make the rectangle with corners (190, 133) and (442, 424) available as the
 camera feed for workspace deployment c9f5e2df-f233-4084-9d01-c7f119e3f9a5, and
 the square with corners (500, 500) and (800, 800) would be for 2a789bea-5f46-4dc0-a8a3-bf26759ca329.
 
+Some cameras require additional tuning, such as turning off auto-focus or
+increasing brightness. On Linux hosts, try v4l-utils_. For example, ::
+
+  v4l2-ctl -d /dev/video2 --all
+
+will result in a dump of all information about the camera.  Continuing this
+example, a feature like automatic focusing appears as a parameter::
+
+  focus_auto 0x009a090c (bool)   : default=1 value=1
+
+Then, to turn it off, ::
+
+  v4l2-ctl -d /dev/video2 -c focus_auto=0
+
+
 Attach and Stop Cameras
 -----------------------
 
@@ -94,3 +109,4 @@ all ``attach-camera`` background processes::
 .. _Pillow documentation: https://pillow.readthedocs.io/en/stable/
 .. _Pillow from PyPI: https://pypi.org/project/Pillow/
 .. _OpenCV: https://opencv.org/
+.. _v4l-utils: https://www.linuxtv.org/wiki/index.php/V4l-utils
