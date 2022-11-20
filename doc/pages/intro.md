@@ -1,14 +1,16 @@
-Introduction
-============
+---
+title: Introduction
+---
+
+# Introduction
 
 This page introduces concepts and technical aspects of **hardshare**. If you
-just want to get started, skip to the :doc:`quickstart`.
+just want to get started, skip to the [quickstart](/quickstart).
 
 
-Overview
---------
+## Overview
 
-.. image:: figures/hardshare-overview.svg
+![overview](figures/hardshare-overview.svg)
 
 As illustrated above, the main parts are:
 
@@ -19,14 +21,15 @@ As illustrated above, the main parts are:
 
 The word "robot" is broadly interpreted here: essentially, it is a device or
 collection of devices that are connected somehow. The robot and the surrounding
-environment are together known as a `workspace deployment
-<https://docs.rerobots.net/prelim>`_. Robots that are owned and managed by
+environment are together known as a [workspace deployment](
+https://docs.rerobots.net/prelim). Robots that are owned and managed by
 the company rerobots are always presented as workspace deployments with unique
 IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
 
 The "rerobots infrastructure" is stuff described at https://docs.rerobots.net/
-and includes facilities like `a Python client library
-<https://pypi.org/project/rerobots/>`_ and sandboxes_.
+and includes facilities like [a Python client library](
+https://pypi.org/project/rerobots) and [sandboxes](
+https://rerobots.net/sandbox).
 
 The hardshare client is the part that manages the lifecycle of remote access,
 including advertising that the robot is available, creating SSH tunnels to a
@@ -39,11 +42,10 @@ Remote users do not necessarily have rerobots accounts. The kinds of access that
 are possible depend on the permissions assigned by the owner.
 
 
-Lifecycle of Instances
-----------------------
+## Lifecycle of Instances
 
 The time during which a user has exclusive access to a workspace deployment is
-known as an `instance <https://docs.rerobots.net/prelim>`_.  The process of
+known as an [instance](https://docs.rerobots.net/prelim).  The process of
 requesting, getting credentials, and terminating an instance is similar to how
 you might get a "compute node" from a "cloud computing" company:
 
@@ -55,23 +57,19 @@ you might get a "compute node" from a "cloud computing" company:
    force termination at any time.)
 
 The lifecycle of instances is illustrated below. In summary, every instance
-begins at ``INIT``, can be used while ``READY``. If there is an error during
-initialization, the instance is marked as ``INIT_FAIL``. While ``READY``, the
+begins at `INIT`, can be used while `READY`. If there is an error during
+initialization, the instance is marked as `INIT_FAIL`. While `READY`, the
 instance can be terminated (that is, permanently stopped), either automatically
 when it expires or manually by the user or owner.
 
-For details, read the `rerobots preliminaries <https://docs.rerobots.net/prelim>`_.
+For details, read the [rerobots preliminaries](https://docs.rerobots.net/prelim).
 
-.. image:: figures/instance-lifecycle.svg
-
-
-.. _sandboxes: https://rerobots.net/sandbox
+![instance lifecycle](figures/instance-lifecycle.svg)
 
 
-Interfaces Around Instances
----------------------------
+## Interfaces Around Instances
 
-.. image:: figures/layers-illustration.svg
+![layers](figures/layers-illustration.svg)
 
 The rerobots/hardshare architecture provides for specifying how hardware appears
 to an instance. If carefully configured, any device can be shared through

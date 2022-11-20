@@ -1,5 +1,8 @@
-Quickstart
-==========
+---
+title: Quickstart
+---
+
+# Quickstart
 
 To get up and running with **hardshare**, try the instructions below.
 
