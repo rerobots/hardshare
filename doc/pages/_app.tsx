@@ -40,6 +40,10 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
             <div id="main-content">
                 <Component {...pageProps} />
             </div>
+            <footer>
+                Copyright &copy; 2022 rerobots, Inc.<br />
+                <a href="https://rerobots.net/site/terms-of-service">terms of service</a> <a href="https://rerobots.net/contact">contact</a>
+            </footer>
         </>
     );
 }
