@@ -1,157 +1,174 @@
-Installation Instructions
-=========================
+---
+title: Installation Instructions
+---
 
-Summary
--------
+# Installation Instructions
 
-The goals of this page are to provide more detail than :doc:`quickstart` and to
-treat special cases. If :doc:`quickstart` worked for you, then you can safely
+## Summary
+
+The goals of this page are to provide more detail than [quickstart](/quickstart) and to
+treat special cases. If [quickstart](/quickstart) worked for you, then you can safely
 skip this page.
 
 The details vary depending upon the hardware that you want to share. These
 instructions are work in progress, and contributions and feedback are welcome.
-Please open a ticket at https://github.com/rerobots/hardshare/issues
+Please open a ticket at <https://github.com/rerobots/hardshare/issues>
 
 Installation instructions are provided for modern GNU/Linux distributions, such
 as Ubuntu_. We are working to support other kinds of hosts, including Windows,
 macOS, and FreeBSD.
-If your host is not supported well, `please tell us <https://rerobots.net/contact>`_.
+If your host is not supported well, [please tell us](https://rerobots.net/contact).
 
 
-Main Aspects
-------------
+## Main Aspects
 
-The main aspects to an operational ``hardshare`` installation:
+The main aspects to an operational `hardshare` installation:
 
 1. API token for a rerobots_ user account,
-2. ``hardshare`` client,
+2. `hardshare` client,
 3. a container provider (also known as *cprovider*),
 4. rules around instance initialization, termination, and filtering.
 
-To begin, initialize a new configuration::
+To begin, initialize a new configuration
 
-  hardshare config -c
+```bash
+hardshare config -c
+```
 
 
 .. _ssec:api-tokens:
 
-API Tokens
-``````````
+### API Tokens
 
 Instructions about managing API tokens are `in the rerobots Web Guide
 <https://docs.rerobots.net/webui/making-and-revoking-api-tokens>`_. The
 token that you create at https://rerobots.net/tokens and download is saved to
 your local hardshare configuration. As such, the default expiration time might
-be too small for your application. Download the token, and add it::
+be too small for your application. Download the token, and add it
 
-  hardshare config --add-token path/to/your/jwt.txt
+```bash
+hardshare config --add-token path/to/your/jwt.txt
+```
 
 
-Containers
-``````````
+### Containers
 
 Hardshare shares hardware among remote users through containers. The term
 *container* in the context of hardshare includes Linux containers. Supporting
 software that facilitates containers in hardshare are known *cproviders*. For new
 users, Docker is a good first cprovider to try and is the default in a
-newly installed ``hardshare`` client configuration.
+newly installed `hardshare` client configuration.
 
-Finally, the primary client is implemented in Python and `available via PyPI
-<https://pypi.org/project/hardshare/>`_::
+Finally, the primary client is implemented in Python and [available via PyPI](
+https://pypi.org/project/hardshare/)
 
-  pip install hardshare
+```bash
+pip install hardshare
+```
 
-or ``pipenv install hardshare`` if Pipenv_ is installed.
+or `pipenv install hardshare` if Pipenv_ is installed.
 If it succeeded, then you should be able to get the version from the
-command-line interface (CLI)::
+command-line interface (CLI)
 
-  hardshare version
+```bash
+hardshare version
+```
 
 
 .. _ssec:install-preparing-cprovider:
 
-Prepare a cprovider
--------------------
+## Prepare a cprovider
 
 .. _ssec:preparing-docker-cprovider:
 
-Docker
-``````
+### Docker
 
 In most cases, Docker images are available via Docker Hub. The correct image to
-use depends on your host architecture. On Linux, you can do ::
+use depends on your host architecture. On Linux, you can do
 
-  uname -m
+```bash
+uname -m
+```
 
-to find this. For example, on Raspberry Pi this would be ``armv7l``, so Docker
-image tags that begin with ``armv7l-`` can be used. To get the latest release of
-the base generic image::
+to find this. For example, on Raspberry Pi this would be `armv7l`, so Docker
+image tags that begin with `armv7l-` can be used. To get the latest release of
+the base generic image
 
-  docker pull rerobots/hs-generic:armv7l-latest
+```bash
+docker pull rerobots/hs-generic:armv7l-latest
+```
 
 which pulls the image from `Docker Hub <https://hub.docker.com/r/rerobots/hs-generic>`_.
-To declare this image in the local hardshare configuration::
+To declare this image in the local hardshare configuration
 
-  hardshare config --assign-image rerobots/hs-generic:armv7l-latest
+```bash
+hardshare config --assign-image rerobots/hs-generic:armv7l-latest
+```
 
-Many consumer "desktop" and "laptop" computers have the ``x86_64`` architecture,
-so the corresponding image is instead ``rerobots/hs-generic:x86_64-latest``.
+Many consumer "desktop" and "laptop" computers have the `x86_64` architecture,
+so the corresponding image is instead `rerobots/hs-generic:x86_64-latest`.
 
 Images in this registry are defined by Dockerfiles `under the directory robots/
 of the sourcetree`_.  To build the image from source files, use the command
-given in the comments of the Dockerfile. For example, ::
+given in the comments of the Dockerfile. For example,
 
-  docker build -t rerobots/hs-generic:latest -f Dockerfile .
+```bash
+docker build -t rerobots/hs-generic:latest -f Dockerfile .
+```
 
 
-Podman
-``````
+### Podman
 
-For many operations, podman_ is a drop-in replacement for ``docker``. To switch
-to it with an existing hardshare configuration (created as described above), ::
+For many operations, podman_ is a drop-in replacement for `docker`. To switch
+to it with an existing hardshare configuration (created as described above),
 
-  hardshare config --cprovider podman
+```bash
+hardshare config --cprovider podman
+```
 
 Then, :ref:`the section about Docker <ssec:preparing-docker-cprovider>` can be
-followed by replacing ``docker`` with ``podman``.
+followed by replacing `docker` with `podman`.
 
 
-Include Devices
----------------
+## Include Devices
 
-For example, ::
+For example,
 
-  hardshare config --add-raw-device /dev/ttyUSB0
+```bash
+hardshare config --add-raw-device /dev/ttyUSB0
+```
 
 
-Access Rules
-------------
+## Access Rules
 
 Each robot shared through rerobots_ is subject to access rules about who can do
 what with it. These rules are said to define *capabilities*. The decision
-sequence for a user ``username`` trying to perform some ``action`` is the
+sequence for a user `username` trying to perform some `action` is the
 following:
 
-1. if there is a rule about ``action`` explicitly for ``username``, then apply it;
-2. else, if there is a rule about  ``action`` that is for a class of users of which ``username`` is a member, then apply it;
-3. else, if there is a rule about ``action`` that targets all users (indicated by ``*``), then apply it;
+1. if there is a rule about `action` explicitly for `username`, then apply it;
+2. else, if there is a rule about  `action` that is for a class of users of which `username` is a member, then apply it;
+3. else, if there is a rule about `action` that targets all users (indicated by `*`), then apply it;
 4. else (no match), default to not permit.
 
 The most simple kind of rule is whether or not to allow someone to remotely
 access a device. When a new device is registered, a single rule is created that
 permits only you (i.e., your user account) to create instances. To get the list
-of access rules::
+of access rules
 
-  hardshare rules -l
+```bash
+hardshare rules -l
+```
 
-which should only have 1 item under ``rules``: a capability ``CAP_INSTANTIATE``
-and your username. To allow other users::
+which should only have 1 item under `rules`: a capability `CAP_INSTANTIATE`
+and your username. To allow other users
 
-  hardshare rules --permit-all
+```bash
+hardshare rules --permit-all
+```
 
 
-What Next?
-----------
+## What Next?
 
 At this stage, you have a ready-to-use hardshare host. Next:
 
