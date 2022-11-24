@@ -52,7 +52,7 @@ of the rerobots API for worknig with VNC servers in instances. An example with
 HackRF_ hardware together with a window of `GNU Radio`_ embedded in a sandbox is
 shown in the figure below.
 
-.. image:: figures/screenshot-vnc-hackrf.jpg
+![screenshot of VNC with HackRF](figures/screenshot-vnc-hackrf.jpg)
 
 At this time, the sandbox kind `vnc` is basesd on noVNC_ and requires
 instances created from an image derived from Dockerfile-vnc `under the directory
