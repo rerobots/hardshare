@@ -1,8 +1,10 @@
-Attach External Camera
-======================
+---
+title: Attach External Camera
+---
 
-Summary
--------
+# Attach External Camera
+
+## Summary
 
 Besides :doc:`addons` like ``cam`` that stream video via the device within an
 instance, hardshare provides for presenting images from a camera not available
@@ -10,8 +12,7 @@ inside the instance. Furthermore, rectangular subsets of this image can be shown
 for different workspaces.
 
 
-Prerequisites
--------------
+## Prerequisites
 
 Streaming from a video camera requires 2 additional packages:
 
@@ -31,8 +32,7 @@ Next, try to install `Pillow from PyPI`_::
 If that fails, read the `Pillow documentation`_.
 
 
-Prepare a New Configuration
----------------------------
+## Prepare a New Configuration
 
 If you have remote access to the array of devices, then the following process
 should suffice to create a new configuration:
@@ -74,8 +74,7 @@ Then, to turn it off, ::
   v4l2-ctl -d /dev/video2 -c focus_auto=0
 
 
-Attach and Stop Cameras
------------------------
+## Attach and Stop Cameras
 
 The contents of a map file is provided to the hardshare daemon via the
 command-line argument ``--crop``, e.g., ::

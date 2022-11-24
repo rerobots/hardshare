@@ -1,5 +1,8 @@
-Tutorial: ESP32
-===============
+---
+title: "Tutorial: ESP32"
+---
+
+# Tutorial: ESP32
 
 This tutorial begins where :doc:`quickstart` ended. Using ESP32-DevKitC_ as an
 example, this tutorial provides typical preparation for sharing a
@@ -11,13 +14,12 @@ PlatformIO_-compatible board via hardshare:
 4. attach a camera to the workspace,
 5. create a sandbox with example code, as shown in the figure below.
 
-.. image:: figures/screenshot-esp32-20201215.jpg
+![screenshot](figures/screenshot-esp32-20201215.jpg)
 
 
 .. highlight:: none
 
-Prerequisites
--------------
+## Prerequisites
 
 Before sharing a device via hardshare, check that you can work with it directly.
 The main intuition of hardshare is to add reproducibility to a workspace that is
@@ -45,8 +47,7 @@ serial line is broken), then you must debug it before proceeding with this
 hardshare tutorial.
 
 
-Prepare Docker image
---------------------
+## Prepare Docker image
 
 In the context of terms from the :doc:`intro`, ESP32 is presented as part of a
 workspace deployment that you have registered (``hardshare register`` in the
@@ -108,8 +109,7 @@ Finally, assign this image to be used by hardshare when creating new instances::
   hardshare config --assign-image hs-esp32-tutorial
 
 
-Add USB device to hardshare configuration
------------------------------------------
+## Add USB device to hardshare configuration
 
 For example, connecting a ESP32-DevKitC via USB port to a Linux host results in
 the following log messages::
@@ -142,8 +142,7 @@ added to the local hardshare configuration::
   hardshare config --add-raw-device /dev/ttyUSB0
 
 
-On security
------------
+## On security
 
 For the purposes of this tutorial, you can address security by deciding who your
 remote users will be and what (if anything) is valuable about the host computer.
@@ -180,8 +179,7 @@ hardshare instances to prevent LAN destinations::
   sudo iptables -I FORWARD -s 172.17.0.0/16 -d 192.168.1.1/32 -j ACCEPT
 
 
-Termination scripts
--------------------
+## Termination scripts
 
 You have the choice of executing a script at the end of every instance.
 Intuitively, this script provides automatic clean-up of a workspace to prepare
@@ -203,8 +201,7 @@ configuration; for example, ::
   hardshare config --add-terminate-prog /home/scott/hs/terminate.sh
 
 
-Stream video
-------------
+## Stream video
 
 For most users, streaming video is most easily achieved with the command
 ``attach-camera`` as described in the section: :doc:`attach_camera`. After
@@ -217,8 +214,7 @@ active instance with your hardshare client. Thus, the above command can succeed
 without you noticing any activity on your camera.
 
 
-Make a sandbox
---------------
+## Make a sandbox
 
 Go to https://rerobots.net/hardshare and, in the Devices section, find the
 ``id`` corresponding to the workspace deployment listed in your local configuration by ::
