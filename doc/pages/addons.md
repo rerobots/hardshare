@@ -4,7 +4,7 @@ title: Add-ons
 
 # Add-ons
 
-All workspace deployments provided by rerobots_ and all devices provided by
+All workspace deployments provided by [rerobots](https://rerobots.net/) and all devices provided by
 hardshare users support the core API. Additional features, referred to as
 *add-ons*, can also be provided by hardshare owners if sufficient hardware
 requirements are satisfied.
@@ -41,22 +41,22 @@ and to remove it, `hardshare addon-cmdsh --rm`.
 
 To use `cmdsh`, instances must be created from a compatible image. The default
 Docker image `rerobots/hs-generic` (defined by generic/Dockerfile in the
-`under the directory robots/ of the sourcetree`_) supports `cmdsh`.
+[under the directory devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices)) supports `cmdsh`.
 
 
 ## VNC
 
 VNC is a system for remote access to a desktop display, keyboard, and mouse,
-following the protocol defined in `RFC 6143`_. The add-on `vnc` enables parts
+following the protocol defined in [RFC 6143](https://tools.ietf.org/html/rfc6143). The add-on `vnc` enables parts
 of the rerobots API for worknig with VNC servers in instances. An example with
-HackRF_ hardware together with a window of `GNU Radio`_ embedded in a sandbox is
+[HackRF](https://greatscottgadgets.com/hackrf/) hardware together with a window of [GNU Radio](https://www.gnuradio.org/) embedded in a sandbox is
 shown in the figure below.
 
 ![screenshot of VNC with HackRF](figures/screenshot-vnc-hackrf.jpg)
 
-At this time, the sandbox kind `vnc` is basesd on noVNC_ and requires
-instances created from an image derived from Dockerfile-vnc `under the directory
-robots/ of the sourcetree`_.
+At this time, the sandbox kind `vnc` is basesd on [noVNC](https://github.com/novnc/noVNC) and requires
+instances created from an image derived from Dockerfile-vnc [under the directory
+devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices).
 
 To add it from the CLI
 
@@ -69,15 +69,5 @@ and to remove it, `hardshare addon-vnc --rm`.
 
 ## VS Code
 
-The add-on `vscode` provides management for code-server_ on a per instance
-basis. With it, a core `VS Code`_ IDE is available as a kind of sandbox.
-
-
-.. _rerobots: https://rerobots.net/
-.. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
-.. _RFC 6143: https://tools.ietf.org/html/rfc6143
-.. _HackRF: https://greatscottgadgets.com/hackrf/
-.. _GNU Radio: https://www.gnuradio.org/
-.. _noVNC: https://github.com/novnc/noVNC
-.. _code-server: https://github.com/cdr/code-server
-.. _VS Code: https://github.com/Microsoft/vscode
+The add-on `vscode` provides management for [code-server](https://github.com/cdr/code-server) on a per instance
+basis. With it, a core [VS Code](https://github.com/Microsoft/vscode) IDE is available as a kind of sandbox.

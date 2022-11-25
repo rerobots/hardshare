@@ -7,6 +7,8 @@ import type { MarkdocNextJsPageProps } from '@markdoc/next.js';
 import 'prismjs';
 import 'prismjs/themes/prism.css';
 import 'prismjs/components/prism-bash.min';
+import 'prismjs/components/prism-json.min';
+import 'prismjs/components/prism-python.min';
 
 import '../styles/main.css';
 
