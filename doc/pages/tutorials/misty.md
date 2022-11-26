@@ -106,9 +106,7 @@ To provide a faster and simpler (and also more constrained) experience for
 remote users of your Misty, you can make a sandbox.
 A similar arrangement is shown in [the following video](https://vimeo.com/440801712):
 
-.. raw:: html
-
-  <iframe src="https://player.vimeo.com/video/440801712" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+{% vimeo id="440801712" /%}
 
 Go to your hardshare administrative panel at https://rerobots.net/hardshare
 and in the "Sandboxes" section, do "create new".
