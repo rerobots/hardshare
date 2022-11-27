@@ -21,7 +21,7 @@ this file.
 
 Many hardshare users want to share a camera across multiple workspaces, or to
 only expose a subset of the image to their remote users. For these cases,
-`hardshare` provides special features described in the section :doc:`attach_camera`.
+`hardshare` provides special features described in the section [Attach External Camera](/attach_camera).
 
 
 ## cmdsh

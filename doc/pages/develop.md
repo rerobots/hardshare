@@ -1,20 +1,23 @@
-Development
-===========
+---
+title: Development
+---
 
-Building from Source Code
--------------------------
+# Development
 
-To build for own computer::
+## Building from Source Code
 
-  cargo build --release --locked
+To build for own computer
+
+```bash
+cargo build --release --locked
+```
 
 Beware that the resulting program might be dynamically linked to libraries and,
 therefore, not easily copied to a different host. For cross-compiling and
 creating static programs (therefore avoiding linker dependencies at runtime),
-releases are made with cross_.
-For example, to build for Linux on Raspberry Pi, ::
+releases are made with [cross](https://github.com/rust-embedded/cross).
+For example, to build for Linux on Raspberry Pi,
 
-  cross build --target armv7-unknown-linux-musleabihf --release --locked
-
-
-.. _cross: https://github.com/rust-embedded/cross
+```bash
+cross build --target armv7-unknown-linux-musleabihf --release --locked
+```

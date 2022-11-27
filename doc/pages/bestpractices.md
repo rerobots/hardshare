@@ -1,8 +1,10 @@
-Best Practices
-==============
+---
+title: Best Practices
+---
 
-Manage wdeployment IDs
-----------------------
+# Best Practices
+
+## Manage wdeployment IDs
 
 With the hardshare client, you can freely create and destroy workspace
 deployments. This process corresponds to creating or destroying a unique ID.

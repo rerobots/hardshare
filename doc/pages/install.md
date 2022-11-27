@@ -6,8 +6,8 @@ title: Installation Instructions
 
 ## Summary
 
-The goals of this page are to provide more detail than [quickstart](/quickstart) and to
-treat special cases. If [quickstart](/quickstart) worked for you, then you can safely
+The goals of this page are to provide more detail than [Quickstart](/quickstart) and to
+treat special cases. If [Quickstart](/quickstart) worked for you, then you can safely
 skip this page.
 
 The details vary depending upon the hardware that you want to share. These
@@ -15,7 +15,7 @@ instructions are work in progress, and contributions and feedback are welcome.
 Please open a ticket at <https://github.com/rerobots/hardshare/issues>
 
 Installation instructions are provided for modern GNU/Linux distributions, such
-as Ubuntu_. We are working to support other kinds of hosts, including Windows,
+as [Ubuntu](https://ubuntu.com/download/desktop). We are working to support other kinds of hosts, including Windows,
 macOS, and FreeBSD.
 If your host is not supported well, [please tell us](https://rerobots.net/contact).
 
@@ -24,7 +24,7 @@ If your host is not supported well, [please tell us](https://rerobots.net/contac
 
 The main aspects to an operational `hardshare` installation:
 
-1. API token for a rerobots_ user account,
+1. API token for a [rerobots](https://rerobots.net/) user account,
 2. `hardshare` client,
 3. a container provider (also known as *cprovider*),
 4. rules around instance initialization, termination, and filtering.
@@ -40,9 +40,9 @@ hardshare config -c
 
 ### API Tokens
 
-Instructions about managing API tokens are `in the rerobots Web Guide
-<https://docs.rerobots.net/webui/making-and-revoking-api-tokens>`_. The
-token that you create at https://rerobots.net/tokens and download is saved to
+Instructions about managing API tokens are [in the rerobots Web Guide](
+https://docs.rerobots.net/webui/making-and-revoking-api-tokens). The
+token that you create at <https://rerobots.net/tokens> and download is saved to
 your local hardshare configuration. As such, the default expiration time might
 be too small for your application. Download the token, and add it
 
@@ -66,7 +66,7 @@ https://pypi.org/project/hardshare/)
 pip install hardshare
 ```
 
-or `pipenv install hardshare` if Pipenv_ is installed.
+or `pipenv install hardshare` if [Pipenv](https://pipenv.pypa.io/) is installed.
 If it succeeded, then you should be able to get the version from the
 command-line interface (CLI)
 
@@ -98,7 +98,7 @@ the base generic image
 docker pull rerobots/hs-generic:armv7l-latest
 ```
 
-which pulls the image from `Docker Hub <https://hub.docker.com/r/rerobots/hs-generic>`_.
+which pulls the image from [Docker Hub](https://hub.docker.com/r/rerobots/hs-generic).
 To declare this image in the local hardshare configuration
 
 ```bash
@@ -108,8 +108,9 @@ hardshare config --assign-image rerobots/hs-generic:armv7l-latest
 Many consumer "desktop" and "laptop" computers have the `x86_64` architecture,
 so the corresponding image is instead `rerobots/hs-generic:x86_64-latest`.
 
-Images in this registry are defined by Dockerfiles `under the directory robots/
-of the sourcetree`_.  To build the image from source files, use the command
+Images in this registry are defined by Dockerfiles [under the directory
+devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices).
+To build the image from source files, use the command
 given in the comments of the Dockerfile. For example,
 
 ```bash
@@ -119,7 +120,7 @@ docker build -t rerobots/hs-generic:latest -f Dockerfile .
 
 ### Podman
 
-For many operations, podman_ is a drop-in replacement for `docker`. To switch
+For many operations, [podman](https://podman.io/) is a drop-in replacement for `docker`. To switch
 to it with an existing hardshare configuration (created as described above),
 
 ```bash
@@ -172,17 +173,7 @@ hardshare rules --permit-all
 
 At this stage, you have a ready-to-use hardshare host. Next:
 
-* :doc:`attach_camera` to provide video streams of your hardware.
+* [Attach External Camera](/attach_camera) to provide video streams of your hardware.
 * Go to https://rerobots.net/hardshare and create your first sandbox.
-* If you have a PlatformIO_-compatible board (for example, ESP32_), do the :doc:`tutorial_esp32`.
-* If you have a Misty_ robot, do the :doc:`tutorial_misty`.
-
-
-.. _rerobots: https://rerobots.net/
-.. _under the directory robots/ of the sourcetree: https://github.com/rerobots/hardshare/tree/master/robots
-.. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
-.. _ESP32: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/
-.. _Misty: https://www.mistyrobotics.com/
-.. _Ubuntu: https://ubuntu.com/download/desktop
-.. _podman: https://podman.io/
-.. _Pipenv: https://pipenv.pypa.io/
+* If you have a [PlatformIO](https://docs.platformio.org/en/latest/what-is-platformio.html)-compatible board (for example, [ESP32](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/), do the [Tutorial: ESP32](/tutorials/esp32).
+* If you have a [Misty](https://www.mistyrobotics.com/) robot, do the [Tutorial: Misty](/tutorials/misty).

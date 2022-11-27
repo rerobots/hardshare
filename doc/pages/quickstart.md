@@ -7,14 +7,14 @@ title: Quickstart
 To get up and running with **hardshare**, try the instructions below.
 
 For more details, including alternative configurations and special cases, read
-[install](/install). To learn basic concepts about **hardshare**, read the
-[intro](/intro).
+[Installation Instructions](/install). To learn basic concepts about **hardshare**, read the
+[Introduction](/intro).
 
 
 ## Preliminaries
 
 Instuctions below are known to work on modern GNU/Linux distributions, for
-example Ubuntu_.
+example [Ubuntu](https://ubuntu.com/download/desktop).
 
 First, get `hardshare`
 
@@ -30,7 +30,7 @@ hardshare version
 ```
 
 A container provider must be installed before `hardshare` can create
-instances. The default is `Docker <https://www.docker.com/get-started>`_. To
+instances. The default is [Docker](https://www.docker.com/get-started). To
 check that you have it
 
 ```bash
@@ -40,9 +40,9 @@ docker version
 
 ## Create Local Configuration
 
-Get an `API token <https://rerobots.net/tokens>`_ to associate with your
-hardshare client. (Learn how to do this `from the rerobots Web Guide
-<https://docs.rerobots.net/webui/making-and-revoking-api-tokens>`_.) Then,
+Get an [API token](https://rerobots.net/tokens) to associate with your
+hardshare client. (Learn how to do this [from the rerobots Web Guide](
+https://docs.rerobots.net/webui/making-and-revoking-api-tokens).) Then,
 initialize a new local configuration, and add the API token to it
 
 ```bash
@@ -95,12 +95,12 @@ It will look like
 a different ID. After requesting the instance, it should go from `INIT` to
 `READY`. If something breaks, for example arriving at `INIT_FAIL` status,
 then read
-[install](/install) or [help](/help). For example, the first `INIT` can appear slow
+[Installation Instructions](/install) or [Get Help](/help). For example, the first `INIT` can appear slow
 because a Docker image is downloaded, :ref:`as described elsewhere
 <ssec:install-preparing-cprovider>`.
 
 Otherwise, congratulations on successful instantiation from your own device!
-Terminate the instance from https://rerobots.net/instances and, from the
+Terminate the instance from <https://rerobots.net/instances> and, from the
 command-line, stop the daemon
 
 ```bash
@@ -131,14 +131,8 @@ hardshare rules --permit-all
 
 At this stage, you have a ready-to-use hardshare host. Next:
 
-* :doc:`attach_camera` to provide video streams of your hardware.
+* [Attach External Camera](/attach_camera) to provide video streams of your hardware.
 * Go to https://rerobots.net/hardshare and create your first sandbox.
-* If you have a PlatformIO_-compatible board (for example, ESP32_), do the :doc:`tutorial_esp32`.
-* If you have a Misty_ robot, do the :doc:`tutorial_misty`.
-* Tell us what you are building! https://rerobots.net/contact
-
-
-.. _PlatformIO: https://docs.platformio.org/en/latest/what-is-platformio.html
-.. _ESP32: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/
-.. _Misty: https://www.mistyrobotics.com/
-.. _Ubuntu: https://ubuntu.com/download/desktop
+* If you have a [PlatformIO](https://docs.platformio.org/en/latest/what-is-platformio.html)-compatible board (for example, [ESP32](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/)), do the [Tutorial: ESP32](/tutorials/esp32).
+* If you have a [Misty](https://www.mistyrobotics.com/) robot, do the [Tutorial: Misty](/tutorials/misty).
+* Tell us what you are building! <https://rerobots.net/contact>
