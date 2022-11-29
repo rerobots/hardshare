@@ -5,7 +5,7 @@ title: Introduction
 # Introduction
 
 This page introduces concepts and technical aspects of **hardshare**. If you
-just want to get started, skip to the [quickstart](/quickstart).
+just want to get started, skip to the [Quickstart](/quickstart).
 
 
 ## Overview
@@ -22,7 +22,7 @@ As illustrated above, the main parts are:
 The word "robot" is broadly interpreted here: essentially, it is a device or
 collection of devices that are connected somehow. The robot and the surrounding
 environment are together known as a [workspace deployment](
-https://docs.rerobots.net/prelim). Robots that are owned and managed by
+https://docs.rerobots.net/intro). Robots that are owned and managed by
 the company rerobots are always presented as workspace deployments with unique
 IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
 
@@ -45,7 +45,7 @@ are possible depend on the permissions assigned by the owner.
 ## Lifecycle of Instances
 
 The time during which a user has exclusive access to a workspace deployment is
-known as an [instance](https://docs.rerobots.net/prelim).  The process of
+known as an [instance](https://docs.rerobots.net/intro).  The process of
 requesting, getting credentials, and terminating an instance is similar to how
 you might get a "compute node" from a "cloud computing" company:
 
@@ -62,7 +62,7 @@ initialization, the instance is marked as `INIT_FAIL`. While `READY`, the
 instance can be terminated (that is, permanently stopped), either automatically
 when it expires or manually by the user or owner.
 
-For details, read the [rerobots preliminaries](https://docs.rerobots.net/prelim).
+For details, read the [rerobots introduction](https://docs.rerobots.net/intro).
 
 ![instance lifecycle](figures/instance-lifecycle.svg)
 
