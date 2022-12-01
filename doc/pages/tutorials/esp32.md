@@ -26,7 +26,7 @@ to a device locally using PlatformIO, then you can allow others to do the same
 remotely.
 
 With this in mind, begin by getting an example from the repository at
-https://github.com/platformio/platform-espressif32
+<https://github.com/platformio/platform-espressif32>
 
 ```bash
 git clone https://github.com/platformio/platform-espressif32.git
