@@ -6,3 +6,4 @@
 *.pem filter=lfs diff=lfs merge=lfs -text
 *.key filter=lfs diff=lfs merge=lfs -text
 *.woff2 filter=lfs diff=lfs merge=lfs -text
+*.ico filter=lfs diff=lfs merge=lfs -text
