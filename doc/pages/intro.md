@@ -26,7 +26,7 @@ https://docs.rerobots.net/intro). Robots that are owned and managed by
 the company rerobots are always presented as workspace deployments with unique
 IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
 
-The "rerobots infrastructure" is stuff described at https://docs.rerobots.net/
+The "rerobots infrastructure" is stuff described at <https://docs.rerobots.net/>
 and includes facilities like [a Python client library](
 https://pypi.org/project/rerobots) and [sandboxes](
 https://rerobots.net/sandbox).
