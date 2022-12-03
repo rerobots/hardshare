@@ -38,18 +38,7 @@ Summary:
 Building Documentation
 ----------------------
 
-    cd doc
-    pip install -r requirements.txt
-    make
-
-The `pip install` call is only required once to get required Python packages. If
-you are working on translations to natural languages besides American English,
-then
-
-    make gettext-update
-
-to generate and update gettext po files. Current translation work is tracked at
-https://github.com/rerobots/hardshare/issues/1
+Go to doc/
 
 
 Building and Testing
