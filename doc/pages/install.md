@@ -36,8 +36,6 @@ hardshare config -c
 ```
 
 
-.. _ssec:api-tokens:
-
 ### API Tokens
 
 Instructions about managing API tokens are [in the rerobots Web Guide](
@@ -75,11 +73,7 @@ hardshare version
 ```
 
 
-.. _ssec:install-preparing-cprovider:
-
 ## Prepare a cprovider
-
-.. _ssec:preparing-docker-cprovider:
 
 ### Docker
 
@@ -127,7 +121,7 @@ to it with an existing hardshare configuration (created as described above),
 hardshare config --cprovider podman
 ```
 
-Then, :ref:`the section about Docker <ssec:preparing-docker-cprovider>` can be
+Then, [the section about Docker](#docker) can be
 followed by replacing `docker` with `podman`.
 
 

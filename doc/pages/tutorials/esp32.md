@@ -69,8 +69,8 @@ the hardshare client](https://github.com/rerobots/hardshare). You can build it y
 can pull the image from [the registry](
 https://hub.docker.com/r/rerobots/hs-generic-platformio/tags) if there is a
 tag corresponding to your host architecture. For details about tag names and
-finding your host architecture, read :ref:`details about preparing Docker
-<ssec:preparing-docker-cprovider>` in the [Installation Instructions](/install).
+finding your host architecture, read [details about preparing Docker](/install#docker)
+in the [Installation Instructions](/install).
 
 Now start a container from it. For example, on a x86_64 host
 

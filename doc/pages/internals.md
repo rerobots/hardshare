@@ -34,7 +34,7 @@ or [GitHub](https://help.github.com/en/github/authenticating-to-github/connectin
 The SSH key is used by the hardshare client in a way that does not motivate
 adding password protection: to create reverse tunnels from rerobots-managed
 servers into containers that you host. Only the public key is copied to the
-rerobots server-side. Furthermore, :ref:`API tokens <ssec:api-tokens>` provide
+rerobots server-side. Furthermore, [API tokens](/install#api-tokens) provide
 for authentication and authorization of the hardshare client with respect to
 your rerobots account. In summary, this SSH key has a technical role and
 provides for encryption, but exposure risk of the secret key small.
