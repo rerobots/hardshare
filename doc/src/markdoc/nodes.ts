@@ -1,5 +1,4 @@
-import { CodeBlock } from '../components';
-import { Link } from '../components';
+import { CodeBlock, Heading, Link } from '../components';
 
 export const link = {
     render: Link,
@@ -18,6 +17,17 @@ export const fence = {
         },
         language: {
             type: String,
+        },
+    },
+};
+
+export const heading = {
+    render: Heading,
+    attributes: {
+        level: {
+            type: Number,
+            required: true,
+            default: 1,
         },
     },
 };
