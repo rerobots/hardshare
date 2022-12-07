@@ -13,8 +13,8 @@ export function Vimeo({ id }: VimeoProps)
           src={`https://player.vimeo.com/video/${id}`}
           width="640"
           height="360"
-          frameborder="0"
-          webkitallowfullscreen mozallowfullscreen allowfullscreen
+          frameBorder="0"
+          allowFullScreen
         >
         </iframe>
     );
