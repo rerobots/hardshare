@@ -81,6 +81,8 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
                 <ul className="navbar-items">
                     <li onClick={possiblyCollapseMenu}><Link href="/intro">introduction</Link></li>
                     <li onClick={possiblyCollapseMenu}><Link href="/quickstart">quickstart</Link></li>
+                    <li onClick={possiblyCollapseMenu}><Link href="/install">installation</Link></li>
+                    <li onClick={possiblyCollapseMenu}><Link href="/help">help</Link></li>
                 </ul>
               </div>
             </nav>
