@@ -6,7 +6,10 @@ title: Development
 
 ## Building from Source Code
 
-To build for own computer
+Clone the repository at <https://github.com/rerobots/hardshare> or download the
+release source files.
+
+To build,
 
 ```bash
 cargo build --release --locked
