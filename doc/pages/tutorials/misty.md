@@ -45,7 +45,7 @@ and notice the path under the section "found API tokens". Now call `rerobots wdi
 to get details associated with your workspace deployment; for example,
 
 ```bash
-$ rerobots -t /home/scott/.rerobots/tokens/jwt.txt wdinfo 2d6039bc-7c83-4d46-8567-c8df4711c386
+# rerobots -t /home/scott/.rerobots/tokens/jwt.txt wdinfo 2d6039bc-7c83-4d46-8567-c8df4711c386
 {
   "id": "2d6039bc-7c83-4d46-8567-c8df4711c386",
   "type": "user_provided",
