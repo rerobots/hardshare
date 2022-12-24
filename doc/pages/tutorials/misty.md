@@ -154,7 +154,7 @@ drive_fwd(mpurl, 2000)
 time.sleep(2)
 
 # Change the color of the chest LED to green
-# https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#changeled
+# https://docs.mistyrobotics.com/misty-ii/web-api/api-reference/#changeled
 res = requests.post(MPURL + '/api/led', json={
     'red': 0,
     'green': 255,
@@ -163,7 +163,7 @@ res = requests.post(MPURL + '/api/led', json={
 assert res.ok, 'response from POST /api/led: {} {}'.format(res.status_code, res.reason)
 
 # Tilt the head forward
-# https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movehead
+# https://docs.mistyrobotics.com/misty-ii/web-api/api-reference/#movehead
 res = requests.post(MPURL + '/api/head', json={
     'Pitch': 20,
     'Roll': 0,
@@ -176,7 +176,7 @@ assert res.ok, 'response from POST /api/head: {} {}'.format(res.status_code, res
 time.sleep(5)
 
 # Tilt the head back
-# https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movehead
+# https://docs.mistyrobotics.com/misty-ii/web-api/api-reference/#movehead
 res = requests.post(MPURL + '/api/head', json={
     'Pitch': 0,
     'Roll': 0,
@@ -186,7 +186,7 @@ res = requests.post(MPURL + '/api/head', json={
 assert res.ok, 'response from POST /api/head: {} {}'.format(res.status_code, res.reason)
 
 # Change the color of the chest LED to purple
-# https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#changeled
+# https://docs.mistyrobotics.com/misty-ii/web-api/api-reference/#changeled
 res = requests.post(MPURL + '/api/led', json={
     'red': 255,
     'green': 0,
@@ -196,7 +196,7 @@ assert res.ok, 'response from POST /api/led: {} {}'.format(res.status_code, res.
 
 
 # Move the arms
-# https://docs.mistyrobotics.com/misty-ii/rest-api/api-reference/#movearms
+# https://docs.mistyrobotics.com/misty-ii/web-api/api-reference/#movearms
 res = requests.post(MPURL + '/api/arms/set', json={
     'LeftArmPosition': -20,
     'RightArmPosition': -20,
