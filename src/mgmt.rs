@@ -174,7 +174,7 @@ pub fn get_local_config_bp(
 ) -> Result<Config, Box<dyn std::error::Error>> {
     if !base_path.exists() {
         if create_if_empty {
-            std::fs::create_dir(&base_path)?;
+            std::fs::create_dir(base_path)?;
             std::fs::create_dir(base_path.join("tokens"))?;
             std::fs::create_dir(base_path.join("ssh"))?;
         } else {
@@ -230,7 +230,7 @@ pub fn append_urls(config: &mut Config) {
 
 
 pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
-    let rawtok = String::from(String::from_utf8(std::fs::read(&path)?)?.trim());
+    let rawtok = String::from(String::from_utf8(std::fs::read(path)?)?.trim());
     let org;
     match get_jwt_claims(&rawtok) {
         Ok(claims) => {

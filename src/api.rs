@@ -725,10 +725,7 @@ impl HSAPIClient {
                 error(format!("server indicated error: {}", resp.status()))
             }
         });
-        if let Err(err) = res {
-            return Err(err);
-        }
-        let mut new_wd = res.unwrap();
+        let mut new_wd = res?;
 
         if !new_wd.contains_key("cprovider") {
             new_wd.insert("cprovider".into(), json!("docker"));
