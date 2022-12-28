@@ -21,10 +21,10 @@ body {
 }
 
 h1 {
-  text-align: left;
-  margin: 0;
-  padding: 0;
-  border: 0;
+    text-align: left;
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
 
 a {
@@ -34,12 +34,12 @@ a {
 a,
 a:hover,
 a:focus {
-  color: #4040BF;
+    color: #4040BF;
 }
 
 a:hover,
 a:focus {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .collapsed {
@@ -47,8 +47,8 @@ a:focus {
 }
 
 .prefix-re {
-  font-weight: bold;
-  color: #284328;
+    font-weight: bold;
+    color: #284328;
 }
 
 .brandText {
@@ -115,13 +115,13 @@ ul.navbar-items li a:focus {
 nav a,
 nav a:hover,
 nav a:focus {
-  color: #284328;
-  text-decoration: none;
-  border: 0;
+    color: #284328;
+    text-decoration: none;
+    border: 0;
 }
 nav a:hover,
 nav a:focus {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 
@@ -157,15 +157,15 @@ img {
 }
 
 #main-content {
-  font-family: Georgia, sans;
-  font-size: 17px;
-  max-width: 60em;
-  padding: 0 6em;
-  margin: 44px 0 64px 0;
+    font-family: Georgia, sans;
+    font-size: 17px;
+    max-width: 60em;
+    padding: 0 6em;
+    margin: 44px 0 64px 0;
 }
 
 h1, h2, h3, h4 {
-  font-family: Georgia, serif;
+    font-family: Georgia, serif;
 }
 
 
