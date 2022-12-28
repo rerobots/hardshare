@@ -41,7 +41,7 @@ cargs: []
 img: rerobots/hs-generic
 ```
 
-indicates the image rerobots/hs-generic:latest ("latest" is implied if not
+indicates the image `rerobots/hs-generic:latest` ("latest" is implied if not
 present). Now, get your host architecture as known to Linux
 
 ```bash
