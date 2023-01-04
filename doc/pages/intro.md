@@ -76,7 +76,7 @@ to an instance. If carefully configured, any device can be shared through
 instances safely and securely. The precise meanings of *safe* and *secure*
 depend on the hardware in the workspace deployment, but the basic organization
 is the same: associate actions with lifecycle events (e.g., initialization), and
-monitor input and output streams.
+filter input and output streams.
 
 The default configuration of a new hardshare client installation does not
 enforce any contracts. Instances in this case have unfiltered access to
