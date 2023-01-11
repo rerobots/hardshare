@@ -4,8 +4,8 @@ title: Maintenance
 
 # Maintenance
 
-This page describes common routines for maintaining hardshare configurations and
-shared devices. Another page provides detailed discussion about [Best Practices](/bestpractices).
+This page describes troubleshooting and best practices for maintaining hardshare
+configurations and shared devices.
 
 
 ## How to find all hardshare processes?
