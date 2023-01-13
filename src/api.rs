@@ -611,11 +611,7 @@ impl HSAPIClient {
         let url = format!("http://{}/start/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");
         let res = actix::SystemRunner::block_on(&mut sys, async {
-            awc::Client::new()
-                .post(url)
-                .send()
-                .await
-                .map(|resp| ())
+            awc::Client::new().post(url).send().await.map(|resp| ())
         });
         match res {
             Ok(()) => {
