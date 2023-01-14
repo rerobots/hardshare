@@ -213,13 +213,12 @@ class WorkspaceInstance:
 
     async def find_tunnelhub(self, ws_send, ws_recv):
         assert self.tunnelhub is None
-        logger.debug('sending TH_SEARCH')
+        logger.debug('sending CREATE_SSHTUN')
         message_id = str(uuid.uuid4())
         payload = {
             'v': 0,
-            'cmd': 'TH_SEARCH',
+            'cmd': 'CREATE_SSHTUN',
             'id': self.instance_id,
-            'mo': self.conntype,
             'mi': message_id,
         }
         if self.tunnelkey_public:
@@ -235,8 +234,8 @@ class WorkspaceInstance:
                 logger.warning('caught {}: {}'.format(type(err), err))
         assert res['v'] == 0
         assert res['id'] == self.instance_id
-        assert res['cmd'] == 'TH_ACCEPT'
-        logger.debug('received TH_ACCEPT for th {} at {}'.format(
+        assert res['cmd'] == 'CREATE_SSHTUN_DONE'
+        logger.debug('received CREATE_SSHTUN_DONE for th {} at {}'.format(
             res['thid'],
             res['ipv4']
         ))

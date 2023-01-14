@@ -481,6 +481,17 @@ class HSAPIClient:
             else:
                 await self.ws_recvmap[self.current.instance_id].put(payload)
 
+        elif payload['cmd'] == 'CREATE_SSHTUN_DONE':
+            if (self.current is None or 'id' not in payload
+                or self.current.instance_id != payload['id']):
+                await ws.send_str(json.dumps({
+                    'v': 0,
+                    'cmd': 'NACK',
+                    'mi': payload['mi'],
+                }))
+            else:
+                await self.ws_recvmap[self.current.instance_id].put(payload)
+
         elif payload['cmd'] == 'TH_PING':
             resp = {
                 'v': 0,
