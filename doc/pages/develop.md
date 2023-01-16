@@ -39,9 +39,11 @@ configuration (`hardshare config -c`) automatically, this section can be
 skipped unless something breaks.
 
 There might already be an SSH key at `~/.ssh/id_rsa`. If not, or if you want to
-create a new pair for this purpose, then::
+create a new pair for this purpose, then
 
-  ssh-keygen
+```bash
+ssh-keygen
+```
 
 to start an interactive process to create a new pair. The default options are
 sufficient here; the prompt "default" is selected by simply pushing ENTER
