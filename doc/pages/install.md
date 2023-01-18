@@ -57,15 +57,8 @@ software that facilitates containers in hardshare are known *cproviders*. For ne
 users, Docker is a good first cprovider to try and is the default in a
 newly installed `hardshare` client configuration.
 
-Finally, the primary client is implemented in Python and [available via PyPI](
-https://pypi.org/project/hardshare/)
-
-```bash
-pip install hardshare
-```
-
-or `pipenv install hardshare` if [Pipenv](https://pipenv.pypa.io/) is installed.
-If it succeeded, then you should be able to get the version from the
+Finally, releases of the client are available at <https://github.com/rerobots/hardshare/releases>
+When installed, you should be able to get the version from the
 command-line interface (CLI)
 
 ```bash
