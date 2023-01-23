@@ -108,7 +108,7 @@ A similar arrangement is shown in [the following video](https://vimeo.com/440801
 
 {% vimeo id="440801712" /%}
 
-Go to your hardshare administrative panel at https://rerobots.net/hardshare
+Go to your hardshare administrative panel at <https://rerobots.net/hardshare>
 and in the "Sandboxes" section, do "create new".
 Select the sandbox kind `misty-py`.
 

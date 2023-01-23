@@ -66,7 +66,7 @@ client to use the key without having to know the password. For this, you should
 configure `ssh-agent`, usage of which is presented in the [OpenBSD manual](
 http://man.openbsd.org/OpenBSD-current/man1/ssh-agent.1).
 If you are new to `ssh-agent`, we recommend reading about basic ideas of how
-it works at http://www.unixwiz.net/techtips/ssh-agent-forwarding.html
+it works at <http://www.unixwiz.net/techtips/ssh-agent-forwarding.html>
 
 Finally, add the SSH secret key path
 

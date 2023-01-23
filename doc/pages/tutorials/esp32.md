@@ -248,7 +248,7 @@ without you noticing any activity on your camera.
 
 ## Make a sandbox
 
-Go to https://rerobots.net/hardshare and, in the Devices section, find the
+Go to <https://rerobots.net/hardshare> and, in the Devices section, find the
 `id` corresponding to the workspace deployment listed in your local configuration by
 
 ```bash
