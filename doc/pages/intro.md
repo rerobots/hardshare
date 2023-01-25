@@ -19,12 +19,15 @@ As illustrated above, the main parts are:
 3. rerobots infrastructure,
 4. remote users.
 
-The word "robot" is broadly interpreted here: essentially, it is a device or
-collection of devices that are connected somehow. The robot and the surrounding
-environment are together known as a [workspace deployment](
-https://docs.rerobots.net/intro). Robots that are owned and managed by
-the company rerobots are always presented as workspace deployments with unique
-IDs.  To share your robot via hardshare, it also must be assigned a unique ID.
+The robot and the surrounding environment are together known as a [workspace
+deployment](https://docs.rerobots.net/intro). Robots that are owned and managed
+by the company rerobots are always presented as workspace deployments with
+unique IDs.  To share your robot via hardshare, it also must be assigned a
+unique ID.
+
+In hardshare, the terms *robot* and *device* are interchangeable. Minimally, it
+is some hardware with output or input. A workspace can have multiple devices (or
+multiple robots).
 
 The "rerobots infrastructure" is stuff described at <https://docs.rerobots.net/>
 and includes facilities like [a Python client library](
