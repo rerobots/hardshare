@@ -118,6 +118,20 @@ Then, [the section about Docker](#docker) can be
 followed by replacing `docker` with `podman`.
 
 
+### LXD
+
+For many operations, [LXD](https://linuxcontainers.org/lxd/) is a drop-in
+replacement for `docker`. To switch to it with an existing hardshare
+configuration (created as described above),
+
+```bash
+hardshare config --cprovider lxd
+```
+
+Then, [the section about Docker](#docker) can be
+followed by replacing `docker` with `lxc`.
+
+
 ## Include Devices
 
 For example,
