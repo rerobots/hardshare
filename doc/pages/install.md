@@ -96,7 +96,7 @@ Many consumer "desktop" and "laptop" computers have the `x86_64` architecture,
 so the corresponding image is instead `rerobots/hs-generic:x86_64-latest`.
 
 Images in this registry are defined by Dockerfiles [under the directory
-devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices).
+devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/main/devices).
 To build the image from source files, use the command
 given in the comments of the Dockerfile. For example,
 

@@ -41,7 +41,7 @@ and to remove it, `hardshare addon-cmdsh --rm`.
 
 To use `cmdsh`, instances must be created from a compatible image. The default
 Docker image `rerobots/hs-generic` (defined by generic/Dockerfile in the
-[under the directory devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices)) supports `cmdsh`.
+[under the directory devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/main/devices)) supports `cmdsh`.
 
 
 ## VNC
@@ -56,7 +56,7 @@ shown in the figure below.
 
 At this time, the sandbox kind `vnc` is basesd on [noVNC](https://github.com/novnc/noVNC) and requires
 instances created from an image derived from Dockerfile-vnc [under the directory
-devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/master/devices).
+devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/main/devices).
 
 To add it from the CLI
 

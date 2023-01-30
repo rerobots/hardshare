@@ -64,7 +64,7 @@ installed. Then, we will build example code in a process that will automatically
 install required packages for that example. Finally, the resulting container
 will be committed as an image that can be re-used.
 
-The base Docker image is defined by [Dockerfile-platformio](https://github.com/rerobots/hardshare/tree/master/robots/generic/Dockerfile-platformio) in the [sourcetree of
+The base Docker image is defined by [Dockerfile-platformio](https://github.com/rerobots/hardshare/tree/main/devices/generic/Dockerfile-platformio) in the [sourcetree of
 the hardshare client](https://github.com/rerobots/hardshare). You can build it yourself from this Dockerfile, or you
 can pull the image from [the registry](
 https://hub.docker.com/r/rerobots/hs-generic-platformio/tags) if there is a
