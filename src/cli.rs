@@ -140,8 +140,8 @@ fn print_config_w<T: Write>(
 
     write!(f, "\ndefault org: ")?;
     match &local.default_org {
-        Some(dorg) => writeln!(f, "{}", dorg),
-        None => writeln!(f, "(none)"),
+        Some(dorg) => writeln!(f, "{}", dorg)?,
+        None => writeln!(f, "(none)")?,
     };
 
     writeln!(f, "\nfound API tokens:")?;
