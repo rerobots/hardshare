@@ -143,8 +143,9 @@ hardshare config --add-raw-device /dev/ttyUSB0
 
 ## Access Rules
 
-Each robot shared through rerobots_ is subject to access rules about who can do
-what with it. These rules are said to define *capabilities*. The decision
+Each robot shared through [rerobots](https://rerobots.net/) is subject to access
+rules about who can do what with it.
+These rules are said to define *capabilities*. The decision
 sequence for a user `username` trying to perform some `action` is the
 following:
 
