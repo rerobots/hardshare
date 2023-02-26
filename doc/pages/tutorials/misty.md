@@ -120,7 +120,8 @@ that is replaced with the `mistyproxy` URL generated for each instance.
 Other sandbox kinds are available for different language runtimes. For example,
 `misty-java` provides a Java runtime. Alternatively, the sandbox can present a
 [Blockly](https://developers.google.com/blockly/) editor if `misty-blockly` is selected. An example is shown in the
-video at <https://vimeo.com/488264658>
+video at <https://vimeo.com/488264658>.
+Read about it at <https://docs.rerobots.net/sandbox/misty-blockly>.
 
 
 ## Example misty-py template
