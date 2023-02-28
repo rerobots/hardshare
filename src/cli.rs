@@ -126,7 +126,10 @@ fn print_config_w<T: Write>(
                 wd["cprovider"].as_str().unwrap(),
                 wd["cargs"]
             )?;
-            if wd["cprovider"] == "docker" || wd["cprovider"] == "podman" {
+            if wd["cprovider"] == "docker"
+                || wd["cprovider"] == "podman"
+                || wd["cprovider"] == "lxd"
+            {
                 writeln!(f, "\timg: {}", wd["image"].as_str().unwrap())?;
             }
             if !wd["terminate"].as_array().unwrap().is_empty() {
@@ -282,9 +285,9 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
         if let Some(cprovider) = matches.value_of("cprovider") {
             let selected_cprovider = cprovider.to_lowercase();
-            if !vec!["docker", "podman", "proxy"].contains(&selected_cprovider.as_str()) {
+            if !vec!["lxd", "docker", "podman", "proxy"].contains(&selected_cprovider.as_str()) {
                 return CliError::new(
-                    "cprovider must be one of the following: docker, podman, proxy",
+                    "cprovider must be one of the following: lxd, docker, podman, proxy",
                     1,
                 );
             }
@@ -308,7 +311,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 let null_img = json!(null);
                 local_config.wdeployments[wd_index].insert("image".into(), null_img);
             } else {
-                // cprovider \in {docker, podman}
+                // cprovider \in {lxd, docker, podman}
                 let default_img = json!("rerobots/hs-generic");
                 if let Some(wd_cprovider_img) = local_config.wdeployments[wd_index].get_mut("image")
                 {
@@ -370,6 +373,8 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
                     let new_image = json!(new_image);
                     local_config.wdeployments[wd_index].insert("image".into(), new_image);
+                }
+                "lxd" => {
                 }
                 _ => {
                     let errmessage = format!("cannot --assign-image for cprovider `{}`", cprovider);
@@ -639,7 +644,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("cprovider")
                          .long("cprovider")
                          .value_name("CPROVIDER")
-                         .help("select a container provider: docker, podman, proxy"))
+                         .help("select a container provider: lxd, docker, podman, proxy"))
                     .arg(Arg::with_name("cprovider_img")
                          .long("assign-image")
                          .value_name("IMG")
