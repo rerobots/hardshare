@@ -24,7 +24,7 @@ FLAGS:
 
 OPTIONS:
         --cprovider <CPROVIDER>
-            select a container provider: docker, podman, proxy
+            select a container provider: lxd, docker, podman, proxy
 
         --assign-image <IMG>
             assign image for cprovider to use (advanced option)
