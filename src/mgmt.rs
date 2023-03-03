@@ -346,7 +346,7 @@ fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, S
         }
         Err(err) => match err {
             jwt::error::Error::InvalidSignature => Err("invalid signature".into()),
-            _ => Err("unknown error".into()),
+            _ => Err(format!("error: {}", err)),
         },
     }
 }
