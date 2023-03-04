@@ -352,9 +352,6 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
-
-                    let new_image = json!(new_image);
-                    local_config.wdeployments[wd_index].insert("image".into(), new_image);
                 }
                 "docker" => {
                     let argv = vec!["docker", "image", "inspect", new_image];
@@ -375,17 +372,35 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
-
-                    let new_image = json!(new_image);
-                    local_config.wdeployments[wd_index].insert("image".into(), new_image);
                 }
                 "lxd" => {
+                    let argv = vec!["lxc", "image", "show", new_image];
+                    let mut prog = Command::new(argv[0]);
+
+                    debug!("exec: {:?}", argv);
+                    let status = prog
+                        .args(&argv[1..])
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .status();
+                    let status = match status {
+                        Ok(s) => s,
+                        Err(err) => return CliError::new_stdio(err, 1),
+                    };
+                    debug!("exit status: {:?}", status);
+
+                    if !status.success() {
+                        return CliError::new("given image name is not recognized by cprovider", 1);
+                    }
                 }
                 _ => {
                     let errmessage = format!("cannot --assign-image for cprovider `{}`", cprovider);
                     return CliError::new(errmessage.as_str(), 1);
                 }
             }
+
+            let new_image = json!(new_image);
+            local_config.wdeployments[wd_index].insert("image".into(), new_image);
 
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
