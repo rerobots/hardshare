@@ -266,6 +266,11 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 }
             }
         }
+    } else if let Some(new_ssh_path) = matches.value_of("new_ssh_path") {
+        match mgmt::add_ssh_path(new_ssh_path) {
+            Ok(()) => {}
+            Err(err) => return CliError::new_std(err, 1),
+        }
     } else if create_if_missing {
         if let Err(err) = mgmt::get_local_config(true, false) {
             return CliError::new_std(err, 1);
@@ -649,6 +654,10 @@ pub fn main() -> Result<(), CliError> {
                          .long("assign-image")
                          .value_name("IMG")
                          .help("assign image for cprovider to use (advanced option)"))
+                    .arg(Arg::with_name("new_ssh_path")
+                         .long("add-ssh-path")
+                         .value_name("FILE")
+                         .help("add path of SSH key pair (does not copy the key)"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))

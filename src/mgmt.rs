@@ -275,6 +275,30 @@ pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::
 }
 
 
+pub fn add_ssh_path(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let target = std::path::Path::new(path).canonicalize()?;
+    if !target.exists() {
+        return error("file does not exist");
+    }
+    let target_public = target.with_extension("pub");
+    if target_public == target {
+        return error("public key file cannot be same as secret key file");
+    }
+    if !target_public.exists() {
+        return error("public key file does not exist");
+    }
+    let mut local_config = match get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return Err(err),
+    };
+    local_config.ssh_key = match target.to_str() {
+        Some(s) => s.into(),
+        None => return error("path not given in UTF-8"),
+    };
+    modify_local(&local_config)
+}
+
+
 pub fn find_id_prefix(
     config: &Config,
     id_prefix: Option<&str>,
