@@ -30,9 +30,11 @@ OPTIONS:
             assign image for cprovider to use (advanced option)
 
         --add-token <FILE>         add new API token
+        --add-ssh-path <FILE>
+            add path of SSH key pair (does not copy the key)
+
 
 ARGS:
     <ID>    id of workspace deployment for configuration changes (can be
             unique prefix); this argument is not required if there is only 1
             workspace deployment
-
