@@ -59,7 +59,7 @@ hardshare register
 
 ## Start Sharing!
 
-Start the daemon
+Start advertising
 
 ```bash
 hardshare ad -d
