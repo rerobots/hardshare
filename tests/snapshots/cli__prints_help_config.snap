@@ -29,6 +29,9 @@ OPTIONS:
         --assign-image <IMG>
             assign image for cprovider to use (advanced option)
 
+        --declare <ID>
+            declare that workspace deployment is hosted here. (This only works
+            if it has been previously registered under the same user account.)
         --add-token <FILE>         add new API token
         --add-ssh-path <FILE>
             add path of SSH key pair (does not copy the key)

@@ -271,6 +271,12 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
             Ok(()) => {}
             Err(err) => return CliError::new_std(err, 1),
         }
+    } else if let Some(declared_wdeployment_id) = matches.value_of("declare_wdeployment_id") {
+        let mut ac = api::HSAPIClient::new();
+        match ac.declare_existing(declared_wdeployment_id) {
+            Ok(()) => {}
+            Err(err) => return CliError::new_std(err, 1),
+        }
     } else if create_if_missing {
         if let Err(err) = mgmt::get_local_config(true, false) {
             return CliError::new_std(err, 1);
@@ -673,6 +679,10 @@ pub fn main() -> Result<(), CliError> {
                          .long("add-ssh-path")
                          .value_name("FILE")
                          .help("add path of SSH key pair (does not copy the key)"))
+                    .arg(Arg::with_name("declare_wdeployment_id")
+                         .long("declare")
+                         .value_name("ID")
+                         .help("declare that workspace deployment is hosted here. (This only works if it has been previously registered under the same user account.)"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))

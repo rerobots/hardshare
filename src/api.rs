@@ -751,6 +751,89 @@ impl HSAPIClient {
         }
         Ok(wdid)
     }
+
+    pub fn declare_existing(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(local_config) = &self.local_config {
+            for wd in local_config.wdeployments.iter() {
+                if wd["id"] == wdid {
+                    return error("attempted to declare workspace deployment that is already declared in local configuration");
+                }
+            }
+        } else {
+            return error("cannot declare existing without initial local configuration. (try `hardshare config --create`)");
+        }
+
+        let api_token = self.cached_api_token.clone();
+        let origin = self.origin.clone();
+        let url = format!("{}/hardshare/list", origin);
+        let mut sys = System::new("wclient");
+
+        let wdid = wdid.to_string();
+        let res = actix::SystemRunner::block_on(&mut sys, async move {
+            let client = create_client(api_token)?;
+
+            let mut resp = client.get(url).send().await?;
+            if resp.status() == 200 {
+                let body = resp.body().await?;
+                let parsed_body: serde_json::Value = serde_json::from_slice(body.as_ref())?;
+                for wd in parsed_body["wdeployments"].as_array().unwrap().iter() {
+                    if wd["id"].as_str().unwrap() == wdid {
+                        let mut matched_wd: HashMap<String, serde_json::Value> = HashMap::new();
+                        matched_wd.insert("id".into(), json!(wd["id"].as_str().unwrap()));
+                        matched_wd.insert(
+                            "owner".into(),
+                            json!(parsed_body["owner"].as_str().unwrap())
+                        );
+                        return Ok(Some(matched_wd));
+                    }
+                }
+                Ok(None)
+            } else if resp.status() == 400 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                error(String::from(payload["error_message"].as_str().unwrap()))
+            } else {
+                error(format!(
+                    "error contacting core API server: {}",
+                    resp.status()
+                ))
+            }
+        });
+
+        let mut matched_wd = match res? {
+            Some(matched_wd) => matched_wd,
+            None => {
+                return error("no previously registered workspace deployments found with given ID")
+            }
+        };
+        if !matched_wd.contains_key("cprovider") {
+            matched_wd.insert("cprovider".into(), json!("docker"));
+        }
+        if !matched_wd.contains_key("cargs") {
+            matched_wd.insert("cargs".into(), json!([]));
+        }
+        if !matched_wd.contains_key("image") {
+            matched_wd.insert("image".into(), json!("rerobots/hs-generic"));
+        }
+        if !matched_wd.contains_key("terminate") {
+            matched_wd.insert("terminate".into(), json!([]));
+        }
+        if !matched_wd.contains_key("init_inside") {
+            matched_wd.insert("init_inside".into(), json!([]));
+        }
+        if !matched_wd.contains_key("container_name") {
+            matched_wd.insert("container_name".into(), json!("rrc"));
+        }
+
+        let wdid = String::from(matched_wd["id"].as_str().unwrap());
+        if let Some(local_config) = &mut self.local_config {
+            local_config.wdeployments.push(matched_wd);
+
+            #[cfg(not(test))]
+            mgmt::modify_local(local_config)?;
+        }
+        Ok(())
+    }
 }
 
 
