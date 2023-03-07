@@ -29,7 +29,7 @@ In hardshare, the terms *robot* and *device* are interchangeable. Minimally, it
 is some hardware with output or input. A workspace can have multiple devices (or
 multiple robots).
 
-The "rerobots infrastructure" is stuff described at <https://docs.rerobots.net/>
+The "rerobots infrastructure" is stuff described at [docs.rerobots.net](https://docs.rerobots.net/)
 and includes facilities like [a Python client library](
 https://pypi.org/project/rerobots) and [sandboxes](
 https://rerobots.net/sandbox).
