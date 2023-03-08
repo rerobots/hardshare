@@ -412,6 +412,60 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Err(err) => CliError::new_std(err, 1),
                 Ok(()) => Ok(()),
             };
+        } else if let Some(raw_device_path) = matches.value_of("raw_device_path") {
+            let device_path = match std::path::Path::new(raw_device_path).canonicalize() {
+                Ok(p) => p,
+                Err(err) => return CliError::new_stdio(err, 1),
+            };
+            if !device_path.exists() {
+                return CliError::new("device does not exist", 1);
+            }
+            let device_path = device_path.to_str().unwrap();
+            if local_config.wdeployments[wd_index]["cprovider"] == "docker"
+                || local_config.wdeployments[wd_index]["cprovider"] == "podman"
+            {
+                let new_carg = json!(format!("--device={}:{}", device_path, device_path));
+                let wd = local_config.wdeployments.get_mut(wd_index).unwrap();
+                let cargs = wd.get_mut("cargs").unwrap().as_array_mut().unwrap();
+                if cargs.contains(&new_carg) {
+                    return CliError::new("device already added", 1);
+                }
+                cargs.push(new_carg);
+            } else {
+                return CliError::new("adding devices not supported by this cprovider", 1);
+            }
+
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
+        } else if let Some(device_path) = matches.value_of("remove_raw_device_path") {
+            if local_config.wdeployments[wd_index]["cprovider"] == "docker"
+                || local_config.wdeployments[wd_index]["cprovider"] == "podman"
+            {
+                let mut carg = json!(format!("--device={}:{}", device_path, device_path));
+                let wd = local_config.wdeployments.get_mut(wd_index).unwrap();
+                let cargs = wd.get_mut("cargs").unwrap().as_array_mut().unwrap();
+                if !cargs.contains(&carg) {
+                    let device_path_c = match std::path::Path::new(device_path).canonicalize() {
+                        Ok(p) => p,
+                        Err(err) => return CliError::new_stdio(err, 1),
+                    };
+                    let device_path_c = device_path_c.to_str().unwrap();
+                    carg = json!(format!("--device={}:{}", device_path_c, device_path_c));
+                    if !cargs.contains(&carg) {
+                        return CliError::new("device not previously added", 1);
+                    }
+                }
+                cargs.remove(cargs.iter().position(|x| x == &carg).unwrap());
+            } else {
+                return CliError::new("adding/removing devices not supported by this cprovider", 1);
+            }
+
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
         } else {
             let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
@@ -675,6 +729,14 @@ pub fn main() -> Result<(), CliError> {
                          .long("assign-image")
                          .value_name("IMG")
                          .help("assign image for cprovider to use (advanced option)"))
+                    .arg(Arg::with_name("raw_device_path")
+                         .long("add-raw-device")
+                         .value_name("PATH")
+                         .help("add device file to present in container"))
+                    .arg(Arg::with_name("remove_raw_device_path")
+                         .long("rm-raw-device")
+                         .value_name("PATH")
+                         .help("remove device previously marked for inclusion in container"))
                     .arg(Arg::with_name("new_ssh_path")
                          .long("add-ssh-path")
                          .value_name("FILE")

@@ -36,6 +36,10 @@ OPTIONS:
         --add-ssh-path <FILE>
             add path of SSH key pair (does not copy the key)
 
+        --add-raw-device <PATH>    add device file to present in container
+        --rm-raw-device <PATH>
+            remove device previously marked for inclusion in container
+
 
 ARGS:
     <ID>    id of workspace deployment for configuration changes (can be
