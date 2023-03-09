@@ -559,6 +559,7 @@ impl HSAPIClient {
 
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
             if wdid_tab.contains_key(&*wdid) {
+                warn!("start ad called when already advertising {}", &*wdid);
                 return actix_web::HttpResponse::Forbidden().finish();
             }
         }
@@ -611,11 +612,15 @@ impl HSAPIClient {
         let url = format!("http://{}/start/{}", bindaddr, wdid);
         let mut sys = System::new("dclient");
         let res = actix::SystemRunner::block_on(&mut sys, async {
-            awc::Client::new().post(url).send().await.map(|resp| ())
+            awc::Client::new().post(url).send().await
         });
         match res {
-            Ok(()) => {
-                info!("started via existing daemon");
+            Ok(res) => {
+                if res.status() == 403 {
+                    warn!("ignoring because daemon already advertising {}", wdid);
+                } else {
+                    info!("started via existing daemon");
+                }
                 return Ok(());
             }
             Err(err) => warn!("no existing daemon: {}", err),
