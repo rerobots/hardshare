@@ -599,7 +599,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
-fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+fn ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
@@ -612,14 +612,14 @@ fn ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
     let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
-    match ac.run(wdid, "127.0.0.1:6666") {
+    match ac.run(wdid, bindaddr) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }
 }
 
 
-fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+fn stop_ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
@@ -632,7 +632,7 @@ fn stop_ad_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
     let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
-    match ac.stop(wdid, "127.0.0.1:6666") {
+    match ac.stop(wdid, bindaddr) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }
@@ -697,6 +697,11 @@ pub fn main() -> Result<(), CliError> {
              .long("format")
              .value_name("FORMAT")
              .help("special output formatting (default is no special formatting); options: YAML , JSON"))
+        .arg(Arg::with_name("daemonport")
+             .long("port")
+             .value_name("PORT")
+             .help("port for daemon")
+             .default_value("6666"))
         .subcommand(SubCommand::with_name("config")
                     .about("Manage local and remote configuration")
                     .arg(Arg::with_name("list")
@@ -833,6 +838,8 @@ pub fn main() -> Result<(), CliError> {
         None => PrintingFormat::Default,
     };
 
+    let bindaddr = format!("127.0.0.1:{}", matches.value_of("daemonport").unwrap());
+
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("config") {
@@ -842,9 +849,9 @@ pub fn main() -> Result<(), CliError> {
     } else if let Some(matches) = matches.subcommand_matches("rules") {
         return rules_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("ad") {
-        return ad_subcommand(matches);
+        return ad_subcommand(matches, &bindaddr);
     } else if let Some(matches) = matches.subcommand_matches("stop-ad") {
-        return stop_ad_subcommand(matches);
+        return stop_ad_subcommand(matches, &bindaddr);
     } else if let Some(matches) = matches.subcommand_matches("register") {
         return register_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("declare-org") {

@@ -16,6 +16,7 @@ FLAGS:
     -V, --version    Prints version number and exits
 
 OPTIONS:
+        --port <PORT>        port for daemon [default: 6666]
         --format <FORMAT>    special output formatting (default is no special
                              formatting); options: YAML , JSON
 
