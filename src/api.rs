@@ -852,7 +852,7 @@ enum CWorkerCommandType {
     InstanceLaunch,
     InstanceDestroy,
     InstanceStatus,
-    HubAccept,
+    CreateSshTunDone,
     HubPing,
 }
 
@@ -884,7 +884,7 @@ fn cworker(
             }
             CWorkerCommandType::InstanceStatus => {
             }
-            CWorkerCommandType::HubAccept => {
+            CWorkerCommandType::CreateSshTunDone => {
             }
             CWorkerCommandType::HubPing => {
             }
