@@ -12,6 +12,7 @@ extern crate serde_json;
 
 mod api;
 mod cli;
+mod control;
 mod mgmt;
 
 

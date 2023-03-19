@@ -23,6 +23,8 @@ extern crate serde;
 extern crate serde_json;
 use serde::{Deserialize, Serialize};
 
+use crate::control;
+use crate::control::CWorkerCommand;
 use crate::mgmt;
 
 
@@ -539,7 +541,7 @@ impl HSAPIClient {
 
         let ws_addr = addr.clone();
         let ac = ac.clone();
-        std::thread::spawn(move || cworker(ac, cworker_rx, ws_addr));
+        std::thread::spawn(move || control::cworker(ac, cworker_rx, ws_addr));
 
         Ok(addr)
     }
@@ -842,198 +844,7 @@ impl HSAPIClient {
 }
 
 
-#[derive(PartialEq, Debug, Clone)]
-enum ConnType {
-    SshTun,
-}
-
-#[derive(PartialEq, Debug, Clone)]
-enum CWorkerCommandType {
-    InstanceLaunch,
-    InstanceDestroy,
-    InstanceStatus,
-    CreateSshTunDone,
-    HubPing,
-}
-
-#[derive(Debug, Clone)]
-struct CWorkerCommand {
-    command: CWorkerCommandType,
-    instance_id: String, // \in UUID
-    conntype: Option<ConnType>,
-    publickey: Option<String>,
-    message_id: Option<String>,
-}
-
-
-#[derive(Debug)]
-enum InstanceStatus {
-    Init,
-    InitFail,
-    Ready,
-    Terminating,
-}
-
-impl ToString for InstanceStatus {
-    fn to_string(&self) -> String {
-        match self {
-            InstanceStatus::Init => "INIT".into(),
-            InstanceStatus::InitFail => "INIT_FAIL".into(),
-            InstanceStatus::Ready => "READY".into(),
-            InstanceStatus::Terminating => "TERMINATING".into(),
-        }
-    }
-}
-
-#[derive(Debug)]
-struct CurrentInstance {
-    status: Option<InstanceStatus>,
-    id: Option<String>,
-}
-
-impl CurrentInstance {
-    pub fn new() -> CurrentInstance {
-        CurrentInstance {
-            status: None,
-            id: None,
-        }
-    }
-
-    pub fn init(&mut self, instance_id: &str) -> Result<(), &str> {
-        if self.exists() {
-            return Err("already current instance, cannot INIT new instance");
-        }
-        self.status = Some(InstanceStatus::Init);
-        self.id = Some(instance_id.into());
-        Ok(())
-    }
-
-    pub fn exists(&self) -> bool {
-        self.status.is_some()
-    }
-}
-
-
-fn cworker(
-    ac: HSAPIClient,
-    wsclient_req: mpsc::Receiver<CWorkerCommand>,
-    wsclient_addr: Addr<WSClient>,
-) {
-    let mut current_instance = CurrentInstance::new();
-
-    loop {
-        let req = match wsclient_req.recv() {
-            Ok(m) => m,
-            Err(_) => return,
-        };
-        debug!("cworker rx: {:?}", req);
-
-        match req.command {
-            CWorkerCommandType::InstanceLaunch => {
-                match current_instance.init(&req.instance_id) {
-                    Ok(()) => {
-                        wsclient_addr.do_send(WSClientWorkerMessage {
-                            mtype: CWorkerMessageType::WsSend,
-                            body: Some(
-                                serde_json::to_string(&json!({
-                                    "v": 0,
-                                    "cmd": "ACK",
-                                    "mi": req.message_id,
-                                }))
-                                .unwrap()
-                            ),
-                        });
-                    }
-                    Err(err) => {
-                        error!(
-                            "launch request for instance {} failed: {}",
-                            req.instance_id, err
-                        );
-                        wsclient_addr.do_send(WSClientWorkerMessage {
-                            mtype: CWorkerMessageType::WsSend,
-                            body: Some(
-                                serde_json::to_string(&json!({
-                                    "v": 0,
-                                    "cmd": "NACK",
-                                    "mi": req.message_id,
-                                }))
-                                .unwrap()
-                            ),
-                        });
-                    }
-                };
-
-            }
-            CWorkerCommandType::InstanceDestroy => {
-                if current_instance.exists() {
-                    wsclient_addr.do_send(WSClientWorkerMessage {
-                        mtype: CWorkerMessageType::WsSend,
-                        body: Some(
-                            serde_json::to_string(&json!({
-                                "v": 0,
-                                "cmd": "ACK",
-                                "mi": req.message_id,
-                            }))
-                            .unwrap()
-                        ),
-                    });
-                } else {
-                    error!("destroy request received when there is no active instance");
-                    wsclient_addr.do_send(WSClientWorkerMessage {
-                        mtype: CWorkerMessageType::WsSend,
-                        body: Some(
-                            serde_json::to_string(&json!({
-                                "v": 0,
-                                "cmd": "NACK",
-                                "mi": req.message_id,
-                            }))
-                            .unwrap()
-                        ),
-                    });
-                }
-            }
-            CWorkerCommandType::InstanceStatus => {
-                match &current_instance.status {
-                    Some(status) => {
-                        wsclient_addr.do_send(WSClientWorkerMessage {
-                            mtype: CWorkerMessageType::WsSend,
-                            body: Some(
-                                serde_json::to_string(&json!({
-                                    "v": 0,
-                                    "cmd": "ACK",
-                                    "s": status.to_string(),
-                                    "mi": req.message_id,
-                                }))
-                                .unwrap()
-                            ),
-                        });
-                    }
-                    None => {
-                        warn!("status check received when there is no active instance");
-                        wsclient_addr.do_send(WSClientWorkerMessage {
-                            mtype: CWorkerMessageType::WsSend,
-                            body: Some(
-                                serde_json::to_string(&json!({
-                                    "v": 0,
-                                    "cmd": "NACK",
-                                    "mi": req.message_id,
-                                }))
-                                .unwrap()
-                            ),
-                        });
-                    }
-                };
-            }
-            CWorkerCommandType::CreateSshTunDone => {
-            }
-            CWorkerCommandType::HubPing => {
-            }
-        }
-    }
-}
-
-
-struct WSClient {
+pub struct WSClient {
     worker_req: mpsc::Sender<CWorkerCommand>,
     ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
     recent_rx_instant: std::time::Instant,
@@ -1043,16 +854,11 @@ struct WSClient {
 #[rtype(result = "()")]
 struct WSClientCommand(String);
 
-#[derive(PartialEq, Debug, Clone)]
-enum CWorkerMessageType {
-    WsSend,
-}
-
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-struct WSClientWorkerMessage {
-    mtype: CWorkerMessageType,
-    body: Option<String>,
+pub struct WSClientWorkerMessage {
+    pub mtype: control::CWorkerMessageType,
+    pub body: Option<String>,
 }
 
 impl Actor for WSClient {
@@ -1104,7 +910,7 @@ impl Handler<WSClientWorkerMessage> for WSClient {
     fn handle(&mut self, msg: WSClientWorkerMessage, ctx: &mut Context<Self>) {
         debug!("received client worker message: {:?}", msg);
         match msg.mtype {
-            CWorkerMessageType::WsSend => {
+            control::CWorkerMessageType::WsSend => {
                 self.ws_sink.write(Message::Text(msg.body.unwrap()));
             }
         }
@@ -1149,27 +955,20 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             };
 
             let m = match cmd {
-                "INSTANCE_LAUNCH" => CWorkerCommand {
-                    command: CWorkerCommandType::InstanceLaunch,
-                    instance_id: String::from(payload["id"].as_str().unwrap()),
-                    conntype: Some(ConnType::SshTun), // TODO: Support ct != sshtun
-                    publickey: Some(String::from(payload["pr"].as_str().unwrap())),
-                    message_id: Some(String::from(payload["mi"].as_str().unwrap()))
-                },
-                "INSTANCE_STATUS" => CWorkerCommand {
-                    command: CWorkerCommandType::InstanceStatus,
-                    instance_id: String::from(payload["id"].as_str().unwrap()),
-                    conntype: None,
-                    publickey: None,
-                    message_id: Some(String::from(payload["mi"].as_str().unwrap())),
-                },
-                "INSTANCE_DESTROY" => CWorkerCommand {
-                    command: CWorkerCommandType::InstanceDestroy,
-                    instance_id: String::from(payload["id"].as_str().unwrap()),
-                    conntype: None,
-                    publickey: None,
-                    message_id: Some(String::from(payload["mi"].as_str().unwrap())),
-                },
+                "INSTANCE_LAUNCH" => CWorkerCommand::launch_instance(
+                    payload["id"].as_str().unwrap(),
+                    payload["mi"].as_str().unwrap(),
+                    control::ConnType::SshTun,
+                    payload["pr"].as_str().unwrap(),
+                ),
+                "INSTANCE_STATUS" => CWorkerCommand::get_status(
+                    payload["id"].as_str().unwrap(),
+                    payload["mi"].as_str().unwrap(),
+                ),
+                "INSTANCE_DESTROY" => CWorkerCommand::destroy_instance(
+                    payload["id"].as_str().unwrap(),
+                    payload["mi"].as_str().unwrap(),
+                ),
                 _ => {
                     error!("unknown command: {}", cmd);
                     return;
@@ -1200,7 +999,6 @@ mod tests {
     use super::mgmt;
     use super::AddOn;
     use super::HSAPIClient;
-    use super::CurrentInstance;
 
     #[test]
     fn list_no_rules() {
@@ -1288,17 +1086,5 @@ mod tests {
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), expected_new_wdids[1]);
         assert_eq!(ac.local_config.unwrap().wdeployments.len(), 2);
-    }
-
-    #[test]
-    fn cannot_init_when_busy() {
-        let instance_ids = vec![
-            "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
-            "0f2576b5-17d9-477e-ba70-f07142faa2d9",
-        ];
-        let mut current_instance = CurrentInstance::new();
-        assert!(current_instance.init(instance_ids[0]).is_ok());
-        assert!(current_instance.exists());
-        assert!(current_instance.init(instance_ids[1]).is_err());
     }
 }
