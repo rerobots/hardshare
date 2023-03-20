@@ -1,14 +1,15 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2023 rerobots, Inc.
 
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread;
 
 use actix::prelude::*;
 
 use crate::api;
 
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug, Clone)]
 enum InstanceStatus {
     Init,
     InitFail,
@@ -34,31 +35,133 @@ pub enum ConnType {
 }
 
 
-#[derive(Debug)]
+#[derive(Clone)]
 struct CurrentInstance {
-    status: Option<InstanceStatus>,
+    status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
+    wsclient_addr: Option<Addr<api::WSClient>>,
 }
 
 impl CurrentInstance {
-    fn new() -> CurrentInstance {
+    fn new(wsclient_addr: Option<&Addr<api::WSClient>>) -> CurrentInstance {
         CurrentInstance {
-            status: None,
+            status: Arc::new(Mutex::new(None)),
             id: None,
+            wsclient_addr: wsclient_addr.cloned(),
+        }
+    }
+
+    fn send_status(&self) {
+        if let Some(wsclient_addr) = &self.wsclient_addr {
+            let status = self.status.lock().unwrap();
+            match &*status {
+                Some(s) => {
+                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        mtype: CWorkerMessageType::WsSend,
+                        body: Some(
+                            serde_json::to_string(&json!({
+                                "v": 0,
+                                "cmd": "INSTANCE_STATUS",
+                                "s": s.to_string(),
+                            }))
+                            .unwrap(),
+                        ),
+                    });
+                }
+                None => {
+                    error!("called when no active instance");
+                }
+            }
         }
     }
 
     fn init(&mut self, instance_id: &str) -> Result<(), &str> {
-        if self.exists() {
-            return Err("already current instance, cannot INIT new instance");
+        let mut status = self.status.lock().unwrap();
+        match *status {
+            Some(_) => {
+                return Err("already current instance, cannot INIT new instance");
+            }
+            None => {
+                *status = Some(InstanceStatus::Init);
+                self.id = Some(instance_id.into());
+            }
         }
-        self.status = Some(InstanceStatus::Init);
-        self.id = Some(instance_id.into());
+
+        let instance = self.clone();
+        thread::spawn(move || {
+            CurrentInstance::launch(instance);
+        });
         Ok(())
     }
 
     fn exists(&self) -> bool {
-        self.status.is_some()
+        self.status.lock().unwrap().is_some()
+    }
+
+    fn status(&self) -> Option<InstanceStatus> {
+        (*self.status.lock().unwrap()).as_ref().cloned()
+    }
+
+    fn declare_status(&mut self, new_status: InstanceStatus) {
+        let mut x = self.status.lock().unwrap();
+        *x = Some(new_status);
+    }
+
+    fn clear_status(&mut self) {
+        let mut x = self.status.lock().unwrap();
+        *x = None;
+    }
+
+
+    fn launch(mut instance: CurrentInstance) {
+        instance.declare_status(InstanceStatus::Ready);
+        instance.send_status();
+    }
+
+    fn terminate(&mut self) -> Result<(), &str> {
+        let mut status = self.status.lock().unwrap();
+        match &*status {
+            Some(s) => {
+                if s == &InstanceStatus::Terminating {
+                    return Ok(());
+                }
+                if s == &InstanceStatus::Init {
+                    return Err("cannot terminate() when status is INIT");
+                }
+                *status = Some(InstanceStatus::Terminating);
+            }
+            None => {
+                return Err("terminate() called when no active instance");
+            }
+        }
+
+        let instance = self.clone();
+        thread::spawn(move || {
+            CurrentInstance::destroy(instance);
+        });
+        Ok(())
+    }
+
+    fn send_destroy_done(&self) {
+        if let Some(wsclient_addr) = &self.wsclient_addr {
+            wsclient_addr.do_send(api::WSClientWorkerMessage {
+                mtype: CWorkerMessageType::WsSend,
+                body: Some(
+                    serde_json::to_string(&json!({
+                        "v": 0,
+                        "cmd": "ACK",
+                        "req": "INSTANCE_DESTROY",
+                        "st": "DONE",
+                    }))
+                    .unwrap(),
+                ),
+            });
+        }
+    }
+
+    fn destroy(mut instance: CurrentInstance) {
+        instance.clear_status();
+        instance.send_destroy_done();
     }
 }
 
@@ -68,7 +171,7 @@ pub fn cworker(
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
     wsclient_addr: Addr<api::WSClient>,
 ) {
-    let mut current_instance = CurrentInstance::new();
+    let mut current_instance = CurrentInstance::new(Some(&wsclient_addr));
 
     loop {
         let req = match wsclient_req.recv() {
@@ -114,6 +217,27 @@ pub fn cworker(
             }
             CWorkerCommandType::InstanceDestroy => {
                 if current_instance.exists() {
+                    let status = current_instance.status().unwrap();
+                    if status == InstanceStatus::Init {
+                        warn!("destroy request received when status is INIT");
+                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                            mtype: CWorkerMessageType::WsSend,
+                            body: Some(
+                                serde_json::to_string(&json!({
+                                    "v": 0,
+                                    "cmd": "NACK",
+                                    "mi": req.message_id,
+                                }))
+                                .unwrap(),
+                            ),
+                        });
+                        continue;
+
+                    }
+                    if status == InstanceStatus::Terminating {
+                        // Already terminating; ACK but no action
+                        warn!("destroy request received when already terminating");
+                    }
                     wsclient_addr.do_send(api::WSClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
@@ -125,6 +249,9 @@ pub fn cworker(
                             .unwrap(),
                         ),
                     });
+                    if status != InstanceStatus::Terminating {
+                        current_instance.terminate();
+                    }
                 } else {
                     error!("destroy request received when there is no active instance");
                     wsclient_addr.do_send(api::WSClientWorkerMessage {
@@ -141,7 +268,7 @@ pub fn cworker(
                 }
             }
             CWorkerCommandType::InstanceStatus => {
-                match &current_instance.status {
+                match current_instance.status() {
                     Some(status) => {
                         wsclient_addr.do_send(api::WSClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
@@ -252,7 +379,7 @@ mod tests {
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
-        let mut current_instance = CurrentInstance::new();
+        let mut current_instance = CurrentInstance::new(None);
         assert!(current_instance.init(instance_ids[0]).is_ok());
         assert!(current_instance.exists());
         assert!(current_instance.init(instance_ids[1]).is_err());
