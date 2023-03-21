@@ -2,7 +2,7 @@
 // Copyright (C) 2023 rerobots, Inc.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 use actix::prelude::*;
