@@ -1,6 +1,7 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2023 rerobots, Inc.
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
@@ -170,6 +171,7 @@ pub fn cworker(
     ac: api::HSAPIClient,
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
     wsclient_addr: Addr<api::WSClient>,
+    wd: HashMap<String, serde_json::Value>,
 ) {
     let mut current_instance = CurrentInstance::new(Some(&wsclient_addr));
 

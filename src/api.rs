@@ -529,6 +529,10 @@ impl HSAPIClient {
         let (_, framed) = client.ws(url).connect().await?;
         let (sink, stream) = framed.split();
 
+        let local_config = mgmt::get_local_config(false, false)?;
+        let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
+        let wd = local_config.wdeployments[wd_index].clone();
+
         let (cworker_tx, cworker_rx) = mpsc::channel();
         let addr = WSClient::create(|ctx| {
             WSClient::add_stream(stream, ctx);
@@ -541,7 +545,7 @@ impl HSAPIClient {
 
         let ws_addr = addr.clone();
         let ac = ac.clone();
-        std::thread::spawn(move || control::cworker(ac, cworker_rx, ws_addr));
+        std::thread::spawn(move || control::cworker(ac, cworker_rx, ws_addr, wd));
 
         Ok(addr)
     }
