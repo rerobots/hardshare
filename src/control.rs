@@ -38,14 +38,19 @@ pub enum ConnType {
 
 #[derive(Clone)]
 struct CurrentInstance {
+    wdeployment: Arc<HashMap<String, serde_json::Value>>,
     status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
     wsclient_addr: Option<Addr<api::WSClient>>,
 }
 
 impl CurrentInstance {
-    fn new(wsclient_addr: Option<&Addr<api::WSClient>>) -> CurrentInstance {
+    fn new(
+        wdeployment: &Arc<HashMap<String, serde_json::Value>>,
+        wsclient_addr: Option<&Addr<api::WSClient>>,
+    ) -> CurrentInstance {
         CurrentInstance {
+            wdeployment: Arc::clone(wdeployment),
             status: Arc::new(Mutex::new(None)),
             id: None,
             wsclient_addr: wsclient_addr.cloned(),
@@ -171,9 +176,9 @@ pub fn cworker(
     ac: api::HSAPIClient,
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
     wsclient_addr: Addr<api::WSClient>,
-    wd: HashMap<String, serde_json::Value>,
+    wdeployment: Arc<HashMap<String, serde_json::Value>>,
 ) {
-    let mut current_instance = CurrentInstance::new(Some(&wsclient_addr));
+    let mut current_instance = CurrentInstance::new(&wdeployment, Some(&wsclient_addr));
 
     loop {
         let req = match wsclient_req.recv() {
@@ -373,15 +378,32 @@ pub enum CWorkerMessageType {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::CurrentInstance;
+
 
     #[test]
     fn cannot_init_when_busy() {
+        let wdeployment = serde_json::from_str(
+            r#"
+            {
+                "id": "68a1be97-9365-4007-b726-14c56bd69eef",
+                "owner": "bilbo",
+                "cprovider": "podman",
+                "cargs": [],
+                "image": "rerobots/hs-generic",
+                "terminate": [],
+                "init_inside": [],
+                "container_name": "rrc"
+            }"#,
+        )
+        .unwrap();
         let instance_ids = vec![
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
-        let mut current_instance = CurrentInstance::new(None);
+        let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment), None);
         assert!(current_instance.init(instance_ids[0]).is_ok());
         assert!(current_instance.exists());
         assert!(current_instance.init(instance_ids[1]).is_err());

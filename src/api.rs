@@ -531,7 +531,7 @@ impl HSAPIClient {
 
         let local_config = mgmt::get_local_config(false, false)?;
         let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
-        let wd = local_config.wdeployments[wd_index].clone();
+        let wd = Arc::new(local_config.wdeployments[wd_index].clone());
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
         let addr = WSClient::create(|ctx| {
