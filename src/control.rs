@@ -18,13 +18,13 @@ enum InstanceStatus {
     Terminating,
 }
 
-impl ToString for InstanceStatus {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for InstanceStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InstanceStatus::Init => "INIT".into(),
-            InstanceStatus::InitFail => "INIT_FAIL".into(),
-            InstanceStatus::Ready => "READY".into(),
-            InstanceStatus::Terminating => "TERMINATING".into(),
+            InstanceStatus::Init => write!(f, "INIT"),
+            InstanceStatus::InitFail => write!(f, "INIT_FAIL"),
+            InstanceStatus::Ready => write!(f, "READY"),
+            InstanceStatus::Terminating => write!(f, "TERMINATING"),
         }
     }
 }
