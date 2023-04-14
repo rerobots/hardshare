@@ -953,7 +953,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             let cmd = match payload["cmd"].as_str() {
                 Some(c) => c,
                 None => {
-                    error!("received message of without `cmd` field");
+                    error!("received message without `cmd` field");
                     return;
                 }
             };
