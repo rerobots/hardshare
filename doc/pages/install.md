@@ -177,5 +177,5 @@ At this stage, you have a ready-to-use hardshare host. Next:
 
 * [Attach External Camera](/attach_camera) to provide video streams of your hardware.
 * Go to <https://rerobots.net/hardshare> and create your first sandbox.
-* If you have a [PlatformIO](https://docs.platformio.org/en/latest/what-is-platformio.html)-compatible board (for example, [ESP32](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/), do the [Tutorial: ESP32](/tutorials/esp32).
+* If you have a [PlatformIO](https://docs.platformio.org/en/latest/what-is-platformio.html)-compatible board (for example, [ESP32](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/)), do the [Tutorial: ESP32](/tutorials/esp32).
 * If you have a [Misty](https://www.mistyrobotics.com/) robot, do the [Tutorial: Misty](/tutorials/misty).
