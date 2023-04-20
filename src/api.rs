@@ -24,7 +24,7 @@ extern crate serde_json;
 use serde::{Deserialize, Serialize};
 
 use crate::control;
-use crate::control::CWorkerCommand;
+use crate::control::{CWorkerCommand, TunnelInfo};
 use crate::mgmt;
 
 
@@ -529,8 +529,12 @@ impl HSAPIClient {
         let (_, framed) = client.ws(url).connect().await?;
         let (sink, stream) = framed.split();
 
-        let local_config = mgmt::get_local_config(false, false)?;
+        let mut local_config = mgmt::get_local_config(false, false)?;
         let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
+        local_config.wdeployments[wd_index].insert(
+            "ssh_key".into(),
+            serde_json::Value::String(local_config.ssh_key.clone()),
+        );
         let wd = Arc::new(local_config.wdeployments[wd_index].clone());
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
@@ -973,6 +977,20 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     payload["id"].as_str().unwrap(),
                     payload["mi"].as_str().unwrap(),
                 ),
+                "CREATE_SSHTUN_DONE" => {
+                    let tunnelinfo: TunnelInfo = match serde_json::from_slice(txt.as_ref()) {
+                        Ok(x) => x,
+                        Err(err) => {
+                            error!("failed to parse tunnel info from {:?}: {}", txt, err);
+                            return;
+                        }
+                    };
+                    CWorkerCommand::create_sshtun_done(
+                        payload["id"].as_str().unwrap(),
+                        payload["mi"].as_str().unwrap(),
+                        &tunnelinfo,
+                    )
+                }
                 _ => {
                     error!("unknown command: {}", cmd);
                     return;

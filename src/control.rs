@@ -2,10 +2,18 @@
 // Copyright (C) 2023 rerobots, Inc.
 
 use std::collections::HashMap;
+use std::ffi::OsStr;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::Write;
+use std::process::Command;
+use std::str::FromStr;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 use actix::prelude::*;
+use serde::Deserialize;
+use tempfile::NamedTempFile;
 
 use crate::api;
 
@@ -16,6 +24,7 @@ enum InstanceStatus {
     InitFail,
     Ready,
     Terminating,
+    Fault,
 }
 
 impl std::fmt::Display for InstanceStatus {
@@ -25,9 +34,13 @@ impl std::fmt::Display for InstanceStatus {
             InstanceStatus::InitFail => write!(f, "INIT_FAIL"),
             InstanceStatus::Ready => write!(f, "READY"),
             InstanceStatus::Terminating => write!(f, "TERMINATING"),
+            InstanceStatus::Fault => write!(f, "FAULT"),
         }
     }
 }
+
+
+type Port = u32;
 
 
 #[derive(PartialEq, Debug, Clone)]
@@ -36,12 +49,23 @@ pub enum ConnType {
 }
 
 
+struct SshTunnel {
+    proc: std::process::Child,
+    tunnelkey_path: std::path::PathBuf,
+    container_addr: String,
+    container_port: Port,
+}
+
+
 #[derive(Clone)]
 struct CurrentInstance {
     wdeployment: Arc<HashMap<String, serde_json::Value>>,
     status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
+    local_name: Arc<Mutex<Option<String>>>,
     wsclient_addr: Option<Addr<api::WSClient>>,
+    responses: Arc<Mutex<HashMap<String, Option<CWorkerCommand>>>>,
+    tunnel: Arc<Mutex<Option<SshTunnel>>>,
 }
 
 impl CurrentInstance {
@@ -53,8 +77,36 @@ impl CurrentInstance {
             wdeployment: Arc::clone(wdeployment),
             status: Arc::new(Mutex::new(None)),
             id: None,
+            local_name: Arc::new(Mutex::new(None)),
             wsclient_addr: wsclient_addr.cloned(),
+            responses: Arc::new(Mutex::new(HashMap::new())),
+            tunnel: Arc::new(Mutex::new(None)),
         }
+    }
+
+    fn generate_local_name(&mut self, base_name: &str) -> String {
+        let random_suffix: String = rand::random::<u16>().to_string();
+        let mut local_name = self.local_name.lock().unwrap();
+        *local_name = Some(base_name.to_string() + &random_suffix);
+        local_name.as_ref().unwrap().clone()
+    }
+
+    fn get_local_name(&self) -> Option<String> {
+        let local_name = self.local_name.lock().unwrap();
+        local_name.clone()
+    }
+
+    fn handle_response(&mut self, res: &CWorkerCommand) -> Result<(), String> {
+        let message_id: String = res.message_id.clone().unwrap();
+        let mut responses = self.responses.lock().unwrap();
+        if !responses.contains_key(&message_id) {
+            return Err(format!("unknown message {}", message_id));
+        }
+        if !responses[&message_id].is_none() {
+            return Err(format!("already handled message {}", message_id));
+        }
+        responses.insert(message_id, Some(res.clone()));
+        Ok(())
     }
 
     fn send_status(&self) {
@@ -81,7 +133,48 @@ impl CurrentInstance {
         }
     }
 
-    fn init(&mut self, instance_id: &str) -> Result<(), &str> {
+
+    fn send_create_sshtun(&self, tunnelkey_public: &str) -> Result<String, String> {
+        if let Some(wsclient_addr) = &self.wsclient_addr {
+            let message_id = {
+                let mut message_id: String;
+                let mut responses = self.responses.lock().unwrap();
+                loop {
+                    message_id = rand::random::<u32>().to_string();
+                    if !responses.contains_key(&message_id) {
+                        responses.insert(message_id.clone(), None);
+                        break;
+                    }
+                }
+                message_id
+            };
+            let status = self.status.lock().unwrap();
+            match &*status {
+                Some(s) => {
+                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        mtype: CWorkerMessageType::WsSend,
+                        body: Some(
+                            serde_json::to_string(&json!({
+                                "v": 0,
+                                "cmd": "CREATE_SSHTUN",
+                                "id": self.id.as_ref().clone(),
+                                "key": tunnelkey_public,
+                                "mi": message_id,
+                            }))
+                            .unwrap(),
+                        ),
+                    });
+                    Ok(message_id)
+                }
+                None => Err("called when no active instance".into()),
+            }
+        } else {
+            Err("called without WebSocket client".into())
+        }
+    }
+
+
+    fn init(&mut self, instance_id: &str, public_key: &str) -> Result<(), &str> {
         let mut status = self.status.lock().unwrap();
         match *status {
             Some(_) => {
@@ -94,8 +187,9 @@ impl CurrentInstance {
         }
 
         let instance = self.clone();
+        let public_key = String::from(public_key);
         thread::spawn(move || {
-            CurrentInstance::launch(instance);
+            CurrentInstance::launch(instance, &public_key);
         });
         Ok(())
     }
@@ -115,29 +209,354 @@ impl CurrentInstance {
 
     fn clear_status(&mut self) {
         let mut x = self.status.lock().unwrap();
-        *x = None;
+        if *x != Some(InstanceStatus::Fault) {
+            *x = None;
+        }
     }
 
 
-    fn launch(mut instance: CurrentInstance) {
+    fn get_container_addr(cprovider: &str, name: &str, timeout: u64) -> Result<String, String> {
+        let max_duration = std::time::Duration::from_secs(timeout);
+        let sleep_time = std::time::Duration::from_secs(2);
+        let now = std::time::Instant::now();
+        while now.elapsed() <= max_duration {
+            let mut run_command = Command::new(cprovider);
+            let run_command = run_command.args(["inspect", name]);
+            let command_result = match run_command.output() {
+                Ok(o) => o,
+                Err(err) => return Err(format!("{}", err)),
+            };
+            if !command_result.status.success() {
+                return Err(format!("run command failed: {:?}", command_result));
+            }
+            let r: serde_json::Value = match serde_json::from_slice(&command_result.stdout) {
+                Ok(o) => o,
+                Err(err) => return Err(format!("{}", err)),
+            };
+            match r[0]["NetworkSettings"]["IPAddress"].as_str() {
+                Some(addr) => {
+                    if !addr.is_empty() {
+                        return Ok(addr.into());
+                    }
+                    warn!("waiting for address...");
+                    std::thread::sleep(sleep_time);
+                }
+                None => {
+                    warn!("waiting for address...");
+                    std::thread::sleep(sleep_time);
+                }
+            }
+        }
+        Err("address not found".into())
+    }
+
+
+    fn get_container_sshport(cprovider: &str, name: &str) -> Result<Port, String> {
+        let mut run_command = Command::new(cprovider);
+        let run_command = run_command.args(["port", name, "22"]);
+        let command_result = match run_command.output() {
+            Ok(o) => o,
+            Err(err) => return Err(format!("{}", err)),
+        };
+        if !command_result.status.success() {
+            return Err(format!("run command failed: {:?}", command_result));
+        }
+
+        let s = String::from_utf8(command_result.stdout).unwrap();
+        let s = s.trim();
+        let parts: Vec<&str> = s.split(':').collect();
+        match Port::from_str(parts[1]) {
+            Ok(port) => Ok(port),
+            Err(err) => Err("SSH port not found".into()),
+        }
+    }
+
+
+    fn get_container_hostkey(cprovider: &str, name: &str, timeout: u64) -> Result<String, String> {
+        let hostkey_filename = "ssh_host_ecdsa_key.pub";
+        let hostkey_contained_path = String::from(name) + ":/etc/ssh/" + hostkey_filename;
+        let max_duration = std::time::Duration::from_secs(timeout);
+        let sleep_time = std::time::Duration::from_secs(2);
+        let now = std::time::Instant::now();
+        while now.elapsed() <= max_duration {
+            match Command::new(cprovider)
+                .args(["cp", &hostkey_contained_path, "."])
+                .status()
+            {
+                Ok(copy_result) => {
+                    if copy_result.success() {
+                        let mut hostkey_file = match File::open(hostkey_filename) {
+                            Ok(f) => f,
+                            Err(err) => return Err(format!("{}", err)),
+                        };
+                        let mut hostkey = String::new();
+                        if let Err(err) = hostkey_file.read_to_string(&mut hostkey) {
+                            return Err(format!("{}", err));
+                        }
+                        return Ok(hostkey);
+                    } else {
+                        warn!("waiting for host key...");
+                        std::thread::sleep(sleep_time);
+                    }
+                }
+                Err(_) => {
+                    warn!("waiting for host key...");
+                    std::thread::sleep(sleep_time);
+                }
+            }
+        }
+        Err("host key not found".into())
+    }
+
+
+    fn start_sshtun(
+        &self,
+        container_addr: &str,
+        container_port: Port,
+        tunnelkey_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let tunnelkey_public_path = String::from(tunnelkey_path) + ".pub";
+        let mut f = File::open(tunnelkey_public_path)?;
+        let mut tunnelkey_public = String::new();
+        f.read_to_string(&mut tunnelkey_public)?;
+        let message_id = self.send_create_sshtun(&tunnelkey_public)?;
+        let st = std::time::Duration::from_secs(2);
+        let tunnelinfo;
+        loop {
+            std::thread::sleep(st);
+            {
+                let responses = self.responses.lock().unwrap();
+                if let Some(res) = &responses[&message_id] {
+                    tunnelinfo = res.tunnelinfo.clone().unwrap();
+                    break;
+                }
+            }
+            info!("waiting for sshtun creation...");
+        }
+        let tunnel_process_args = [
+            "-o",
+            "ServerAliveInterval=10",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ExitOnForwardFailure=yes",
+            "-T",
+            "-N",
+            "-R",
+            &format!(":2210:{container_addr}:{container_port}"),
+            "-i",
+            tunnelkey_path,
+            "-p",
+            &format!("{thport}", thport = tunnelinfo.thport),
+            &format!(
+                "{thuser}@{addr}",
+                thuser = tunnelinfo.thuser,
+                addr = tunnelinfo.ipv4
+            ),
+        ];
+        println!("tunnel process args: {:?}", tunnel_process_args);
+        let tunnel_process = Command::new("ssh").args(tunnel_process_args).spawn()?;
+
+        let mut tunnel = self.tunnel.lock().unwrap();
+        *tunnel = Some(SshTunnel {
+            proc: tunnel_process,
+            tunnelkey_path: tunnelkey_path.into(),
+            container_addr: container_addr.into(),
+            container_port,
+        });
+        Ok(())
+    }
+
+
+    fn launch(mut instance: CurrentInstance, public_key: &str) {
+        let cprovider = instance.wdeployment["cprovider"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        if cprovider == "docker" || cprovider == "podman" {
+            let image = instance.wdeployment["image"].as_str().unwrap().to_string();
+            let base_name = instance.wdeployment["container_name"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            let name = instance.generate_local_name(&base_name);
+            let cargs = instance.wdeployment["cargs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap());
+            let tunnelkey_path = instance.wdeployment["ssh_key"]
+                .as_str()
+                .unwrap()
+                .to_string();
+
+            let mut run_command = Command::new(&cprovider);
+            let mut run_command = run_command.args([
+                "run",
+                "-d",
+                "-h",
+                &name,
+                "--name",
+                &name,
+                "--device=/dev/net/tun:/dev/net/tun",
+                "--cap-add=NET_ADMIN",
+                "--cap-add=CAP_SYS_CHROOT",
+            ]);
+            run_command = run_command.args(cargs);
+            if cprovider == "podman" {
+                run_command = run_command.args(["-p", "127.0.0.1::22"]);
+            }
+            run_command = run_command.arg(image);
+            let command_result = match run_command.output() {
+                Ok(o) => o,
+                Err(err) => {
+                    error!("{}", err);
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            };
+            if !command_result.status.success() {
+                error!("run command failed: {:?}", command_result);
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+
+            let addr: String = if cprovider == "podman" {
+                "127.0.0.1".into()
+            } else {
+                match CurrentInstance::get_container_addr(&cprovider, &name, 10) {
+                    Ok(a) => a,
+                    Err(err) => {
+                        error!("{}", err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+            };
+
+            let sshport = if cprovider == "docker" {
+                22
+            } else {
+                match CurrentInstance::get_container_sshport(&cprovider, &name) {
+                    Ok(a) => a,
+                    Err(err) => {
+                        error!("{}", err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+            };
+
+            let mut public_key_file = match NamedTempFile::new() {
+                Ok(f) => f,
+                Err(err) => {
+                    error!("{}", err);
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            };
+            write!(public_key_file, "{}", public_key);
+
+            let mkdir_result = Command::new(&cprovider)
+                .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
+                .status()
+                .unwrap();
+            if !mkdir_result.success() {
+                error!("mkdir command failed: {:?}", mkdir_result);
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+
+            let cp_result = Command::new(&cprovider)
+                .args([
+                    "cp",
+                    public_key_file.path().to_str().unwrap(),
+                    &(name.clone() + ":/root/.ssh/authorized_keys"),
+                ])
+                .status()
+                .unwrap();
+            if !cp_result.success() {
+                error!("cp command failed: {:?}", cp_result);
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+
+            let chown_result = Command::new(&cprovider)
+                .args([
+                    "exec",
+                    &name,
+                    "/bin/chown",
+                    "0:0",
+                    "/root/.ssh/authorized_keys",
+                ])
+                .status()
+                .unwrap();
+            if !chown_result.success() {
+                error!("chown command failed: {:?}", chown_result);
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+
+            let hostkey: String =
+                match CurrentInstance::get_container_hostkey(&cprovider, &name, 10) {
+                    Ok(k) => k,
+                    Err(err) => {
+                        error!("{}", err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                };
+
+            if let Err(err) = instance.start_sshtun(&addr, sshport, &tunnelkey_path) {
+                error!("{}", err);
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+        } else if cprovider == "lxd" {
+            error!("lxd cprovider not implemented yet");
+            instance.declare_status(InstanceStatus::InitFail);
+            instance.send_status();
+            return;
+        } else if cprovider == "proxy" {
+            error!("proxy cprovider not implemented yet");
+            instance.declare_status(InstanceStatus::InitFail);
+            instance.send_status();
+            return;
+        } else {
+            error!("unknown cprovider: {}", cprovider);
+            instance.declare_status(InstanceStatus::InitFail);
+            instance.send_status();
+            return;
+        }
         instance.declare_status(InstanceStatus::Ready);
         instance.send_status();
     }
 
-    fn terminate(&mut self) -> Result<(), &str> {
+    fn terminate(&mut self) -> Result<(), String> {
         let mut status = self.status.lock().unwrap();
         match &*status {
             Some(s) => {
                 if s == &InstanceStatus::Terminating {
                     return Ok(());
                 }
-                if s == &InstanceStatus::Init {
-                    return Err("cannot terminate() when status is INIT");
+                if s == &InstanceStatus::Init || s == &InstanceStatus::InitFail {
+                    warn!("received terminate request when {}", s);
+                    return Err(format!("cannot terminate when status is {}", s));
                 }
                 *status = Some(InstanceStatus::Terminating);
             }
             None => {
-                return Err("terminate() called when no active instance");
+                return Err("terminate() called when no active instance".into());
             }
         }
 
@@ -165,7 +584,53 @@ impl CurrentInstance {
         }
     }
 
+    fn stop_tunnel(&self) {
+        let mut tunnel_ref = self.tunnel.lock().unwrap();
+        if let Some(tunnel) = tunnel_ref.as_mut() {
+            if let Err(err) = tunnel.proc.kill() {
+                warn!("tunnel kill: : {}", err);
+            }
+            match tunnel.proc.wait() {
+                Ok(s) => {
+                    if !s.success() {
+                        warn!("exit code: {:?}", s.code());
+                    }
+                }
+                Err(err) => {
+                    error!("{}", err);
+                }
+            }
+        }
+        *tunnel_ref = None;
+    }
+
     fn destroy(mut instance: CurrentInstance) {
+        instance.stop_tunnel();
+
+        let cprovider = instance.wdeployment["cprovider"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        if cprovider == "docker" || cprovider == "podman" {
+            let name = instance.get_local_name().unwrap();
+            let mut run_command = Command::new(&cprovider);
+            let mut run_command = run_command.args(["rm", "-f", &name]);
+            match run_command.status() {
+                Ok(s) => {
+                    if !s.success() {
+                        error!("exit code: {:?}", s.code());
+                        instance.declare_status(InstanceStatus::Fault);
+                        return;
+                    }
+                }
+                Err(err) => {
+                    error!("{}", err);
+                    instance.declare_status(InstanceStatus::Fault);
+                    return;
+                }
+            }
+        }
+
         instance.clear_status();
         instance.send_destroy_done();
     }
@@ -189,7 +654,7 @@ pub fn cworker(
 
         match req.command {
             CWorkerCommandType::InstanceLaunch => {
-                match current_instance.init(&req.instance_id) {
+                match current_instance.init(&req.instance_id, &req.publickey.unwrap()) {
                     Ok(()) => {
                         wsclient_addr.do_send(api::WSClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
@@ -239,7 +704,6 @@ pub fn cworker(
                             ),
                         });
                         continue;
-
                     }
                     if status == InstanceStatus::Terminating {
                         // Already terminating; ACK but no action
@@ -307,6 +771,11 @@ pub fn cworker(
                 };
             }
             CWorkerCommandType::CreateSshTunDone => {
+                if current_instance.exists() {
+                    current_instance.handle_response(&req);
+                } else {
+                    error!("CREATE_SSHTUN_DONE received when there is no active instance");
+                }
             }
             CWorkerCommandType::HubPing => {
             }
@@ -324,12 +793,22 @@ enum CWorkerCommandType {
     HubPing,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct TunnelInfo {
+    hostkey: String,
+    ipv4: String,
+    port: Port,
+    thport: Port,
+    thuser: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct CWorkerCommand {
     command: CWorkerCommandType,
     instance_id: String, // \in UUID
     conntype: Option<ConnType>,
     publickey: Option<String>,
+    tunnelinfo: Option<TunnelInfo>,
     message_id: Option<String>,
 }
 
@@ -340,6 +819,7 @@ impl CWorkerCommand {
             instance_id: String::from(instance_id),
             conntype: None,
             publickey: None,
+            tunnelinfo: None,
             message_id: Some(String::from(message_id)),
         }
     }
@@ -355,6 +835,7 @@ impl CWorkerCommand {
             instance_id: String::from(instance_id),
             conntype: Some(ConnType::SshTun),
             publickey: Some(String::from(public_key)),
+            tunnelinfo: None,
             message_id: Some(String::from(message_id)),
         }
     }
@@ -365,6 +846,22 @@ impl CWorkerCommand {
             instance_id: String::from(instance_id),
             conntype: None,
             publickey: None,
+            tunnelinfo: None,
+            message_id: Some(String::from(message_id)),
+        }
+    }
+
+    pub fn create_sshtun_done(
+        instance_id: &str,
+        message_id: &str,
+        tunnelinfo: &TunnelInfo,
+    ) -> Self {
+        Self {
+            command: CWorkerCommandType::CreateSshTunDone,
+            instance_id: String::from(instance_id),
+            conntype: None,
+            publickey: None,
+            tunnelinfo: Some(tunnelinfo.clone()),
             message_id: Some(String::from(message_id)),
         }
     }
@@ -404,8 +901,8 @@ mod tests {
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
         let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment), None);
-        assert!(current_instance.init(instance_ids[0]).is_ok());
+        assert!(current_instance.init(instance_ids[0], "").is_ok());
         assert!(current_instance.exists());
-        assert!(current_instance.init(instance_ids[1]).is_err());
+        assert!(current_instance.init(instance_ids[1], "").is_err());
     }
 }
