@@ -631,6 +631,30 @@ impl CurrentInstance {
             }
         }
 
+        let terminate_scripts: Vec<&str> = instance.wdeployment["terminate"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+
+        for script in terminate_scripts.iter() {
+            match Command::new("/bin/sh").args(["-c", script]).status() {
+                Ok(script_result) => {
+                    if !script_result.success() {
+                        error!("`{script}` failed: {}", script_result);
+                        instance.declare_status(InstanceStatus::Fault);
+                        return;
+                    }
+                }
+                Err(err) => {
+                    error!("`{script}` failed: {}", err);
+                    instance.declare_status(InstanceStatus::Fault);
+                    return;
+                }
+            }
+        }
+
         instance.clear_status();
         instance.send_destroy_done();
     }
