@@ -53,9 +53,109 @@ fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct WDeployment {
+    pub id: String,
+    pub owner: String,
+    pub cprovider: String,
+    pub cargs: Vec<String>,
+    pub container_name: String,
+    pub init_inside: Vec<String>,
+    pub terminate: Vec<String>,
+
+    #[serde(default)]
+    pub image: Option<String>,
+
+    #[serde(default)]
+    pub url: Option<String>,
+
+    #[serde(default)]
+    pub ssh_key: Option<String>,
+}
+
+impl WDeployment {
+    pub fn from_json(h: &HashMap<String, serde_json::Value>) -> Self {
+        let cprovider: String = if h.contains_key("cprovider") {
+            h["cprovider"].as_str().unwrap()
+        } else {
+            "docker"
+        }
+        .into();
+
+        let cargs: Vec<String> = if h.contains_key("cargs") {
+            h["cargs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_string())
+                .collect()
+        } else {
+            vec![]
+        };
+
+        let container_name = if h.contains_key("container_name") {
+            h["container_name"].as_str().unwrap()
+        } else {
+            "rrc"
+        }
+        .into();
+
+        let init_inside: Vec<String> = if h.contains_key("init_inside") {
+            h["init_inside"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_string())
+                .collect()
+        } else {
+            vec![]
+        };
+
+        let terminate: Vec<String> = if h.contains_key("terminate") {
+            h["terminate"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|a| a.as_str().unwrap().to_string())
+                .collect()
+        } else {
+            vec![]
+        };
+
+        let image = if h.contains_key("image") {
+            Some(h["image"].as_str().unwrap().into())
+        } else if cprovider != "proxy" {
+            Some("rerobots/hs-generic".into())
+        } else {
+            None
+        };
+
+        let url: Option<String> = if h.contains_key("url") {
+            Some(h["url"].as_str().unwrap().into())
+        } else {
+            None
+        };
+
+        WDeployment {
+            id: h["id"].as_str().unwrap().into(),
+            owner: h["owner"].as_str().unwrap().into(),
+            cprovider,
+            cargs,
+            container_name,
+            image,
+            init_inside,
+            terminate,
+            url,
+
+            ssh_key: None,
+        }
+    }
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     version: u16,
-    pub wdeployments: Vec<HashMap<String, serde_json::Value>>,
+    pub wdeployments: Vec<WDeployment>,
     pub ssh_key: String,
 
     // organization name | () -> [path0, path1, ...]
@@ -219,11 +319,8 @@ pub fn get_local_config_bp(
 pub fn append_urls(config: &mut Config) {
     let prefix = "https://rerobots.net/workspace/";
     for wd in config.wdeployments.iter_mut() {
-        if !wd.contains_key("url") {
-            wd.insert(
-                "url".to_string(),
-                serde_json::Value::String(format!("{}{}", prefix, wd["id"].as_str().unwrap())),
-            );
+        if wd.url.is_none() {
+            wd.url = Some(format!("{}{}", prefix, wd.id));
         }
     }
 }
@@ -307,13 +404,12 @@ pub fn find_id_prefix(
         let mut candidates = vec![];
 
         for (j, wd) in config.wdeployments.iter().enumerate() {
-            let this_wdid = wd["id"].as_str().unwrap();
-            if this_wdid.starts_with(id_prefix) {
-                candidates.push((j, this_wdid));
+            if wd.id.starts_with(id_prefix) {
+                candidates.push((j, wd.id.clone()));
             }
         }
         if candidates.len() > 1 {
-            let candidates: Vec<&str> = candidates.iter().map(|&val| val.1).collect();
+            let candidates: Vec<String> = candidates.iter().map(|val| val.1.clone()).collect();
             error(
                 format!(
                     "given prefix matches more than 1 workspace deployment: {}",

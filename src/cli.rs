@@ -120,22 +120,26 @@ fn print_config_w<T: Write>(
             writeln!(
                 f,
                 "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
-                wd["id"].as_str().unwrap(),
-                wd["url"].as_str().unwrap(),
-                wd["owner"].as_str().unwrap(),
-                wd["cprovider"].as_str().unwrap(),
-                wd["cargs"]
+                wd.id,
+                wd.url.clone().unwrap(),
+                wd.owner,
+                wd.cprovider,
+                wd.cargs.join(", "),
             )?;
-            if wd["cprovider"] == "docker"
-                || wd["cprovider"] == "podman"
-                || wd["cprovider"] == "lxd"
-            {
-                writeln!(f, "\timg: {}", wd["image"].as_str().unwrap())?;
+            if wd.cprovider == "docker" || wd.cprovider == "podman" || wd.cprovider == "lxd" {
+                match &wd.image {
+                    Some(img) => {
+                        writeln!(f, "\timg: {img}")?;
+                    }
+                    None => {
+                        writeln!(f, "\timg: (none)")?;
+                    }
+                }
             }
-            if !wd["terminate"].as_array().unwrap().is_empty() {
+            if !wd.terminate.is_empty() {
                 writeln!(f, "\tterminate:")?;
-                for terminate_p in wd["terminate"].as_array().unwrap().iter() {
-                    writeln!(f, "\t\t{}", terminate_p.as_str().unwrap())?;
+                for terminate_p in wd.terminate.iter() {
+                    writeln!(f, "\t\t{}", terminate_p)?;
                 }
             }
         }
@@ -303,34 +307,18 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 );
             }
 
-            if let Some(wd_cprovider) = local_config.wdeployments[wd_index].get_mut("cprovider") {
-                let selected_cprovider = serde_json::Value::String(selected_cprovider);
-                if *wd_cprovider == selected_cprovider {
-                    return Ok(());
-                }
-                *wd_cprovider = selected_cprovider;
-            } else {
-                warn!(
-                    "local configuration of {} without prior value of cprovider",
-                    local_config.wdeployments[wd_index]["id"]
-                );
-                local_config.wdeployments[wd_index]
-                    .insert("cprovider".into(), json!(selected_cprovider));
+            if local_config.wdeployments[wd_index].cprovider == selected_cprovider {
+                return Ok(());
             }
+            local_config.wdeployments[wd_index].cprovider = selected_cprovider;
 
-            if local_config.wdeployments[wd_index]["cprovider"] == "proxy" {
-                let null_img = json!(null);
-                local_config.wdeployments[wd_index].insert("image".into(), null_img);
+            if local_config.wdeployments[wd_index].cprovider == "proxy" {
+                local_config.wdeployments[wd_index].image = None;
             } else {
                 // cprovider \in {lxd, docker, podman}
-                let default_img = json!("rerobots/hs-generic");
-                if let Some(wd_cprovider_img) = local_config.wdeployments[wd_index].get_mut("image")
-                {
-                    if *wd_cprovider_img == json!(null) {
-                        *wd_cprovider_img = default_img;
-                    }
-                } else {
-                    local_config.wdeployments[wd_index].insert("image".into(), default_img);
+                let default_img = "rerobots/hs-generic";
+                if local_config.wdeployments[wd_index].image.is_none() {
+                    local_config.wdeployments[wd_index].image = Some(default_img.into());
                 }
             }
 
@@ -339,10 +327,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Ok(()) => Ok(()),
             };
         } else if let Some(new_image) = matches.value_of("cprovider_img") {
-            let cprovider = local_config.wdeployments[wd_index]["cprovider"]
-                .as_str()
-                .unwrap();
-            match cprovider {
+            match local_config.wdeployments[wd_index].cprovider.as_str() {
                 "podman" => {
                     let argv = vec!["podman", "image", "exists", new_image];
                     let mut prog = Command::new(argv[0]);
@@ -400,13 +385,15 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                     }
                 }
                 _ => {
-                    let errmessage = format!("cannot --assign-image for cprovider `{}`", cprovider);
+                    let errmessage = format!(
+                        "cannot --assign-image for cprovider `{}`",
+                        local_config.wdeployments[wd_index].cprovider
+                    );
                     return CliError::new(errmessage.as_str(), 1);
                 }
             }
 
-            let new_image = json!(new_image);
-            local_config.wdeployments[wd_index].insert("image".into(), new_image);
+            local_config.wdeployments[wd_index].image = Some(new_image.into());
 
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
@@ -421,16 +408,17 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 return CliError::new("device does not exist", 1);
             }
             let device_path = device_path.to_str().unwrap();
-            if local_config.wdeployments[wd_index]["cprovider"] == "docker"
-                || local_config.wdeployments[wd_index]["cprovider"] == "podman"
+            if local_config.wdeployments[wd_index].cprovider == "docker"
+                || local_config.wdeployments[wd_index].cprovider == "podman"
             {
-                let new_carg = json!(format!("--device={}:{}", device_path, device_path));
-                let wd = local_config.wdeployments.get_mut(wd_index).unwrap();
-                let cargs = wd.get_mut("cargs").unwrap().as_array_mut().unwrap();
-                if cargs.contains(&new_carg) {
+                let new_carg = format!("--device={device_path}:{device_path}");
+                if local_config.wdeployments[wd_index]
+                    .cargs
+                    .contains(&new_carg)
+                {
                     return CliError::new("device already added", 1);
                 }
-                cargs.push(new_carg);
+                local_config.wdeployments[wd_index].cargs.push(new_carg);
             } else {
                 return CliError::new("adding devices not supported by this cprovider", 1);
             }
@@ -440,24 +428,27 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Ok(()) => Ok(()),
             };
         } else if let Some(device_path) = matches.value_of("remove_raw_device_path") {
-            if local_config.wdeployments[wd_index]["cprovider"] == "docker"
-                || local_config.wdeployments[wd_index]["cprovider"] == "podman"
+            if local_config.wdeployments[wd_index].cprovider == "docker"
+                || local_config.wdeployments[wd_index].cprovider == "podman"
             {
-                let mut carg = json!(format!("--device={}:{}", device_path, device_path));
-                let wd = local_config.wdeployments.get_mut(wd_index).unwrap();
-                let cargs = wd.get_mut("cargs").unwrap().as_array_mut().unwrap();
-                if !cargs.contains(&carg) {
+                let mut carg = format!("--device={device_path}:{device_path}");
+                if !local_config.wdeployments[wd_index].cargs.contains(&carg) {
                     let device_path_c = match std::path::Path::new(device_path).canonicalize() {
                         Ok(p) => p,
                         Err(err) => return CliError::new_stdio(err, 1),
                     };
                     let device_path_c = device_path_c.to_str().unwrap();
-                    carg = json!(format!("--device={}:{}", device_path_c, device_path_c));
-                    if !cargs.contains(&carg) {
+                    carg = format!("--device={device_path_c}:{device_path_c}");
+                    if !local_config.wdeployments[wd_index].cargs.contains(&carg) {
                         return CliError::new("device not previously added", 1);
                     }
                 }
-                cargs.remove(cargs.iter().position(|x| x == &carg).unwrap());
+                let index = local_config.wdeployments[wd_index]
+                    .cargs
+                    .iter()
+                    .position(|x| x == &carg)
+                    .unwrap();
+                local_config.wdeployments[wd_index].cargs.remove(index);
             } else {
                 return CliError::new("adding/removing devices not supported by this cprovider", 1);
             }
@@ -467,7 +458,28 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Ok(()) => Ok(()),
             };
         } else if let Some(program) = matches.value_of("add_terminate_prog") {
+            local_config.wdeployments[wd_index]
+                .terminate
+                .push(program.into());
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
         } else if let Some(program) = matches.value_of("rm_terminate_prog") {
+            match local_config.wdeployments[wd_index]
+                .terminate
+                .iter()
+                .position(|x| x == program)
+            {
+                Some(index) => {
+                    local_config.wdeployments[wd_index].terminate.remove(index);
+                    match mgmt::modify_local(&local_config) {
+                        Err(err) => CliError::new_std(err, 1),
+                        Ok(()) => Ok(()),
+                    }
+                }
+                None => CliError::new("no matching program found", 1),
+            };
         } else {
             let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
@@ -499,7 +511,7 @@ fn config_addon_subcommand(
     };
 
     let ac = api::HSAPIClient::new();
-    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
+    let wdid = &local_config.wdeployments[wd_index].id;
 
     if matches.is_present("remove") {
         if let Err(err) = ac.remove_addon(wdid, &addon) {
@@ -542,9 +554,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
     if matches.is_present("list_rules") {
         let ac = api::HSAPIClient::new();
-        let mut ruleset = match ac
-            .get_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap())
-        {
+        let mut ruleset = match ac.get_access_rules(&local_config.wdeployments[wd_index].id) {
             Ok(r) => r,
             Err(err) => return CliError::new_std(err, 1),
         };
@@ -556,16 +566,14 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         println!("{}", ruleset);
     } else if matches.is_present("drop_all_rules") {
         let ac = api::HSAPIClient::new();
-        match ac.drop_access_rules(local_config.wdeployments[wd_index]["id"].as_str().unwrap()) {
+        match ac.drop_access_rules(&local_config.wdeployments[wd_index].id) {
             Ok(_) => (),
             Err(err) => return CliError::new_std(err, 1),
         }
     } else if matches.is_present("permit_me") {
         let ac = api::HSAPIClient::new();
-        let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
-        let username = local_config.wdeployments[wd_index]["owner"]
-            .as_str()
-            .unwrap();
+        let wdid = &local_config.wdeployments[wd_index].id;
+        let username = &local_config.wdeployments[wd_index].owner;
         match ac.add_access_rule(wdid, username) {
             Ok(_) => (),
             Err(err) => return CliError::new_std(err, 1),
@@ -588,8 +596,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
 
         let ac = api::HSAPIClient::new();
-        let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
-        match ac.add_access_rule(wdid, "*") {
+        match ac.add_access_rule(&local_config.wdeployments[wd_index].id, "*") {
             Ok(_) => (),
             Err(err) => return CliError::new_std(err, 1),
         }
@@ -612,9 +619,8 @@ fn ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliEr
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
-    match ac.run(wdid, bindaddr) {
+    match ac.run(&local_config.wdeployments[wd_index].id, bindaddr) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }
@@ -632,9 +638,8 @@ fn stop_ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), 
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    let wdid = local_config.wdeployments[wd_index]["id"].as_str().unwrap();
     let ac = api::HSAPIClient::new();
-    match ac.stop(wdid, bindaddr) {
+    match ac.stop(&local_config.wdeployments[wd_index].id, bindaddr) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }

@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use crate::control;
 use crate::control::{CWorkerCommand, TunnelInfo};
 use crate::mgmt;
+use crate::mgmt::WDeployment;
 
 
 struct ClientError {
@@ -531,10 +532,7 @@ impl HSAPIClient {
 
         let mut local_config = mgmt::get_local_config(false, false)?;
         let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
-        local_config.wdeployments[wd_index].insert(
-            "ssh_key".into(),
-            serde_json::Value::String(local_config.ssh_key.clone()),
-        );
+        local_config.wdeployments[wd_index].ssh_key = Some(local_config.ssh_key.clone());
         let wd = Arc::new(local_config.wdeployments[wd_index].clone());
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
@@ -702,13 +700,17 @@ impl HSAPIClient {
 
 
     pub fn register_new(&mut self, at_most_1: bool) -> Result<String, Box<dyn std::error::Error>> {
-        if let Some(local_config) = &self.local_config {
-            if at_most_1 && !local_config.wdeployments.is_empty() {
-                return error("local configuration already declares a workspace deployment (to register more, `hardshare register --permit-more`)");
+        let local_config = match &mut self.local_config {
+            Some(local_config) => {
+                if at_most_1 && !local_config.wdeployments.is_empty() {
+                    return error("local configuration already declares a workspace deployment (to register more, `hardshare register --permit-more`)");
+                }
+                local_config
             }
-        } else {
-            return error("cannot register without initial local configuration. (try `hardshare config --create`)");
-        }
+            None => {
+                return error("cannot register without initial local configuration. (try `hardshare config --create`)");
+            }
+        };
 
         let url = format!("{}/hardshare/register", self.origin);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
@@ -738,39 +740,20 @@ impl HSAPIClient {
         });
         let mut new_wd = res?;
 
-        if !new_wd.contains_key("cprovider") {
-            new_wd.insert("cprovider".into(), json!("docker"));
-        }
-        if !new_wd.contains_key("cargs") {
-            new_wd.insert("cargs".into(), json!([]));
-        }
-        if !new_wd.contains_key("image") {
-            new_wd.insert("image".into(), json!("rerobots/hs-generic"));
-        }
-        if !new_wd.contains_key("terminate") {
-            new_wd.insert("terminate".into(), json!([]));
-        }
-        if !new_wd.contains_key("init_inside") {
-            new_wd.insert("init_inside".into(), json!([]));
-        }
-        if !new_wd.contains_key("container_name") {
-            new_wd.insert("container_name".into(), json!("rrc"));
-        }
+        local_config
+            .wdeployments
+            .push(WDeployment::from_json(&new_wd));
 
-        let wdid = String::from(new_wd["id"].as_str().unwrap());
-        if let Some(local_config) = &mut self.local_config {
-            local_config.wdeployments.push(new_wd);
+        #[cfg(not(test))]
+        mgmt::modify_local(local_config)?;
 
-            #[cfg(not(test))]
-            mgmt::modify_local(local_config)?;
-        }
-        Ok(wdid)
+        Ok(local_config.wdeployments.last().unwrap().id.clone())
     }
 
     pub fn declare_existing(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(local_config) = &self.local_config {
             for wd in local_config.wdeployments.iter() {
-                if wd["id"] == wdid {
+                if wd.id == wdid {
                     return error("attempted to declare workspace deployment that is already declared in local configuration");
                 }
             }
@@ -821,28 +804,11 @@ impl HSAPIClient {
                 return error("no previously registered workspace deployments found with given ID")
             }
         };
-        if !matched_wd.contains_key("cprovider") {
-            matched_wd.insert("cprovider".into(), json!("docker"));
-        }
-        if !matched_wd.contains_key("cargs") {
-            matched_wd.insert("cargs".into(), json!([]));
-        }
-        if !matched_wd.contains_key("image") {
-            matched_wd.insert("image".into(), json!("rerobots/hs-generic"));
-        }
-        if !matched_wd.contains_key("terminate") {
-            matched_wd.insert("terminate".into(), json!([]));
-        }
-        if !matched_wd.contains_key("init_inside") {
-            matched_wd.insert("init_inside".into(), json!([]));
-        }
-        if !matched_wd.contains_key("container_name") {
-            matched_wd.insert("container_name".into(), json!("rrc"));
-        }
 
-        let wdid = String::from(matched_wd["id"].as_str().unwrap());
         if let Some(local_config) = &mut self.local_config {
-            local_config.wdeployments.push(matched_wd);
+            local_config
+                .wdeployments
+                .push(WDeployment::from_json(&matched_wd));
 
             #[cfg(not(test))]
             mgmt::modify_local(local_config)?;

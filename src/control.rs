@@ -16,6 +16,7 @@ use serde::Deserialize;
 use tempfile::NamedTempFile;
 
 use crate::api;
+use crate::mgmt::WDeployment;
 
 
 #[derive(PartialEq, Debug, Clone)]
@@ -59,7 +60,7 @@ struct SshTunnel {
 
 #[derive(Clone)]
 struct CurrentInstance {
-    wdeployment: Arc<HashMap<String, serde_json::Value>>,
+    wdeployment: Arc<WDeployment>,
     status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
     local_name: Arc<Mutex<Option<String>>>,
@@ -70,7 +71,7 @@ struct CurrentInstance {
 
 impl CurrentInstance {
     fn new(
-        wdeployment: &Arc<HashMap<String, serde_json::Value>>,
+        wdeployment: &Arc<WDeployment>,
         wsclient_addr: Option<&Addr<api::WSClient>>,
     ) -> CurrentInstance {
         CurrentInstance {
@@ -369,26 +370,20 @@ impl CurrentInstance {
 
 
     fn launch(mut instance: CurrentInstance, public_key: &str) {
-        let cprovider = instance.wdeployment["cprovider"]
-            .as_str()
-            .unwrap()
-            .to_string();
+        let cprovider = instance.wdeployment.cprovider.clone();
         if cprovider == "docker" || cprovider == "podman" {
-            let image = instance.wdeployment["image"].as_str().unwrap().to_string();
-            let base_name = instance.wdeployment["container_name"]
-                .as_str()
-                .unwrap()
-                .to_string();
+            let image = match &instance.wdeployment.image {
+                Some(img) => img.clone(),
+                None => {
+                    error!("no image in configuration");
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            };
+            let base_name = instance.wdeployment.container_name.clone();
             let name = instance.generate_local_name(&base_name);
-            let cargs = instance.wdeployment["cargs"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|a| a.as_str().unwrap());
-            let tunnelkey_path = instance.wdeployment["ssh_key"]
-                .as_str()
-                .unwrap()
-                .to_string();
+            let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
 
             let mut run_command = Command::new(&cprovider);
             let mut run_command = run_command.args([
@@ -402,7 +397,7 @@ impl CurrentInstance {
                 "--cap-add=NET_ADMIN",
                 "--cap-add=CAP_SYS_CHROOT",
             ]);
-            run_command = run_command.args(cargs);
+            run_command = run_command.args(&instance.wdeployment.cargs);
             if cprovider == "podman" {
                 run_command = run_command.args(["-p", "127.0.0.1::22"]);
             }
@@ -607,13 +602,10 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        let cprovider = instance.wdeployment["cprovider"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        if cprovider == "docker" || cprovider == "podman" {
+        if instance.wdeployment.cprovider == "docker" || instance.wdeployment.cprovider == "podman"
+        {
             let name = instance.get_local_name().unwrap();
-            let mut run_command = Command::new(&cprovider);
+            let mut run_command = Command::new(&instance.wdeployment.cprovider);
             let mut run_command = run_command.args(["rm", "-f", &name]);
             match run_command.status() {
                 Ok(s) => {
@@ -631,14 +623,7 @@ impl CurrentInstance {
             }
         }
 
-        let terminate_scripts: Vec<&str> = instance.wdeployment["terminate"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| s.as_str().unwrap())
-            .collect();
-
-        for script in terminate_scripts.iter() {
+        for script in instance.wdeployment.terminate.iter() {
             match Command::new("/bin/sh").args(["-c", script]).status() {
                 Ok(script_result) => {
                     if !script_result.success() {
@@ -665,7 +650,7 @@ pub fn cworker(
     ac: api::HSAPIClient,
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
     wsclient_addr: Addr<api::WSClient>,
-    wdeployment: Arc<HashMap<String, serde_json::Value>>,
+    wdeployment: Arc<WDeployment>,
 ) {
     let mut current_instance = CurrentInstance::new(&wdeployment, Some(&wsclient_addr));
 
