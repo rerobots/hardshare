@@ -466,6 +466,8 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Err(err) => CliError::new_std(err, 1),
                 Ok(()) => Ok(()),
             };
+        } else if let Some(program) = matches.value_of("add_terminate_prog") {
+        } else if let Some(program) = matches.value_of("rm_terminate_prog") {
         } else {
             let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
@@ -750,6 +752,14 @@ pub fn main() -> Result<(), CliError> {
                          .long("declare")
                          .value_name("ID")
                          .help("declare that workspace deployment is hosted here. (This only works if it has been previously registered under the same user account.)"))
+                    .arg(Arg::with_name("add_terminate_prog")
+                         .long("add-terminate-prog")
+                         .value_name("PROGRAM")
+                         .help("add program to list of commands to execute"))
+                    .arg(Arg::with_name("rm_terminate_prog")
+                         .long("rm-terminate-prog")
+                         .value_name("PROGRAM")
+                         .help("remove program from list of commands to execute; for example, copy-and-paste value shown in `hardshare config -l` here"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
