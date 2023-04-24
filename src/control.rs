@@ -103,7 +103,7 @@ impl CurrentInstance {
         if !responses.contains_key(&message_id) {
             return Err(format!("unknown message {}", message_id));
         }
-        if !responses[&message_id].is_none() {
+        if responses[&message_id].is_some() {
             return Err(format!("already handled message {}", message_id));
         }
         responses.insert(message_id, Some(res.clone()));
