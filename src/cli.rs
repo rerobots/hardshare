@@ -136,6 +136,12 @@ fn print_config_w<T: Write>(
                     }
                 }
             }
+            if !wd.init_inside.is_empty() {
+                writeln!(f, "\tinit inside:")?;
+                for init_inside_p in wd.init_inside.iter() {
+                    writeln!(f, "\t\t{}", init_inside_p)?;
+                }
+            }
             if !wd.terminate.is_empty() {
                 writeln!(f, "\tterminate:")?;
                 for terminate_p in wd.terminate.iter() {
@@ -466,13 +472,38 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 Ok(()) => Ok(()),
             };
         } else if let Some(program) = matches.value_of("rm_terminate_prog") {
-            match local_config.wdeployments[wd_index]
+            return match local_config.wdeployments[wd_index]
                 .terminate
                 .iter()
                 .position(|x| x == program)
             {
                 Some(index) => {
                     local_config.wdeployments[wd_index].terminate.remove(index);
+                    match mgmt::modify_local(&local_config) {
+                        Err(err) => CliError::new_std(err, 1),
+                        Ok(()) => Ok(()),
+                    }
+                }
+                None => CliError::new("no matching program found", 1),
+            };
+        } else if let Some(program) = matches.value_of("add_init_inside") {
+            local_config.wdeployments[wd_index]
+                .init_inside
+                .push(program.into());
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
+        } else if let Some(program) = matches.value_of("rm_init_inside") {
+            return match local_config.wdeployments[wd_index]
+                .init_inside
+                .iter()
+                .position(|x| x == program)
+            {
+                Some(index) => {
+                    local_config.wdeployments[wd_index]
+                        .init_inside
+                        .remove(index);
                     match mgmt::modify_local(&local_config) {
                         Err(err) => CliError::new_std(err, 1),
                         Ok(()) => Ok(()),
@@ -765,6 +796,14 @@ pub fn main() -> Result<(), CliError> {
                          .long("rm-terminate-prog")
                          .value_name("PROGRAM")
                          .help("remove program from list of commands to execute; for example, copy-and-paste value shown in `hardshare config -l` here"))
+                    .arg(Arg::with_name("add_init_inside")
+                         .long("add-init-inside")
+                         .value_name("PROGRAM")
+                         .help("add program to be executed inside container during initialization"))
+                    .arg(Arg::with_name("rm_init_inside")
+                         .long("rm-init-inside")
+                         .value_name("PROGRAM")
+                         .help("remove program from list of commands to execute inside; for example, copy-and-paste value shown in `hardshare config -l` here"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))

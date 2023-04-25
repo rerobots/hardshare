@@ -511,6 +511,28 @@ impl CurrentInstance {
                     }
                 };
 
+            for script in instance.wdeployment.init_inside.iter() {
+                let status = Command::new(&cprovider)
+                    .args(["exec", &name, "/bin/sh", "-c", script])
+                    .status();
+                match status {
+                    Ok(script_result) => {
+                        if !script_result.success() {
+                            error!("`{script}` failed: {}", script_result);
+                            instance.declare_status(InstanceStatus::InitFail);
+                            instance.send_status();
+                            return;
+                        }
+                    }
+                    Err(err) => {
+                        error!("`{script}` failed: {}", err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+            }
+
             if let Err(err) = instance.start_sshtun(&addr, sshport, &tunnelkey_path) {
                 error!("{}", err);
                 instance.declare_status(InstanceStatus::InitFail);

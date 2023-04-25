@@ -23,6 +23,12 @@ FLAGS:
     -V, --version              Prints version information
 
 OPTIONS:
+        --add-init-inside <PROGRAM>
+            add program to be executed inside container during initialization
+
+        --add-terminate-prog <PROGRAM>
+            add program to list of commands to execute
+
         --cprovider <CPROVIDER>
             select a container provider: lxd, docker, podman, proxy
 
@@ -32,14 +38,22 @@ OPTIONS:
         --declare <ID>
             declare that workspace deployment is hosted here. (This only works
             if it has been previously registered under the same user account.)
-        --add-token <FILE>         add new API token
+        --add-token <FILE>                add new API token
         --add-ssh-path <FILE>
             add path of SSH key pair (does not copy the key)
 
-        --add-raw-device <PATH>    add device file to present in container
+        --add-raw-device <PATH>
+            add device file to present in container
+
         --rm-raw-device <PATH>
             remove device previously marked for inclusion in container
 
+        --rm-init-inside <PROGRAM>
+            remove program from list of commands to execute inside; for example,
+            copy-and-paste value shown in `hardshare config -l` here
+        --rm-terminate-prog <PROGRAM>
+            remove program from list of commands to execute; for example, copy-
+            and-paste value shown in `hardshare config -l` here
 
 ARGS:
     <ID>    id of workspace deployment for configuration changes (can be
