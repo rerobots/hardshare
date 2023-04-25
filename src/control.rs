@@ -721,8 +721,11 @@ pub fn cworker(
             CWorkerCommandType::InstanceDestroy => {
                 if current_instance.exists() {
                     let status = current_instance.status().unwrap();
-                    if status == InstanceStatus::Init {
-                        warn!("destroy request received when status is INIT");
+                    if status == InstanceStatus::Terminating {
+                        // Already terminating; ACK but no action
+                        warn!("destroy request received when already terminating");
+                    } else if status != InstanceStatus::Ready {
+                        warn!("destroy request received when status is {}", status);
                         wsclient_addr.do_send(api::WSClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
@@ -735,10 +738,6 @@ pub fn cworker(
                             ),
                         });
                         continue;
-                    }
-                    if status == InstanceStatus::Terminating {
-                        // Already terminating; ACK but no action
-                        warn!("destroy request received when already terminating");
                     }
                     wsclient_addr.do_send(api::WSClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
