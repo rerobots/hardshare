@@ -20,6 +20,10 @@ Beware that this can return several processes that include "hardshare" in their
 arguments but are not hardshare processes per se.  The left-most number in each
 returned row is the PID. These processes can be killed via `kill` or
 `kill -SIGINT`.
+The flags to `ps` may be different on your host. On Mac, try
+```bash
+ps -ef | grep -i hardshare
+```
 
 
 ## After first installation, instance status INIT_FAIL
