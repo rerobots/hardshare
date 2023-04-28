@@ -18,11 +18,15 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
 {
     const { markdoc } = pageProps;
 
-    let title = 'hardshare';
+    let title: string;
     if (markdoc?.frontmatter?.title) {
-        title += ': ' + markdoc.frontmatter.title;
+        if (markdoc.frontmatter.section) {
+            title = `${markdoc.frontmatter.title} | ${markdoc.frontmatter.section} | hardshare`;
+        } else {
+            title = `${markdoc.frontmatter.title} | hardshare`;
+        }
     } else {
-        title += '  documentation';
+        title += 'hardshare documentation';
     }
 
     let ogImage = markdoc?.frontmatter?.image;
