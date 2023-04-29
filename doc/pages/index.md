@@ -14,7 +14,7 @@ The source code repository is at <https://github.com/rerobots/hardshare>
 
 ## What is rerobots?
 
-Learn about it at [docs.rerobots.net](https://docs.rerobots.net/).
+Learn more at [docs.rerobots.net](https://docs.rerobots.net/).
 
 
 ## How do I begin?
