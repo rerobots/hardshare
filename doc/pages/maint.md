@@ -71,7 +71,7 @@ Now restart the hardshare daemon
 
 ```bash
 hardshare stop-ad
-hardshare ad -d
+hardshare ad
 ```
 
 Finally, request an instance as usual.
@@ -129,7 +129,7 @@ remote:
 ## Start, check, and stop daemons
 
 ```bash
-hardshare ad -d
+hardshare ad
 hardshare status
 hardshare stop-ad
 ```

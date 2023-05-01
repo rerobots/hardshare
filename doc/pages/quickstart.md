@@ -59,10 +59,10 @@ hardshare register
 Start advertising
 
 ```bash
-hardshare ad -d
+hardshare ad
 ```
 
-Check it
+Open a new terminal, and check it
 
 ```bash
 hardshare status
