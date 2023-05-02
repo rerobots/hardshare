@@ -18,6 +18,8 @@ example [Ubuntu](https://ubuntu.com/download/desktop).
 
 First, get the current release at <https://github.com/rerobots/hardshare/releases>
 and follow the instructions for your host.
+If your host type is not there, then please [contact us](https://rerobots.net/contact)
+or [build the client from source code](/develop).
 
 If it succeeded, then you should be able to get the version from the
 command-line interface (CLI)
