@@ -107,19 +107,6 @@ pub struct HSAPIClient {
 pub struct RemoteConfig {}
 
 
-fn create_client(token: Option<String>) -> Result<awc::Client, Box<dyn std::error::Error>> {
-    if token.is_none() {
-        return error("No valid API tokens found.");
-    }
-
-    let connector = SslConnector::builder(SslMethod::tls())?.build();
-    let client = awc::Client::builder().connector(awc::Connector::new().ssl(connector).finish());
-    Ok(client
-        .header("Authorization", format!("Bearer {}", token.unwrap()))
-        .finish())
-}
-
-
 async fn get_access_rules_a(
     client: &awc::Client,
     origin: &str,
@@ -196,11 +183,40 @@ impl HSAPIClient {
     }
 
 
+    fn create_client_generator(
+        &self,
+    ) -> Result<impl FnOnce() -> awc::Client, Box<dyn std::error::Error>> {
+        let api_token = match &self.cached_api_token {
+            Some(tok) => tok.clone(),
+            None => match &self.local_config {
+                Some(local_config) => {
+                    return match &local_config.default_org {
+                        Some(default_org) => {
+                            error(format!("No valid API tokens found for org {}", default_org))
+                        }
+                        None => error("No valid API tokens found (no default org)"),
+                    }
+                }
+                None => return error("No valid API tokens found"),
+            },
+        };
+
+        let connector = SslConnector::builder(SslMethod::tls())?.build();
+
+        Ok(Box::new(move || {
+            awc::Client::builder()
+                .connector(awc::Connector::new().ssl(connector).finish())
+                .header("Authorization", format!("Bearer {}", api_token))
+                .finish()
+        }))
+    }
+
+
     pub fn get_remote_config(
         &self,
         include_dissolved: bool,
     ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-        let api_token = self.cached_api_token.clone();
+        let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
@@ -211,8 +227,7 @@ impl HSAPIClient {
             };
             let url = format!("{}{}", origin, listurl_path);
 
-            let client = create_client(api_token)?;
-
+            let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
                 Ok(serde_json::from_slice(resp.body().await?.as_ref())?)
@@ -231,25 +246,23 @@ impl HSAPIClient {
 
 
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
-        let api_token = self.cached_api_token.clone();
+        let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
-            get_access_rules_a(&client, &origin, &wdid).await
+            get_access_rules_a(&client(), &origin, &wdid).await
         })
     }
 
 
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let api_token = self.cached_api_token.clone();
+        let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
-
+            let client = client();
             let ruleset = get_access_rules_a(&client, &origin, &wdid).await?;
             for rule in ruleset.rules.iter() {
                 let url = format!("{}/deployment/{}/rule/{}", origin, wdid, rule.id);
@@ -273,8 +286,8 @@ impl HSAPIClient {
         wdid: &str,
         to_user: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
         let td = std::time::Duration::new(10, 0);
-        let api_token = self.cached_api_token.clone();
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let origin = self.origin.clone();
@@ -285,9 +298,8 @@ impl HSAPIClient {
             body.insert("cap", "CAP_INSTANTIATE");
             body.insert("user", to_user.as_str());
 
-            let client = create_client(api_token)?;
-
             let url = format!("{}/deployment/{}/rule", origin, wdid);
+            let client = client();
             let client_req = client.post(url).timeout(td);
             let mut resp = client_req.send_json(&body).await?;
             if resp.status() == 400 {
@@ -310,14 +322,14 @@ impl HSAPIClient {
         wdid: &str,
         addon: &AddOn,
     ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-        let api_token = self.cached_api_token.clone();
+        let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
             let url = format!("{}/deployment/{}", origin, wdid);
+            let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
                 let mut payload: serde_json::Value =
@@ -351,15 +363,15 @@ impl HSAPIClient {
         wdid: &str,
         addon: &AddOn,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
         let td = std::time::Duration::new(10, 0);
-        let api_token = self.cached_api_token.clone();
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
             let url = format!("{}/deployment/{}", origin, wdid);
+            let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
                 let mut payload: serde_json::Value =
@@ -418,15 +430,15 @@ impl HSAPIClient {
         addon: &AddOn,
         config: Option<serde_json::Value>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
         let td = std::time::Duration::new(10, 0);
-        let api_token = self.cached_api_token.clone();
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
             let url = format!("{}/deployment/{}", origin, wdid);
+            let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
                 let mut payload: serde_json::Value =
@@ -761,15 +773,14 @@ impl HSAPIClient {
             return error("cannot declare existing without initial local configuration. (try `hardshare config --create`)");
         }
 
-        let api_token = self.cached_api_token.clone();
+        let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let url = format!("{}/hardshare/list", origin);
         let mut sys = System::new("wclient");
 
         let wdid = wdid.to_string();
         let res = actix::SystemRunner::block_on(&mut sys, async move {
-            let client = create_client(api_token)?;
-
+            let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
                 let body = resp.body().await?;
