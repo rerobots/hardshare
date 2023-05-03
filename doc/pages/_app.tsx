@@ -26,7 +26,7 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
             title = `${markdoc.frontmatter.title} | hardshare`;
         }
     } else {
-        title += 'hardshare documentation';
+        title = 'hardshare documentation';
     }
 
     let ogImage = markdoc?.frontmatter?.image;
