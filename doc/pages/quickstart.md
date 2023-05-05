@@ -41,7 +41,7 @@ docker version
 
 Get an [API token](https://rerobots.net/tokens) to associate with your
 hardshare client. (Learn how to do this [from the rerobots Web Guide](
-https://docs.rerobots.net/webui/making-and-revoking-api-tokens).) Then,
+https://docs.rerobots.net/web/making-and-revoking-api-tokens).) Then,
 initialize a new local configuration, and add the API token to it
 
 ```bash
