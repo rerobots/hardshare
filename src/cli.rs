@@ -78,8 +78,9 @@ fn print_config(
     local: &mgmt::Config,
     remote: &Option<serde_json::Value>,
     pformat: PrintingFormat,
+    show_all_remote: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    print_config_w(&mut std::io::stdout(), local, remote, pformat)?;
+    print_config_w(&mut std::io::stdout(), local, remote, pformat, show_all_remote)?;
     Ok(())
 }
 
@@ -89,6 +90,7 @@ fn print_config_w<T: Write>(
     local: &mgmt::Config,
     remote: &Option<serde_json::Value>,
     pformat: PrintingFormat,
+    show_all_remote: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if pformat != PrintingFormat::Default {
         fn serializer<T: Serialize>(x: &T, pformat: PrintingFormat) -> String {
@@ -112,11 +114,13 @@ fn print_config_w<T: Write>(
         return Ok(());
     }
 
+    let mut local_ids = vec![];
     writeln!(f, "workspace deployments defined in local configuration:")?;
     if local.wdeployments.is_empty() {
         writeln!(f, "\t(none)")?;
     } else {
         for wd in local.wdeployments.iter() {
+            local_ids.push(wd.id.as_str());
             writeln!(
                 f,
                 "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
@@ -193,11 +197,21 @@ fn print_config_w<T: Write>(
                 "\nno registered workspace deployments with this user account"
             )?;
         } else {
-            writeln!(
-                f,
-                "\nregistered workspace deployments with this user account:"
-            )?;
+            if show_all_remote {
+                writeln!(
+                    f,
+                    "\nregistration details for all workspace deployments owned by this user:"
+                )?;
+            } else {
+                writeln!(
+                    f,
+                    "\nregistration details for workspace deployments in local config:"
+                )?;
+            }
             for wd in rc_wds.iter() {
+                if !show_all_remote && !local_ids.contains(&wd["id"].as_str().unwrap()) {
+                    continue;
+                }
                 writeln!(f, "{}", wd["id"].as_str().unwrap())?;
                 writeln!(f, "\tcreated: {}", wd["date_created"].as_str().unwrap())?;
                 if !wd["desc"].is_null() {
@@ -226,6 +240,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
     let include_dissolved = matches.is_present("includedissolved");
 
     if matches.is_present("list") {
+        let show_all_remote = matches.is_present("list_all");
         let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1),
@@ -244,7 +259,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
             });
         }
 
-        print_config(&local_config, &remote_config, pformat).unwrap();
+        print_config(&local_config, &remote_config, pformat, show_all_remote).unwrap();
     } else if let Some(new_token_path) = matches.value_of("new_api_token") {
         let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
             Ok(lc) => lc,
@@ -746,6 +761,9 @@ pub fn main() -> Result<(), CliError> {
                          .short("l")
                          .long("list")
                          .help("Lists configuration"))
+                    .arg(Arg::with_name("list_all")
+                         .long("all")
+                         .help("lists all registered devices owned by this user, whether or not in the local configuration"))
                     .arg(Arg::with_name("onlylocalconfig")
                          .long("local")
                          .help("Only show local configuration data"))
@@ -934,7 +952,7 @@ mod tests {
         let lconf = mgmt::get_local_config_bp(&base_path, true, false).unwrap();
 
         let mut buf: Vec<u8> = vec![];
-        print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json).unwrap();
+        print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json, true).unwrap();
         let buf_parsing_result: Result<serde_json::Value, serde_json::Error> =
             serde_json::from_slice(&buf);
         assert!(buf_parsing_result.is_ok());
