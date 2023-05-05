@@ -46,7 +46,7 @@ initialize a new local configuration, and add the API token to it
 
 ```bash
 hardshare config -c
-hardshare config --add-token path/to/your/jwt.txt
+hardshare config --add-token path/to/your/rerobots-apitoken.txt
 ```
 
 Finally, create a new workspace deployment
