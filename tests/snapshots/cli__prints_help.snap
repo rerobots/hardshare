@@ -29,10 +29,13 @@ SUBCOMMANDS:
                     if none, the user
     help            Prints this message or the help of the given
                     subcommand(s)
+    lock            Lock a workspace deployment to prevent new instances
     register        Register new workspace deployment
     rules           Modify access rules (also known as capabilities or
                     permissions)
     stop-ad         Mark as unavailable; optionally wait for current
                     instance to finish
+    unlock          Unlock a workspace deployment to allow new instances,
+                    depending on access rules
     version         Prints version number and exits
 

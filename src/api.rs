@@ -317,6 +317,32 @@ impl HSAPIClient {
     }
 
 
+    pub fn toggle_lockout(
+        &self,
+        wdid: &str,
+        make_locked: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = client();
+            let url = format!("{}/deployment/{}/lockout", origin, wdid);
+            let mut resp = if make_locked {
+                client.post(url).send().await?
+            } else {
+                client.delete(url).send().await?
+            };
+            if resp.status() != 200 {
+                return error(format!("error changing lock-out: {}", resp.status()));
+            }
+
+            Ok(())
+        })
+    }
+
+
     pub fn get_addon_config(
         &self,
         wdid: &str,

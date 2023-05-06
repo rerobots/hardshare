@@ -736,6 +736,28 @@ fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliE
 }
 
 
+fn lock_wdeplyoment_subcommand(
+    matches: &clap::ArgMatches,
+    make_locked: bool,
+) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let ac = api::HSAPIClient::new();
+    match ac.toggle_lockout(&local_config.wdeployments[wd_index].id, make_locked) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -871,6 +893,16 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("permit_all")
                          .long("permit-all")
                          .help("Permit instantiations by anyone")))
+        .subcommand(SubCommand::with_name("lock")
+                    .about("Lock a workspace deployment to prevent new instances")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of target workspace deployment (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
+        .subcommand(SubCommand::with_name("unlock")
+                    .about("Unlock a workspace deployment to allow new instances, depending on access rules")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of target workspace deployment (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
         .subcommand(SubCommand::with_name("stop-ad")
                     .about("Mark as unavailable; optionally wait for current instance to finish")
                     .arg(Arg::with_name("id_prefix")
@@ -932,6 +964,10 @@ pub fn main() -> Result<(), CliError> {
         return register_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("declare-org") {
         return declare_default_org_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("lock") {
+        return lock_wdeplyoment_subcommand(matches, true);
+    } else if let Some(matches) = matches.subcommand_matches("unlock") {
+        return lock_wdeplyoment_subcommand(matches, false);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
