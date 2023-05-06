@@ -16,6 +16,8 @@ FLAGS:
         --include-dissolved    Include configuration data of dissolved workspace
                                deployments
     -l, --list                 Lists configuration
+        --all                  lists all registered devices owned by this user,
+                               whether or not in the local configuration
         --local                Only show local configuration data
     -p, --prune                delete files in local API tokens directory that
                                are not valid; to get list of files with errors,
