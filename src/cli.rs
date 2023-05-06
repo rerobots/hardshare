@@ -226,6 +226,10 @@ fn print_config_w<T: Write>(
                 if !wd["dissolved"].is_null() {
                     writeln!(f, "\tdissolved: {}", wd["dissolved"].as_str().unwrap())?;
                 }
+                let locked_out = wd["lockout"].as_bool().unwrap();
+                if locked_out {
+                    writeln!(f, "\tlock-out: {}", locked_out);
+                }
             }
         }
     }
