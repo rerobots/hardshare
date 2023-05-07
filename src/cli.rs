@@ -80,7 +80,13 @@ fn print_config(
     pformat: PrintingFormat,
     show_all_remote: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    print_config_w(&mut std::io::stdout(), local, remote, pformat, show_all_remote)?;
+    print_config_w(
+        &mut std::io::stdout(),
+        local,
+        remote,
+        pformat,
+        show_all_remote,
+    )?;
     Ok(())
 }
 
