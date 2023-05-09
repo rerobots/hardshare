@@ -980,8 +980,7 @@ pub fn main() -> Result<(), CliError> {
         .subcommand(SubCommand::with_name("dissolve")
                     .about("Dissolve this workspace deployment, making it unavailable for any future use (THIS CANNOT BE UNDONE)")
                     .arg(Arg::with_name("id_prefix")
-                         .value_name("ID")
-                         .help("id of workspace deployment to stop advertising (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
+                         .value_name("ID")))
         ;
 
     let matches = app.get_matches();
