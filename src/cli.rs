@@ -764,6 +764,28 @@ fn lock_wdeplyoment_subcommand(
 }
 
 
+fn status_subcommand(
+    matches: &clap::ArgMatches,
+    bindaddr: &str,
+    pformat: PrintingFormat,
+) -> Result<(), CliError> {
+    let ac = api::HSAPIClient::new();
+    match ac.get_local_status(bindaddr) {
+        Ok(r) => {
+            if pformat == PrintingFormat::Json {
+                println!("{}", serde_json::to_string(&r).unwrap());
+            } else if pformat == PrintingFormat::Yaml {
+                println!("{}", serde_yaml::to_string(&r).unwrap());
+            } else {
+                println!("{}", r);
+            }
+            Ok(())
+        }
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -923,6 +945,8 @@ pub fn main() -> Result<(), CliError> {
                     .about("Declare default organization for commands; for example, `register` will mark the owner as this organization or, if none, the user")
                     .arg(Arg::with_name("org_name")
                          .value_name("ORG")))
+        .subcommand(SubCommand::with_name("status")
+                    .about("Get information about a running hardshare client, if present"))
         ;
 
     let matches = app.get_matches();
@@ -974,6 +998,8 @@ pub fn main() -> Result<(), CliError> {
         return lock_wdeplyoment_subcommand(matches, true);
     } else if let Some(matches) = matches.subcommand_matches("unlock") {
         return lock_wdeplyoment_subcommand(matches, false);
+    } else if let Some(matches) = matches.subcommand_matches("status") {
+        return status_subcommand(matches, &bindaddr, pformat);
     } else {
         println!("No command given. Try `hardshare -h`");
     }

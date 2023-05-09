@@ -106,6 +106,25 @@ pub struct HSAPIClient {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RemoteConfig {}
 
+#[derive(Serialize, Deserialize)]
+pub struct DaemonStatus {
+    ad_deployments: Vec<String>,
+}
+
+impl std::fmt::Display for DaemonStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "advertised deployments:")?;
+        if self.ad_deployments.is_empty() {
+            writeln!(f, "\t(none)")?;
+        } else {
+            for wd in self.ad_deployments.iter() {
+                writeln!(f, "\t{}", wd)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 
 async fn get_access_rules_a(
     client: &awc::Client,
@@ -649,6 +668,22 @@ impl HSAPIClient {
     }
 
 
+    async fn http_get_status(
+        ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
+    ) -> actix_web::HttpResponse {
+        let mut daemon_status = DaemonStatus {
+            ad_deployments: vec![],
+        };
+        let ac_inner = ac.lock().unwrap();
+        if let Some(wdid_tab) = &ac_inner.wdid_tab {
+            for k in wdid_tab.keys() {
+                daemon_status.ad_deployments.push(k.clone());
+            }
+        }
+        actix_web::HttpResponse::Ok().json(daemon_status)
+    }
+
+
     pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         if self.cached_api_token.is_none() {
             return error("No valid API tokens found.");
@@ -701,6 +736,10 @@ impl HSAPIClient {
                     .data(ac)
                     .wrap(actix_web::middleware::Logger::default())
                     .route(
+                        "/status",
+                        actix_web::web::get().to(HSAPIClient::http_get_status),
+                    )
+                    .route(
                         "/stop/{wdid:.*}",
                         actix_web::web::post().to(HSAPIClient::http_post_stop),
                     )
@@ -734,6 +773,24 @@ impl HSAPIClient {
             Ok(()) => Ok(()),
             Err(_) => error(err_rx.recv()?),
         }
+    }
+
+
+    pub fn get_local_status(
+        &self,
+        bindaddr: &str,
+    ) -> Result<DaemonStatus, Box<dyn std::error::Error>> {
+        let url = format!("http://{}/status", bindaddr);
+        let mut sys = System::new("dclient");
+        actix::SystemRunner::block_on(&mut sys, async {
+            let mut resp = awc::Client::new().get(url).send().await?;
+            if resp.status() == 200 {
+                let r: DaemonStatus = serde_json::from_slice(resp.body().await?.as_ref())?;
+                Ok(r)
+            } else {
+                error(format!("error contacting daemon: {}", resp.status()))
+            }
+        })
     }
 
 

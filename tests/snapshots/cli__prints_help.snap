@@ -33,6 +33,8 @@ SUBCOMMANDS:
     register        Register new workspace deployment
     rules           Modify access rules (also known as capabilities or
                     permissions)
+    status          Get information about a running hardshare client, if
+                    present
     stop-ad         Mark as unavailable; optionally wait for current
                     instance to finish
     unlock          Unlock a workspace deployment to allow new instances,
