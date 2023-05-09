@@ -362,6 +362,51 @@ impl HSAPIClient {
     }
 
 
+    pub fn dissolve_wdeployment(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let local_config = match &self.local_config {
+            Some(local_config) => {
+                if local_config.wdeployments.is_empty() {
+                    return error("Unexpected dissolve request: local configuration is empty");
+                }
+                local_config
+            }
+            None => {
+                return error("cannot dissolve without local configuration");
+            }
+        };
+
+        let mut wd_index = None;
+        for (j, wd) in local_config.wdeployments.iter().enumerate() {
+            if wd.id == wdid {
+                wd_index = Some(j);
+                break;
+            }
+        }
+        let wd_index = wd_index.unwrap();
+
+        let client = self.create_client_generator()?;
+        let origin = self.origin.clone();
+        let url = format!("{}/hardshare/dis/{}", origin, wdid);
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = client();
+
+            let mut resp = client.post(url).send().await?;
+            if resp.status() != 200 {
+                return error(format!("error dissolving: {}", resp.status()));
+            }
+
+            Ok(())
+        })?;
+
+        if let Some(local_config) = &mut self.local_config {
+            local_config.wdeployments.remove(wd_index);
+            mgmt::modify_local(local_config)?;
+        }
+        Ok(())
+    }
+
+
     pub fn get_addon_config(
         &self,
         wdid: &str,

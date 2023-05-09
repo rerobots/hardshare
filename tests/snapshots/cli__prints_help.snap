@@ -27,6 +27,8 @@ SUBCOMMANDS:
     declare-org     Declare default organization for commands; for example,
                     `register` will mark the owner as this organization or,
                     if none, the user
+    dissolve        Dissolve this workspace deployment, making it
+                    unavailable for any future use (THIS CANNOT BE UNDONE)
     help            Prints this message or the help of the given
                     subcommand(s)
     lock            Lock a workspace deployment to prevent new instances

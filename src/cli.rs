@@ -74,6 +74,26 @@ enum PrintingFormat {
 }
 
 
+fn confirm(prompt: &str) -> Result<(), CliError> {
+    let mut confirmation = String::new();
+    loop {
+        print!("{}", prompt);
+        std::io::stdout().flush().expect("failed to flush stdout");
+        match std::io::stdin().read_line(&mut confirmation) {
+            Ok(n) => n,
+            Err(err) => return CliError::new_stdio(err, 1),
+        };
+        confirmation = confirmation.trim().to_lowercase();
+        if confirmation == "y" || confirmation == "yes" {
+            break;
+        } else if confirmation.is_empty() || confirmation == "n" || confirmation == "no" {
+            return CliError::newrc(1);
+        }
+    }
+    Ok(())
+}
+
+
 fn print_config(
     local: &mgmt::Config,
     remote: &Option<serde_json::Value>,
@@ -635,21 +655,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => return CliError::new_std(err, 1),
         }
     } else if matches.is_present("permit_all") {
-        let mut confirmation = String::new();
-        loop {
-            print!("Do you want to permit access by anyone? [y/N] ");
-            std::io::stdout().flush().expect("failed to flush stdout");
-            match std::io::stdin().read_line(&mut confirmation) {
-                Ok(n) => n,
-                Err(err) => return CliError::new_stdio(err, 1),
-            };
-            confirmation = confirmation.trim().to_lowercase();
-            if confirmation == "y" || confirmation == "yes" {
-                break;
-            } else if confirmation.is_empty() || confirmation == "n" || confirmation == "no" {
-                return CliError::newrc(1);
-            }
-        }
+        confirm("Do you want to permit access by anyone? [y/N] ")?;
 
         let ac = api::HSAPIClient::new();
         match ac.add_access_rule(&local_config.wdeployments[wd_index].id, "*") {
@@ -781,6 +787,30 @@ fn status_subcommand(
             }
             Ok(())
         }
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
+fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let mut local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    confirm(&format!(
+        "Do you want to dissolve {}? This action cannot be undone. [y/N] ",
+        &local_config.wdeployments[wd_index].id,
+    ))?;
+
+    let mut ac = api::HSAPIClient::new();
+    match ac.dissolve_wdeployment(&local_config.wdeployments[wd_index].id) {
+        Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }
 }
@@ -947,6 +977,11 @@ pub fn main() -> Result<(), CliError> {
                          .value_name("ORG")))
         .subcommand(SubCommand::with_name("status")
                     .about("Get information about a running hardshare client, if present"))
+        .subcommand(SubCommand::with_name("dissolve")
+                    .about("Dissolve this workspace deployment, making it unavailable for any future use (THIS CANNOT BE UNDONE)")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment to stop advertising (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
         ;
 
     let matches = app.get_matches();
@@ -1000,6 +1035,8 @@ pub fn main() -> Result<(), CliError> {
         return lock_wdeplyoment_subcommand(matches, false);
     } else if let Some(matches) = matches.subcommand_matches("status") {
         return status_subcommand(matches, &bindaddr, pformat);
+    } else if let Some(matches) = matches.subcommand_matches("dissolve") {
+        return dissolve_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }
