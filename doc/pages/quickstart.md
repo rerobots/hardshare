@@ -73,10 +73,8 @@ hardshare status
 which should result in output that is similar to the following
 
 ```
-- daemon_found: true
-  has_instance: false
-  provider: docker
-  wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
+advertised deployments:
+	b47cd57c-833b-47c1-964d-79e5e6f00dba
 ```
 
 
