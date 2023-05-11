@@ -103,8 +103,6 @@ command-line, stop the daemon
 hardshare stop-ad
 ```
 
-Now entering `hardshare status` should return `daemon_found: false`.
-
 
 ## Check Permissions
 
