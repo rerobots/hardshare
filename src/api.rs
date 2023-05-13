@@ -202,6 +202,13 @@ impl HSAPIClient {
     }
 
 
+    fn reload_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let local_config = mgmt::get_local_config(false, false)?;
+        self.local_config = Some(local_config);
+        Ok(())
+    }
+
+
     fn create_client_generator(
         &self,
     ) -> Result<impl FnOnce() -> awc::Client, Box<dyn std::error::Error>> {
