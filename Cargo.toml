@@ -11,7 +11,7 @@ include = [
     "/src",
     "/README.md",
     "/CHANGELOG",
-    "/keys/webui-public.pem",
+    "/keys/public.pem",
 ]
 
 [dependencies]
