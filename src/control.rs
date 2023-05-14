@@ -355,7 +355,7 @@ impl CurrentInstance {
                 addr = tunnelinfo.ipv4
             ),
         ];
-        println!("tunnel process args: {:?}", tunnel_process_args);
+        info!("tunnel process args: {:?}", tunnel_process_args);
         let tunnel_process = Command::new("ssh").args(tunnel_process_args).spawn()?;
 
         let mut tunnel = self.tunnel.lock().unwrap();
