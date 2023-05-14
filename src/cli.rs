@@ -787,7 +787,10 @@ fn status_subcommand(
             }
             Ok(())
         }
-        Err(err) => CliError::new(&format!("{}\nIs the local hardshare client active?", err), 1),
+        Err(err) => CliError::new(
+            &format!("{}\nIs the local hardshare client active?", err),
+            1,
+        ),
     }
 }
 
