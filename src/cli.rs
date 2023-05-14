@@ -795,6 +795,15 @@ fn status_subcommand(
 }
 
 
+fn reload_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
+    let ac = api::HSAPIClient::new();
+    match ac.req_reload_config(bindaddr) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
 fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let mut local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
@@ -980,6 +989,8 @@ pub fn main() -> Result<(), CliError> {
                          .value_name("ORG")))
         .subcommand(SubCommand::with_name("status")
                     .about("Get information about a running hardshare client, if present"))
+        .subcommand(SubCommand::with_name("reload")
+                    .about("Reload configuration in a running hardshare client"))
         .subcommand(SubCommand::with_name("dissolve")
                     .about("Dissolve this workspace deployment, making it unavailable for any future use (THIS CANNOT BE UNDONE)")
                     .arg(Arg::with_name("id_prefix")
@@ -1039,6 +1050,8 @@ pub fn main() -> Result<(), CliError> {
         return status_subcommand(matches, &bindaddr, pformat);
     } else if let Some(matches) = matches.subcommand_matches("dissolve") {
         return dissolve_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("reload") {
+        return reload_subcommand(matches, &bindaddr);
     } else {
         println!("No command given. Try `hardshare -h`");
     }

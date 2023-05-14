@@ -33,6 +33,7 @@ SUBCOMMANDS:
                     subcommand(s)
     lock            Lock a workspace deployment to prevent new instances
     register        Register new workspace deployment
+    reload          Reload configuration in a running hardshare client
     rules           Modify access rules (also known as capabilities or
                     permissions)
     status          Get information about a running hardshare client, if

@@ -639,7 +639,7 @@ impl HSAPIClient {
         let (_, framed) = client.ws(url).connect().await?;
         let (sink, stream) = framed.split();
 
-        let mut local_config = mgmt::get_local_config(false, false)?;
+        let mut local_config = ac.local_config.clone().unwrap();
         let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
         local_config.wdeployments[wd_index].ssh_key = Some(local_config.ssh_key.clone());
         let wd = Arc::new(local_config.wdeployments[wd_index].clone());
@@ -659,6 +659,20 @@ impl HSAPIClient {
         std::thread::spawn(move || control::cworker(ac, cworker_rx, ws_addr, wd));
 
         Ok(addr)
+    }
+
+
+    async fn http_post_reload_config(
+        ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
+    ) -> actix_web::HttpResponse {
+        let mut ac_inner = ac.lock().unwrap();
+        match ac_inner.reload_config() {
+            Ok(()) => actix_web::HttpResponse::Ok().finish(),
+            Err(err) => {
+                error!("{}", err);
+                actix_web::HttpResponse::InternalServerError().finish()
+            }
+        }
     }
 
 
@@ -799,6 +813,10 @@ impl HSAPIClient {
                         "/start/{wdid:.*}",
                         actix_web::web::post().to(HSAPIClient::http_post_start),
                     )
+                    .route(
+                        "/reload",
+                        actix_web::web::post().to(HSAPIClient::http_post_reload_config),
+                    )
             })
             .workers(1);
             manip = match manip.bind(bindaddr) {
@@ -839,6 +857,20 @@ impl HSAPIClient {
             if resp.status() == 200 {
                 let r: DaemonStatus = serde_json::from_slice(resp.body().await?.as_ref())?;
                 Ok(r)
+            } else {
+                error(format!("error contacting daemon: {}", resp.status()))
+            }
+        })
+    }
+
+
+    pub fn req_reload_config(&self, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let url = format!("http://{}/reload", bindaddr);
+        let mut sys = System::new("dclient");
+        actix::SystemRunner::block_on(&mut sys, async {
+            let mut resp = awc::Client::new().post(url).send().await?;
+            if resp.status() == 200 {
+                Ok(())
             } else {
                 error(format!("error contacting daemon: {}", resp.status()))
             }
