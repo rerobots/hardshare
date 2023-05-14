@@ -30,7 +30,7 @@ README files in subdirectories that describe contents therein.
 Summary:
 
 * doc - source of the user guide.
-* robots - code and configuration data for particular robots.
+* devices - code and configuration data for target hardware.
 * src - main source code.
 * py-ws - legacy Python implementation. Releases can be installed directly from https://pypi.org/project/hardshare/ on the Python Package Index.  New releases from py-ws are not planned, and eventually, it will be entirely removed.
 
