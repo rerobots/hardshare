@@ -179,7 +179,7 @@ there are 3 kinds of attack that are salient:
 3. exploiting a security bug in the Linux kernel.
 
 A simple solution to prevent access to any hosts on the local network is an
-`iptables` rule that only permits outgoing packets to your router (as part the
+[`iptables`](https://www.netfilter.org/) rule that only permits outgoing packets to your router (as part the
 packet's journey to outside networks). To construct this rule, first get a list
 of subnets in the routing table
 
