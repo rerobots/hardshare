@@ -64,7 +64,7 @@ provides for encryption, but exposure risk of the secret key small.
 If the SSH key has a password, then there must be some way for the hardshare
 client to use the key without having to know the password. For this, you should
 configure `ssh-agent`, usage of which is presented in the [OpenBSD manual](
-http://man.openbsd.org/OpenBSD-current/man1/ssh-agent.1).
+https://man.openbsd.org/OpenBSD-current/man1/ssh-agent.1).
 If you are new to `ssh-agent`, we recommend reading about basic ideas of how
 it works at <http://www.unixwiz.net/techtips/ssh-agent-forwarding.html>
 
