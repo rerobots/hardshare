@@ -64,7 +64,7 @@ struct CurrentInstance {
     status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
     local_name: Arc<Mutex<Option<String>>>,
-    wsclient_addr: Option<Addr<api::WSClient>>,
+    main_actor_addr: Option<Addr<api::MainActor>>,
     responses: Arc<Mutex<HashMap<String, Option<CWorkerCommand>>>>,
     tunnel: Arc<Mutex<Option<SshTunnel>>>,
 }
@@ -72,14 +72,14 @@ struct CurrentInstance {
 impl CurrentInstance {
     fn new(
         wdeployment: &Arc<WDeployment>,
-        wsclient_addr: Option<&Addr<api::WSClient>>,
+        main_actor_addr: Option<&Addr<api::MainActor>>,
     ) -> CurrentInstance {
         CurrentInstance {
             wdeployment: Arc::clone(wdeployment),
             status: Arc::new(Mutex::new(None)),
             id: None,
             local_name: Arc::new(Mutex::new(None)),
-            wsclient_addr: wsclient_addr.cloned(),
+            main_actor_addr: main_actor_addr.cloned(),
             responses: Arc::new(Mutex::new(HashMap::new())),
             tunnel: Arc::new(Mutex::new(None)),
         }
@@ -111,11 +111,11 @@ impl CurrentInstance {
     }
 
     fn send_status(&self) {
-        if let Some(wsclient_addr) = &self.wsclient_addr {
+        if let Some(main_actor_addr) = &self.main_actor_addr {
             let status = self.status.lock().unwrap();
             match &*status {
                 Some(s) => {
-                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                    main_actor_addr.do_send(api::ClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
                             serde_json::to_string(&json!({
@@ -136,7 +136,7 @@ impl CurrentInstance {
 
 
     fn send_create_sshtun(&self, tunnelkey_public: &str) -> Result<String, String> {
-        if let Some(wsclient_addr) = &self.wsclient_addr {
+        if let Some(main_actor_addr) = &self.main_actor_addr {
             let message_id = {
                 let mut message_id: String;
                 let mut responses = self.responses.lock().unwrap();
@@ -152,7 +152,7 @@ impl CurrentInstance {
             let status = self.status.lock().unwrap();
             match &*status {
                 Some(s) => {
-                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                    main_actor_addr.do_send(api::ClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
                             serde_json::to_string(&json!({
@@ -585,8 +585,8 @@ impl CurrentInstance {
     }
 
     fn send_destroy_done(&self) {
-        if let Some(wsclient_addr) = &self.wsclient_addr {
-            wsclient_addr.do_send(api::WSClientWorkerMessage {
+        if let Some(main_actor_addr) = &self.main_actor_addr {
+            main_actor_addr.do_send(api::ClientWorkerMessage {
                 mtype: CWorkerMessageType::WsSend,
                 body: Some(
                     serde_json::to_string(&json!({
@@ -671,10 +671,10 @@ impl CurrentInstance {
 pub fn cworker(
     ac: api::HSAPIClient,
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
-    wsclient_addr: Addr<api::WSClient>,
+    main_actor_addr: Addr<api::MainActor>,
     wdeployment: Arc<WDeployment>,
 ) {
-    let mut current_instance = CurrentInstance::new(&wdeployment, Some(&wsclient_addr));
+    let mut current_instance = CurrentInstance::new(&wdeployment, Some(&main_actor_addr));
 
     loop {
         let req = match wsclient_req.recv() {
@@ -687,7 +687,7 @@ pub fn cworker(
             CWorkerCommandType::InstanceLaunch => {
                 match current_instance.init(&req.instance_id, &req.publickey.unwrap()) {
                     Ok(()) => {
-                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
                                 serde_json::to_string(&json!({
@@ -704,7 +704,7 @@ pub fn cworker(
                             "launch request for instance {} failed: {}",
                             req.instance_id, err
                         );
-                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
                                 serde_json::to_string(&json!({
@@ -726,7 +726,7 @@ pub fn cworker(
                         warn!("destroy request received when already terminating");
                     } else if status != InstanceStatus::Ready {
                         warn!("destroy request received when status is {}", status);
-                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
                                 serde_json::to_string(&json!({
@@ -739,7 +739,7 @@ pub fn cworker(
                         });
                         continue;
                     }
-                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                    main_actor_addr.do_send(api::ClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
                             serde_json::to_string(&json!({
@@ -755,7 +755,7 @@ pub fn cworker(
                     }
                 } else {
                     error!("destroy request received when there is no active instance");
-                    wsclient_addr.do_send(api::WSClientWorkerMessage {
+                    main_actor_addr.do_send(api::ClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
                             serde_json::to_string(&json!({
@@ -771,7 +771,7 @@ pub fn cworker(
             CWorkerCommandType::InstanceStatus => {
                 match current_instance.status() {
                     Some(status) => {
-                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
                                 serde_json::to_string(&json!({
@@ -786,7 +786,7 @@ pub fn cworker(
                     }
                     None => {
                         warn!("status check received when there is no active instance");
-                        wsclient_addr.do_send(api::WSClientWorkerMessage {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
                                 serde_json::to_string(&json!({

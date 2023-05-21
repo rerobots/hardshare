@@ -100,7 +100,7 @@ pub struct HSAPIClient {
     local_config: Option<mgmt::Config>,
     cached_api_token: Option<String>,
     origin: String,
-    wdid_tab: Option<HashMap<String, Addr<WSClient>>>,
+    wdid_tab: Option<HashMap<String, Addr<MainActor>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -626,17 +626,17 @@ impl HSAPIClient {
     async fn ad(
         ac: &HSAPIClient,
         wdid: String,
-    ) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
+    ) -> Result<Addr<MainActor>, Box<dyn std::error::Error>> {
         let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
         let url = format!("{}/hardshare/ad/{}", ac.origin, wdid);
         let connector = SslConnector::builder(SslMethod::tls())?.build();
 
         let client = awc::Client::builder()
             .connector(awc::Connector::new().ssl(connector).finish())
-            .header("Authorization", authheader)
+            .header("Authorization", authheader.clone())
             .finish();
 
-        let (_, framed) = client.ws(url).connect().await?;
+        let (_, framed) = client.ws(&url).connect().await?;
         let (sink, stream) = framed.split();
 
         let mut local_config = ac.local_config.clone().unwrap();
@@ -645,20 +645,29 @@ impl HSAPIClient {
         let wd = Arc::new(local_config.wdeployments[wd_index].clone());
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
+        let main_actor_addr = MainActor::create(|ctx| MainActor {
+            worker_req: cworker_tx,
+            wsclient_addr: None,
+        });
+
+        let ma_addr_for_wsclient = main_actor_addr.clone();
         let addr = WSClient::create(|ctx| {
             WSClient::add_stream(stream, ctx);
             WSClient {
-                worker_req: cworker_tx,
+                ws_url: url,
+                ws_auth: authheader,
                 ws_sink: SinkWrite::new(sink, ctx),
                 recent_rx_instant: std::time::Instant::now(), // First instant at first connect
+                main_actor_addr: ma_addr_for_wsclient,
             }
         });
+        main_actor_addr.do_send(NewWS(addr));
 
-        let ws_addr = addr.clone();
+        let ma_addr_for_cworker = main_actor_addr.clone();
         let ac = ac.clone();
-        std::thread::spawn(move || control::cworker(ac, cworker_rx, ws_addr, wd));
+        std::thread::spawn(move || control::cworker(ac, cworker_rx, ma_addr_for_cworker, wd));
 
-        Ok(addr)
+        Ok(main_actor_addr)
     }
 
 
@@ -720,9 +729,9 @@ impl HSAPIClient {
             match wdid_tab.remove(&*wdid) {
                 Some(addr) => {
                     if wdid_tab.is_empty() {
-                        addr.do_send(WSClientCommand("STOP DAEMON".into()));
+                        addr.do_send(MainActorCommand("STOP DAEMON".into()));
                     } else {
-                        addr.do_send(WSClientCommand("STOP".into()));
+                        addr.do_send(MainActorCommand("STOP".into()));
                     }
                     actix_web::HttpResponse::Ok().finish()
                 }
@@ -997,21 +1006,16 @@ impl HSAPIClient {
 
 
 pub struct WSClient {
-    worker_req: mpsc::Sender<CWorkerCommand>,
+    ws_url: String,
+    ws_auth: String,
     ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,
     recent_rx_instant: std::time::Instant,
+    main_actor_addr: Addr<MainActor>,
 }
 
 #[derive(Message)]
 #[rtype(result = "()")]
-struct WSClientCommand(String);
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct WSClientWorkerMessage {
-    pub mtype: control::CWorkerMessageType,
-    pub body: Option<String>,
-}
+struct WSSend(String);
 
 impl Actor for WSClient {
     type Context = Context<Self>;
@@ -1019,7 +1023,6 @@ impl Actor for WSClient {
     fn started(&mut self, ctx: &mut Context<Self>) {
         self.check_receive_timeout(ctx);
     }
-
 
     fn stopped(&mut self, ctx: &mut Context<Self>) {
         debug!("WSClient actor stopped");
@@ -1040,32 +1043,11 @@ impl WSClient {
     }
 }
 
-impl Handler<WSClientCommand> for WSClient {
+impl Handler<WSSend> for WSClient {
     type Result = ();
 
-    fn handle(&mut self, msg: WSClientCommand, ctx: &mut Context<Self>) {
-        debug!("received client command: {}", msg.0);
-        if msg.0 == "STOP" {
-            ctx.stop();
-        } else if msg.0 == "STOP DAEMON" {
-            ctx.stop();
-            System::current().stop();
-        } else {
-            warn!("unknown client command: {}", msg.0);
-        }
-    }
-}
-
-impl Handler<WSClientWorkerMessage> for WSClient {
-    type Result = ();
-
-    fn handle(&mut self, msg: WSClientWorkerMessage, ctx: &mut Context<Self>) {
-        debug!("received client worker message: {:?}", msg);
-        match msg.mtype {
-            control::CWorkerMessageType::WsSend => {
-                self.ws_sink.write(Message::Text(msg.body.unwrap()));
-            }
-        }
+    fn handle(&mut self, msg: WSSend, ctx: &mut Context<Self>) {
+        self.ws_sink.write(Message::Text(msg.0));
     }
 }
 
@@ -1140,7 +1122,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     return;
                 }
             };
-            self.worker_req.send(m).unwrap();
+            self.main_actor_addr.do_send(ClientCommand(m));
         } else if let Ok(Frame::Ping(_)) = msg {
             debug!("received PING; sending PONG");
             self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));
@@ -1150,12 +1132,135 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
     }
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
-        debug!("StreamHandler of WSClient is finished");
+        self.ws_sink.close();
+
+        std::thread::sleep(std::time::Duration::from_secs(5));
+
+        let authheader = self.ws_auth.clone();
+        let url = self.ws_url.clone();
+        let main_actor_addr = self.main_actor_addr.clone();
+        Arbiter::spawn(async move {
+            let authheader_dup = authheader.clone();
+            let url_dup = url.clone();
+            let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
+            let client = awc::Client::builder()
+                .connector(awc::Connector::new().ssl(connector).finish())
+                .header("Authorization", authheader)
+                .finish();
+
+            let (_, framed) = client.ws(url).connect().await.unwrap();
+            let (sink, stream) = framed.split();
+
+            let ma_addr_for_wsclient = main_actor_addr.clone();
+            let addr = WSClient::create(|ctx| {
+                WSClient::add_stream(stream, ctx);
+                WSClient {
+                    ws_url: url_dup,
+                    ws_auth: authheader_dup,
+                    ws_sink: SinkWrite::new(sink, ctx),
+                    recent_rx_instant: std::time::Instant::now(), // First instant at first connect
+                    main_actor_addr: ma_addr_for_wsclient,
+                }
+            });
+
+            main_actor_addr.do_send(NewWS(addr));
+        });
+
         ctx.stop()
     }
 }
 
 impl actix::io::WriteHandler<WsProtocolError> for WSClient {}
+
+
+pub struct MainActor {
+    worker_req: mpsc::Sender<CWorkerCommand>,
+    wsclient_addr: Option<Addr<WSClient>>,
+}
+
+impl Actor for MainActor {
+    type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        debug!("MainActor started");
+    }
+
+    fn stopped(&mut self, ctx: &mut Context<Self>) {
+        debug!("MainActor stopped");
+    }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+struct MainActorCommand(String);
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+pub struct ClientWorkerMessage {
+    pub mtype: control::CWorkerMessageType,
+    pub body: Option<String>,
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+struct NewWS(Addr<WSClient>);
+
+impl Handler<NewWS> for MainActor {
+    type Result = ();
+
+    fn handle(&mut self, msg: NewWS, ctx: &mut Context<Self>) {
+        info!("new WebSocket");
+        self.wsclient_addr = Some(msg.0);
+    }
+}
+
+impl Handler<MainActorCommand> for MainActor {
+    type Result = ();
+
+    fn handle(&mut self, msg: MainActorCommand, ctx: &mut Context<Self>) {
+        debug!("received client command: {}", msg.0);
+        if msg.0 == "STOP" {
+            ctx.stop();
+        } else if msg.0 == "STOP DAEMON" {
+            ctx.stop();
+            System::current().stop();
+        } else if msg.0 == "RESTART WEBSOCKET" {
+            self.wsclient_addr = None;
+        } else {
+            warn!("unknown client command: {}", msg.0);
+        }
+    }
+}
+
+impl Handler<ClientWorkerMessage> for MainActor {
+    type Result = ();
+
+    fn handle(&mut self, msg: ClientWorkerMessage, ctx: &mut Context<Self>) {
+        debug!("received client worker message: {:?}", msg);
+        match msg.mtype {
+            control::CWorkerMessageType::WsSend => match &self.wsclient_addr {
+                Some(wa) => {
+                    wa.do_send(WSSend(msg.body.unwrap()));
+                }
+                None => {
+                    error!("received WsSend when no WSClient");
+                }
+            },
+        }
+    }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+struct ClientCommand(CWorkerCommand);
+
+impl Handler<ClientCommand> for MainActor {
+    type Result = ();
+
+    fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
+        self.worker_req.send(msg.0).unwrap();
+    }
+}
 
 
 #[cfg(test)]
