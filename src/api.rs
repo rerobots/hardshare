@@ -629,15 +629,6 @@ impl HSAPIClient {
     ) -> Result<Addr<MainActor>, Box<dyn std::error::Error>> {
         let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
         let url = format!("{}/hardshare/ad/{}", ac.origin, wdid);
-        let connector = SslConnector::builder(SslMethod::tls())?.build();
-
-        let client = awc::Client::builder()
-            .connector(awc::Connector::new().ssl(connector).finish())
-            .header("Authorization", authheader.clone())
-            .finish();
-
-        let (_, framed) = client.ws(&url).connect().await?;
-        let (sink, stream) = framed.split();
 
         let mut local_config = ac.local_config.clone().unwrap();
         let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
@@ -650,17 +641,7 @@ impl HSAPIClient {
             wsclient_addr: None,
         });
 
-        let ma_addr_for_wsclient = main_actor_addr.clone();
-        let addr = WSClient::create(|ctx| {
-            WSClient::add_stream(stream, ctx);
-            WSClient {
-                ws_url: url,
-                ws_auth: authheader,
-                ws_sink: SinkWrite::new(sink, ctx),
-                recent_rx_instant: std::time::Instant::now(), // First instant at first connect
-                main_actor_addr: ma_addr_for_wsclient,
-            }
-        });
+        let addr = open_websocket(&url, &authheader, &main_actor_addr).await;
         main_actor_addr.do_send(NewWS(addr));
 
         let ma_addr_for_cworker = main_actor_addr.clone();
@@ -1005,6 +986,36 @@ impl HSAPIClient {
 }
 
 
+async fn open_websocket(
+    url: &str,
+    authheader: &str,
+    main_actor_addr: &Addr<MainActor>,
+) -> Addr<WSClient> {
+    let authheader_dup = String::from(authheader);
+    let url_dup = String::from(url);
+    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
+    let client = awc::Client::builder()
+        .connector(awc::Connector::new().ssl(connector).finish())
+        .header("Authorization", authheader)
+        .finish();
+
+    let (_, framed) = client.ws(url).connect().await.unwrap();
+    let (sink, stream) = framed.split();
+
+    let ma_addr_for_wsclient = main_actor_addr.clone();
+    WSClient::create(|ctx| {
+        WSClient::add_stream(stream, ctx);
+        WSClient {
+            ws_url: url_dup,
+            ws_auth: authheader_dup,
+            ws_sink: SinkWrite::new(sink, ctx),
+            recent_rx_instant: std::time::Instant::now(), // First instant at first connect
+            main_actor_addr: ma_addr_for_wsclient,
+        }
+    })
+}
+
+
 pub struct WSClient {
     ws_url: String,
     ws_auth: String,
@@ -1140,29 +1151,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
         let url = self.ws_url.clone();
         let main_actor_addr = self.main_actor_addr.clone();
         Arbiter::spawn(async move {
-            let authheader_dup = authheader.clone();
-            let url_dup = url.clone();
-            let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
-            let client = awc::Client::builder()
-                .connector(awc::Connector::new().ssl(connector).finish())
-                .header("Authorization", authheader)
-                .finish();
-
-            let (_, framed) = client.ws(url).connect().await.unwrap();
-            let (sink, stream) = framed.split();
-
-            let ma_addr_for_wsclient = main_actor_addr.clone();
-            let addr = WSClient::create(|ctx| {
-                WSClient::add_stream(stream, ctx);
-                WSClient {
-                    ws_url: url_dup,
-                    ws_auth: authheader_dup,
-                    ws_sink: SinkWrite::new(sink, ctx),
-                    recent_rx_instant: std::time::Instant::now(), // First instant at first connect
-                    main_actor_addr: ma_addr_for_wsclient,
-                }
-            });
-
+            let addr = open_websocket(&url, &authheader, &main_actor_addr).await;
             main_actor_addr.do_send(NewWS(addr));
         });
 
