@@ -641,8 +641,10 @@ impl HSAPIClient {
             wsclient_addr: None,
         });
 
-        let addr = open_websocket(&url, &authheader, &main_actor_addr).await;
-        main_actor_addr.do_send(NewWS(addr));
+        let addr = open_websocket(&url, &authheader, &main_actor_addr, None)
+            .await
+            .unwrap();
+        main_actor_addr.do_send(NewWS(Some(addr)));
 
         let ma_addr_for_cworker = main_actor_addr.clone();
         let ac = ac.clone();
@@ -986,33 +988,64 @@ impl HSAPIClient {
 }
 
 
+// Try at least once, independent of timeout
 async fn open_websocket(
     url: &str,
     authheader: &str,
     main_actor_addr: &Addr<MainActor>,
-) -> Addr<WSClient> {
-    let authheader_dup = String::from(authheader);
-    let url_dup = String::from(url);
-    let connector = SslConnector::builder(SslMethod::tls()).unwrap().build();
-    let client = awc::Client::builder()
-        .connector(awc::Connector::new().ssl(connector).finish())
-        .header("Authorization", authheader)
-        .finish();
+    timeout: Option<Duration>,
+) -> Result<Addr<WSClient>, Box<dyn std::error::Error>> {
+    let sleep_time = std::time::Duration::from_secs(1);
+    let now = std::time::Instant::now();
 
-    let (_, framed) = client.ws(url).connect().await.unwrap();
-    let (sink, stream) = framed.split();
+    loop {
+        let authheader_dup = String::from(authheader);
+        let url_dup = String::from(url);
+        let ssl_builder = match SslConnector::builder(SslMethod::tls()) {
+            Ok(b) => b,
+            Err(err) => {
+                if timeout.is_some() && Some(now.elapsed()) > timeout {
+                    return Err(Box::new(err));
+                } else {
+                    warn!("failed to open WebSocket: {}", err);
+                    std::thread::sleep(sleep_time);
+                    continue;
+                }
+            }
+        };
+        let connector = ssl_builder.build();
+        let client = awc::Client::builder()
+            .connector(awc::Connector::new().ssl(connector).finish())
+            .header("Authorization", authheader)
+            .finish();
 
-    let ma_addr_for_wsclient = main_actor_addr.clone();
-    WSClient::create(|ctx| {
-        WSClient::add_stream(stream, ctx);
-        WSClient {
-            ws_url: url_dup,
-            ws_auth: authheader_dup,
-            ws_sink: SinkWrite::new(sink, ctx),
-            recent_rx_instant: std::time::Instant::now(), // First instant at first connect
-            main_actor_addr: ma_addr_for_wsclient,
-        }
-    })
+        let (_, framed) = match client.ws(url).connect().await {
+            Ok(c) => c,
+            Err(err) => {
+                if timeout.is_some() && Some(now.elapsed()) > timeout {
+                    return Err(Box::new(err));
+                } else {
+                    warn!("failed to open WebSocket: {}", err);
+                    std::thread::sleep(sleep_time);
+                    continue;
+                }
+            }
+        };
+        let (sink, stream) = framed.split();
+
+        let ma_addr_for_wsclient = main_actor_addr.clone();
+
+        return Ok(WSClient::create(|ctx| {
+            WSClient::add_stream(stream, ctx);
+            WSClient {
+                ws_url: url_dup,
+                ws_auth: authheader_dup,
+                ws_sink: SinkWrite::new(sink, ctx),
+                recent_rx_instant: std::time::Instant::now(), // First instant at first connect
+                main_actor_addr: ma_addr_for_wsclient,
+            }
+        }));
+    }
 }
 
 
@@ -1145,14 +1178,15 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
     fn finished(&mut self, ctx: &mut Context<Self>) {
         self.ws_sink.close();
 
-        std::thread::sleep(std::time::Duration::from_secs(5));
-
         let authheader = self.ws_auth.clone();
         let url = self.ws_url.clone();
         let main_actor_addr = self.main_actor_addr.clone();
         Arbiter::spawn(async move {
-            let addr = open_websocket(&url, &authheader, &main_actor_addr).await;
-            main_actor_addr.do_send(NewWS(addr));
+            main_actor_addr.do_send(NewWS(None));
+            let addr = open_websocket(&url, &authheader, &main_actor_addr, None)
+                .await
+                .unwrap();
+            main_actor_addr.do_send(NewWS(Some(addr)));
         });
 
         ctx.stop()
@@ -1192,14 +1226,22 @@ pub struct ClientWorkerMessage {
 
 #[derive(Message)]
 #[rtype(result = "()")]
-struct NewWS(Addr<WSClient>);
+struct NewWS(Option<Addr<WSClient>>);
 
 impl Handler<NewWS> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: NewWS, ctx: &mut Context<Self>) {
-        info!("new WebSocket");
-        self.wsclient_addr = Some(msg.0);
+        match msg.0 {
+            Some(ws) => {
+                info!("new WebSocket");
+                self.wsclient_addr = Some(ws);
+            }
+            None => {
+                info!("closed WebSocket");
+                self.wsclient_addr = None;
+            }
+        }
     }
 }
 
