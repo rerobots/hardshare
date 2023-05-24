@@ -97,6 +97,25 @@ because a Docker image is downloaded, [as described elsewhere](/install#prepare-
 
 If instance initialization is interrupted by a loss of connection or the client
 crashing, then the instance will automatically be marked `INIT_FAIL`.
+Unrecoverable errors during `INIT` or `TERMINATING` cause the deployment to be
+locked.
+This is shown as `lock-out: true` in the listing from `hardshare config -l`,
+e.g.,
+
+```
+registration details for workspace deployments in local config:
+7ec9c3d2-6a74-47d9-bf9f-b3ff41c26ec0
+	created: 2021-02-26 01:29 UTC
+	desc: CubeCell with OLED
+	origin (address) of registration: (unknown)
+	lock-out: true
+```
+
+When locked, new instance requests are rejected. To allow instances again,
+
+```bash
+hardshare unlock
+```
 
 Otherwise, congratulations on successful instantiation from your own device!
 Terminate the instance from <https://rerobots.net/instances> and, from the
