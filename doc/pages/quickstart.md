@@ -95,6 +95,9 @@ then read
 [Installation Instructions](/install) or [Get Help](/help). For example, the first `INIT` can appear slow
 because a Docker image is downloaded, [as described elsewhere](/install#prepare-a-cprovider).
 
+If instance initialization is interrupted by a loss of connection or the client
+crashing, then the instance will automatically be marked `INIT_FAIL`.
+
 Otherwise, congratulations on successful instantiation from your own device!
 Terminate the instance from <https://rerobots.net/instances> and, from the
 command-line, stop the daemon
