@@ -77,9 +77,10 @@ use depends on your host architecture. On Linux, you can do
 uname -m
 ```
 
-to find this. For example, on Raspberry Pi this would be `armv7l`, so Docker
-image tags that begin with `armv7l-` can be used. To get the latest release of
-the base generic image
+to find this. For example, on [Raspberry Pi](
+https://www.raspberrypi.com/products/raspberry-pi-4-model-b/specifications/)
+this would be `armv7l`, so Docker image tags that begin with `armv7l-` can be
+used. To get the latest release of the base generic image
 
 ```bash
 docker pull rerobots/hs-generic:armv7l-latest
