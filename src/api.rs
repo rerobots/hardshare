@@ -762,7 +762,7 @@ impl HSAPIClient {
                 }
                 return Ok(());
             }
-            Err(err) => warn!("no existing daemon: {}", err),
+            Err(err) => info!("no existing daemon: {}", err),
         };
 
         // Else, start new daemon
