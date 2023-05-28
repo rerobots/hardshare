@@ -8,6 +8,31 @@ This page describes troubleshooting and best practices for maintaining hardshare
 configurations and shared devices.
 
 
+## How to run the cient without keeping a terminal open?
+
+Run it with [GNU Screen](https://www.gnu.org/software/screen/) or
+[tmux](https://github.com/tmux/tmux/wiki). For example,
+
+```bash
+tmux new-session hardshare ad \; detach
+```
+
+will start `ad`.
+
+
+## How to log client output to a file?
+
+For example,
+
+```bash
+./hardshare -v ad 2>&1 | tee -a hs.log
+```
+
+will run `ad` with verbose logging and pipe through
+[tee](https://www.gnu.org/software/coreutils/manual/html_node/tee-invocation.html),
+which print logs to the screen and appends to a file named hs.log.
+
+
 ## How to find all hardshare processes?
 
 To find all relevant processes
