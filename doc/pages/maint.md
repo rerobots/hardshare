@@ -104,21 +104,6 @@ Finally, request an instance as usual.
 
 ## Daemon fails to start or is not responsive
 
-```bash
-hardshare status
-```
-
-```
-- daemon_found: false
-  has_instance: false
-  provider: podman
-  warnings:
-  - fail to open daemon socket at /home/scott/.rerobots/hardshare.b47cd57c-833b-47c1-964d-79e5e6f00dba.sock
-  wdeployment: b47cd57c-833b-47c1-964d-79e5e6f00dba
-```
-
-Delete the `.sock` file shown.
-
 
 ## List local configurations
 
