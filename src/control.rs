@@ -455,7 +455,21 @@ impl CurrentInstance {
                     return;
                 }
             };
-            write!(public_key_file, "{}", public_key);
+            match write!(public_key_file, "{}", public_key) {
+                Ok(()) => {
+                    debug!("wrote public key file: {}", public_key_file.path().to_string_lossy());
+                }
+                Err(err) => {
+                    error!(
+                        "failed to write public key file ({}): {:?}",
+                        public_key_file.path().to_string_lossy(),
+                        err
+                    );
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            };
 
             let mkdir_result = Command::new(&cprovider)
                 .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
