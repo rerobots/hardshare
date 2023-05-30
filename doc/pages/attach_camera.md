@@ -14,27 +14,8 @@ for different workspaces.
 
 ## Prerequisites
 
-Streaming from a video camera requires 2 additional packages:
-
-* [Pillow](https://python-pillow.org/)
-* [OpenCV](https://opencv.org/)
-
-Of these, OpenCV is often regarded as difficult to install, so try to get it
-through a system package manager first. For example, on Ubuntu
-
-```bash
-sudo apt-get install python3-opencv
-```
-
-If that fails, read [detailed instructions to install OpenCV](https://docs.opencv.org/4.4.0/d2/de6/tutorial_py_setup_in_ubuntu.html).
-Next, try to install [Pillow from PyPI](https://pypi.org/project/Pillow/)
-
-```bash
-pip install Pillow
-```
-
-If that fails, read the [Pillow documentation](https://pillow.readthedocs.io/en/stable/).
-
+Only supported on Linux and macOS. If you are interested in other host operating
+systems, please [contact us](https://rerobots.net/contact).
 
 ## Prepare a New Configuration
 
