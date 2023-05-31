@@ -959,7 +959,7 @@ dependencies = [
 
 [[package]]
 name = "hardshare"
-version = "0.12.0"
+version = "0.12.1-devel"
 dependencies = [
  "actix",
  "actix-codec",
