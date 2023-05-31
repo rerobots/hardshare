@@ -1,3 +1,10 @@
+hardshare client (0.12.0)
+
+  * New client is ready to use except for `attach-camera`.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Tue, 30 May 2023 19:11:03 -0700
+
+
 hardshare client (0.11.0)
 
   * First release of new implementation of CLI.
