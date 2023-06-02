@@ -153,7 +153,14 @@ footer a:focus {
 
 img {
     border: 0;
-    max-width: 600px;
+    max-width: 800px;
+    width: 100%;
+}
+
+.vimeoIframe {
+    max-width: 800px;
+    min-width: 300px;
+    width: 100%;
 }
 
 #main-content {
