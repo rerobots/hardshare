@@ -67,12 +67,12 @@ when it expires or manually by the user or owner.
 
 For details, read the [rerobots introduction](https://docs.rerobots.net/intro).
 
-![instance lifecycle](figures/instance-lifecycle.svg)
+{% image src="figures/instance-lifecycle.svg" alt="chart of instance lifecycle" maxWidth="400px" /%}
 
 
 ## Interfaces Around Instances
 
-![layers](figures/layers-illustration.svg)
+{% image src="figures/layers-illustration.svg" alt="layers" maxWidth="400px" /%}
 
 The rerobots/hardshare architecture provides for specifying how hardware appears
 to an instance. If carefully configured, any device can be shared through
