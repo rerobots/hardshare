@@ -67,7 +67,7 @@ when it expires or manually by the user or owner.
 
 For details, read the [rerobots introduction](https://docs.rerobots.net/intro).
 
-{% image src="figures/instance-lifecycle.svg" alt="chart of instance lifecycle" maxWidth="400px" /%}
+{% image src="figures/instance-lifecycle.svg" alt="diagram of instance lifecycle" maxWidth="400px" /%}
 
 
 ## Interfaces Around Instances
