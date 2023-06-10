@@ -21,26 +21,27 @@ OPTIONS:
                              formatting); options: YAML , JSON
 
 SUBCOMMANDS:
-    ad              Advertise availability, accept new instances
-    config          Manage local and remote configuration
-    config-addon    Manage add-ons (mistyproxy, vnc, ...)
-    declare-org     Declare default organization for commands; for example,
-                    `register` will mark the owner as this organization or,
-                    if none, the user
-    dissolve        Dissolve this workspace deployment, making it
-                    unavailable for any future use (THIS CANNOT BE UNDONE)
-    help            Prints this message or the help of the given
-                    subcommand(s)
-    lock            Lock a workspace deployment to prevent new instances
-    register        Register new workspace deployment
-    reload          Reload configuration in a running hardshare client
-    rules           Modify access rules (also known as capabilities or
-                    permissions)
-    status          Get information about a running hardshare client, if
-                    present
-    stop-ad         Mark as unavailable; optionally wait for current
-                    instance to finish
-    unlock          Unlock a workspace deployment to allow new instances,
-                    depending on access rules
-    version         Prints version number and exits
-
+    ad               Advertise availability, accept new instances
+    attach-camera    Attach camera stream to workspace deployments
+    config           Manage local and remote configuration
+    config-addon     Manage add-ons (mistyproxy, vnc, ...)
+    declare-org      Declare default organization for commands; for example,
+                     `register` will mark the owner as this organization or,
+                     if none, the user
+    dissolve         Dissolve this workspace deployment, making it
+                     unavailable for any future use (THIS CANNOT BE UNDONE)
+    help             Prints this message or the help of the given
+                     subcommand(s)
+    lock             Lock a workspace deployment to prevent new instances
+    register         Register new workspace deployment
+    reload           Reload configuration in a running hardshare client
+    rules            Modify access rules (also known as capabilities or
+                     permissions)
+    status           Get information about a running hardshare client, if
+                     present
+    stop-ad          Mark as unavailable; optionally wait for current
+                     instance to finish
+    stop-cameras     Stop camera streams previously started by attach-camera
+    unlock           Unlock a workspace deployment to allow new instances,
+                     depending on access rules
+    version          Prints version number and exits
