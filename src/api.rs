@@ -17,12 +17,15 @@ use awc::{
 use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
 
+use nix::{sys::signal, unistd};
+
 use openssl::ssl::{SslConnector, SslMethod};
 
 extern crate serde;
 extern crate serde_json;
 use serde::{Deserialize, Serialize};
 
+use crate::camera;
 use crate::control;
 use crate::control::{CWorkerCommand, TunnelInfo};
 use crate::mgmt;
@@ -46,7 +49,7 @@ impl std::fmt::Debug for ClientError {
     }
 }
 
-fn error<T, S>(msg: S) -> Result<T, Box<dyn std::error::Error>>
+pub fn error<T, S>(msg: S) -> Result<T, Box<dyn std::error::Error>>
 where
     S: ToString,
 {
@@ -93,6 +96,42 @@ impl std::fmt::Display for AddOn {
         }
     }
 }
+
+
+pub struct CameraDimensions {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl std::str::FromStr for CameraDimensions {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut width_height = Vec::new();
+        for x_raw in s.split(',') {
+            let x: u32 = match x_raw.parse() {
+                Ok(x) => x,
+                Err(err) => {
+                    return Err(format!("failed to parse width, height parameter: {}", err))
+                }
+            };
+            width_height.push(x);
+        }
+        if width_height.len() > 2 {
+            return Err("too many values given for (width, height)".into());
+        }
+        if width_height.len() < 2 {
+            return Err("missing values for (width, height)".into());
+        }
+        Ok(CameraDimensions {
+            width: width_height[0],
+            height: width_height[1],
+        })
+    }
+}
+
+
+pub type CameraCrop = HashMap<String, Vec<u16>>;
 
 
 #[derive(Clone)]
@@ -316,7 +355,6 @@ impl HSAPIClient {
         let td = std::time::Duration::new(10, 0);
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
-        let origin = self.origin.clone();
         let to_user = to_user.to_string();
         let mut sys = System::new("wclient");
         actix::SystemRunner::block_on(&mut sys, async move {
@@ -985,6 +1023,132 @@ impl HSAPIClient {
         }
         Ok(())
     }
+
+
+    pub fn attach_camera(
+        &self,
+        camera_path: &str,
+        wds: &Vec<String>,
+        crop: &Option<CameraCrop>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let api_token = self.cached_api_token.as_ref().ok_or("no valid API token")?;
+        let client = self.create_client_generator()?;
+        let td = std::time::Duration::new(10, 0);
+        let origin = self.origin.clone();
+
+        let mut opts = json!({ "wds": wds });
+        if let Some(crop) = crop {
+            opts["crop"] = json!(crop);
+        }
+
+        let mut sys = System::new("wclient");
+        let res = actix::SystemRunner::block_on(&mut sys, async move {
+            let client = client();
+            let url = format!("{}/hardshare/cam", origin);
+            let client_req = client.post(url).timeout(td);
+            let mut resp = client_req.send_json(&opts).await?;
+            if resp.status() == 200 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                Ok(payload["id"].as_str().unwrap().to_string())
+            } else {
+                error(format!("server indicated error: {}", resp.status()))
+            }
+        });
+        let hscamera_id = res?;
+
+        let base_path = mgmt::get_base_path().unwrap();
+        let pid = unistd::getpid();
+        let path = base_path
+            .join("camera")
+            .join(format!("{}.pid", hscamera_id));
+        std::fs::write(&path, pid.to_string())?;
+
+        let exit_result =
+            camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
+
+        exit_result
+    }
+
+
+    pub fn stop_cameras(&self, all: bool) -> Result<(), Box<dyn std::error::Error>> {
+        let base_path = mgmt::get_base_path().unwrap();
+        let path = base_path.join("camera");
+        let mut stopped_via_pids = Vec::new();
+        if path.exists() {
+            for entry in std::fs::read_dir(path)? {
+                let entry = entry?;
+                if entry.file_type()?.is_dir() {
+                    continue;
+                }
+                let entry = entry.path();
+
+                if entry.extension().unwrap() == "pid" {
+                    let file_stem = entry.file_stem().unwrap();
+                    stopped_via_pids.push(file_stem.to_string_lossy().to_string());
+                    let pid: i32 = String::from_utf8(std::fs::read(&entry).unwrap())
+                        .unwrap()
+                        .trim()
+                        .parse()?;
+                    signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM);
+                    std::fs::remove_file(entry)?;
+                }
+            }
+        }
+
+        let local_wdeployments = match &self.local_config {
+            Some(c) => c.wdeployments.iter().map(|x| x.id.clone()).collect(),
+            None => vec![],
+        };
+
+        let client = self.create_client_generator()?;
+        let origin = self.origin.clone();
+        let url = format!("{}/hardshare/cam", origin);
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let client = client();
+            let mut resp = client.get(url).send().await?;
+            if resp.status() == 200 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+
+                let hscameras = payload.as_object().unwrap();
+                debug!("{:?}", hscameras);
+                for (hscamera_id, assoc) in hscameras.iter() {
+                    debug!("{:?}: {:?}", hscamera_id, assoc);
+                    if !all {
+                        if !stopped_via_pids.iter().any(|x| x == hscamera_id) {
+                            continue;
+                        }
+
+                        let assoc: Vec<String> = assoc
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|x| x.as_str().unwrap().to_string())
+                            .collect();
+
+                        if !nonempty_intersection(&local_wdeployments, &assoc) {
+                            continue;
+                        }
+                    }
+
+                    let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
+                    let mut resp = client.delete(url).send().await?;
+                    if resp.status() != 200 {
+                        return error(format!(
+                            "error stopping camera {}: {}",
+                            hscamera_id,
+                            resp.status()
+                        ));
+                    }
+                }
+                Ok(())
+            } else {
+                error(format!("error enumerating cameras: {}", resp.status()))
+            }
+        })
+    }
 }
 
 
@@ -1171,7 +1335,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             debug!("received PING; sending PONG");
             self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));
         } else {
-            debug!("unrecognized WebSocket message: {:?}", msg);
+            warn!("unrecognized WebSocket message: {:?}", msg);
         }
     }
 
@@ -1291,6 +1455,21 @@ impl Handler<ClientCommand> for MainActor {
     fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
         self.worker_req.send(msg.0).unwrap();
     }
+}
+
+
+fn nonempty_intersection<T>(u: &[T], v: &[T]) -> bool
+where
+    T: PartialEq,
+{
+    for x in u.iter() {
+        for y in v.iter() {
+            if x == y {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 

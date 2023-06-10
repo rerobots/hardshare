@@ -457,7 +457,10 @@ impl CurrentInstance {
             };
             match write!(public_key_file, "{}", public_key) {
                 Ok(()) => {
-                    debug!("wrote public key file: {}", public_key_file.path().to_string_lossy());
+                    debug!(
+                        "wrote public key file: {}",
+                        public_key_file.path().to_string_lossy()
+                    );
                 }
                 Err(err) => {
                     error!(

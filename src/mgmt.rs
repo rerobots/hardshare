@@ -188,7 +188,7 @@ impl Config {
 }
 
 
-fn get_base_path() -> Option<std::path::PathBuf> {
+pub fn get_base_path() -> Option<std::path::PathBuf> {
     let home_dir = match home::home_dir() {
         Some(s) => s,
         None => return None,
@@ -429,6 +429,23 @@ pub fn find_id_prefix(
     } else {
         error("ambiguous command: more than 1 workspace deployment defined.")
     }
+}
+
+
+pub fn expand_id_prefixes(
+    config: &Config,
+    id_prefixes: &Vec<&str>,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    if id_prefixes.is_empty() {
+        let index = find_id_prefix(config, None)?;
+        return Ok(vec![config.wdeployments[index].id.clone()]);
+    }
+    let mut expansion = Vec::new();
+    for id_prefix in id_prefixes.iter() {
+        let index = find_id_prefix(config, Some(id_prefix))?;
+        expansion.push(config.wdeployments[index].id.clone());
+    }
+    Ok(expansion)
 }
 
 
