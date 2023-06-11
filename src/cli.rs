@@ -1,6 +1,7 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
+use std::collections::HashMap;
 use std::io::prelude::*;
 use std::process::{Command, Stdio};
 
@@ -8,6 +9,7 @@ use serde::Serialize;
 
 use clap::{Arg, SubCommand};
 
+use crate::api::{CameraCrop, CameraDimensions};
 use crate::{api, mgmt};
 
 
@@ -828,6 +830,69 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let mut local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let camera_path = matches.value_of("camera_path").unwrap_or("/dev/video0");
+
+    let wds: Vec<&str> = match matches.values_of("id_prefix") {
+        Some(v) => v.collect(),
+        None => vec![],
+    };
+    let wds = match mgmt::expand_id_prefixes(&local_config, &wds) {
+        Ok(w) => w,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let width_height = match matches.value_of("attach_camera_res") {
+        Some(wh) => match wh.parse::<CameraDimensions>() {
+            Ok(c) => Some(c),
+            Err(err) => return CliError::new(&err, 1),
+        },
+        None => None,
+    };
+
+    let crop: Option<CameraCrop> = match matches.value_of("attach_camera_crop_config") {
+        Some(c) => match serde_json::from_str::<CameraCrop>(c) {
+            Ok(c) => {
+                for crop_wd in c.keys() {
+                    if !wds.contains(crop_wd) {
+                        return CliError::new(
+                            &format!("unknown ID in crop configuration: {}", crop_wd),
+                            1,
+                        );
+                    }
+                }
+                Some(c)
+            }
+            Err(err) => {
+                return CliError::new(&format!("failed to parse crop configuration: {}", err), 1)
+            }
+        },
+        None => None,
+    };
+
+    let ac = api::HSAPIClient::new();
+    match ac.attach_camera(camera_path, &wds, &crop) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
+fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let all = matches.is_present("all_cameras");
+    let mut ac = api::HSAPIClient::new();
+    match ac.stop_cameras(all) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -995,6 +1060,29 @@ pub fn main() -> Result<(), CliError> {
                     .about("Dissolve this workspace deployment, making it unavailable for any future use (THIS CANNOT BE UNDONE)")
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")))
+        .subcommand(SubCommand::with_name("attach-camera")
+                    .about("Attach camera stream to workspace deployments")
+                    .arg(Arg::with_name("camera_path")
+                         .value_name("PATH")
+                         .help("on Linux, default is /dev/video0"))
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .multiple(true)
+                         .help("id of workspace deployments for camera attachment"))
+                    .arg(Arg::with_name("attach_camera_res")
+                         .long("width-height")
+                         .value_name("W,H")
+                         .help("width and height of captured images; default depends on the supporting drivers"))
+                    .arg(Arg::with_name("attach_camera_crop_config")
+                         .long("crop")
+                         .value_name("CROPCONFIG")
+                         .help("image crop configuration; default: all wdeployments get full images")))
+        .subcommand(SubCommand::with_name("stop-cameras")
+                    .about("Stop camera streams previously started by attach-camera")
+                    .arg(Arg::with_name("all_cameras")
+                         .short("a")
+                         .long("all")
+                         .help("Stop all attached cameras associated with this user account, whether or not started on this host")))
         ;
 
     let matches = app.get_matches();
@@ -1052,6 +1140,10 @@ pub fn main() -> Result<(), CliError> {
         return dissolve_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("reload") {
         return reload_subcommand(matches, &bindaddr);
+    } else if let Some(matches) = matches.subcommand_matches("attach-camera") {
+        return attach_camera_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("stop-cameras") {
+        return stop_cameras_subcommand(matches);
     } else {
         println!("No command given. Try `hardshare -h`");
     }

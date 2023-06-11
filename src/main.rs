@@ -11,6 +11,7 @@ extern crate clap;
 extern crate serde_json;
 
 mod api;
+mod camera;
 mod cli;
 mod control;
 mod mgmt;
