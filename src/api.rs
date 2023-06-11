@@ -1058,10 +1058,12 @@ impl HSAPIClient {
         let hscamera_id = res?;
 
         let base_path = mgmt::get_base_path().unwrap();
+        let path = base_path.join("camera");
+        if !path.exists() {
+            std::fs::create_dir(&path)?
+        }
+        let path = path.join(format!("{}.pid", hscamera_id));
         let pid = unistd::getpid();
-        let path = base_path
-            .join("camera")
-            .join(format!("{}.pid", hscamera_id));
         std::fs::write(&path, pid.to_string())?;
 
         let exit_result =
