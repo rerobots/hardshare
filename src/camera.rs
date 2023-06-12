@@ -98,10 +98,22 @@ fn video_capture(
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
     let buffer_count = 4;
-    let dev = v4l::Device::with_path(camera_path).unwrap();
+    let dev = match v4l::Device::with_path(camera_path) {
+        Ok(d) => d,
+        Err(err) => {
+            error!("when opening camera device, caught {}", err);
+            return;
+        }
+    };
     let mut format = dev.format().unwrap();
     format.fourcc = v4l::FourCC::new(b"MJPG");
-    format = dev.set_format(&format).unwrap();
+    format = match dev.set_format(&format) {
+        Ok(f) => f,
+        Err(err) => {
+            error!("failed to set camera format MJPG: {}", err);
+            return;
+        }
+    };
     let mut stream = None;
 
     loop {
@@ -109,14 +121,18 @@ fn video_capture(
             Ok(m) => {
                 if m == CaptureCommand::Start {
                     if stream.is_none() {
-                        stream = Some(
-                            MmapStream::with_buffers(
-                                &dev,
-                                v4l::buffer::Type::VideoCapture,
-                                buffer_count,
-                            )
-                            .unwrap(),
-                        );
+                        let s = match MmapStream::with_buffers(
+                            &dev,
+                            v4l::buffer::Type::VideoCapture,
+                            buffer_count,
+                        ) {
+                            Ok(s) => s,
+                            Err(err) => {
+                                error!("failed to open stream: {}", err);
+                                return;
+                            }
+                        };
+                        stream = Some(s);
                     }
                 } else if m == CaptureCommand::Stop {
                     stream = None;
@@ -134,11 +150,19 @@ fn video_capture(
         }
 
         if let Some(s) = &mut stream {
-            let (buf, _) = s.next().unwrap();
+            let (buf, _) = match s.next() {
+                Ok(i) => i,
+                Err(err) => {
+                    error!("error reading camera stream: {}", err);
+                    return;
+                }
+            };
             let data = buf.to_vec();
             let b64data = base64::encode(data);
-            wsclient_addr.do_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data));
-            std::thread::sleep(std::time::Duration::from_millis(30));
+            if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
+                error!("try_send failed; caught: {:?}", err);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
         } else {
             std::thread::sleep(std::time::Duration::from_secs(2));
         }
