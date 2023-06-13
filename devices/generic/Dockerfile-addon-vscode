@@ -1,6 +1,6 @@
 # Base image with packages required for add-on `vscode`
 #
-#     docker build -t rerobots/hs-generic-vscode:x86_64-latest -f Dockerfile-addon-vscode .
+#     docker build -t rerobots/hs-generic-vscode:latest -f Dockerfile-addon-vscode .
 #
 # This Dockerfile gets install.sh from the tip of `main` branch of https://github.com/cdr/code-server.git
 # To instead pin to a version that is known to work, get https://raw.githubusercontent.com/cdr/code-server/d31439ec34572b6829902ea1863931071fe1fc55/install.sh
@@ -10,7 +10,7 @@
 # SCL <scott@rerobots.net>
 # Copyright (C) 2021 rerobots, Inc.
 
-FROM rerobots/hs-generic:x86_64-latest
+FROM rerobots/hs-generic:latest
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y curl
 
