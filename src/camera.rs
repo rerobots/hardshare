@@ -20,7 +20,11 @@ use openssl::ssl::{SslConnector, SslMethod};
 
 #[cfg(target_os="linux")]
 use v4l::io::traits::CaptureStream;
+
+#[cfg(target_os="linux")]
 use v4l::prelude::*;
+
+#[cfg(target_os="linux")]
 use v4l::video::Capture;
 
 use crate::api;
