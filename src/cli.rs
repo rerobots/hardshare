@@ -831,6 +831,9 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 
 fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    #[cfg(not(target_os="linux"))]
+    return CliError::new("only Linux supported", 1);
+
     let mut local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),

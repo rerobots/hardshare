@@ -18,6 +18,7 @@ use futures::stream::{SplitSink, StreamExt};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
+#[cfg(target_os="linux")]
 use v4l::io::traits::CaptureStream;
 use v4l::prelude::*;
 use v4l::video::Capture;
@@ -25,6 +26,7 @@ use v4l::video::Capture;
 use crate::api;
 
 
+#[cfg(target_os="linux")]
 pub fn stream_websocket(
     origin: &str,
     api_token: &str,
@@ -92,6 +94,7 @@ enum CaptureCommand {
 }
 
 
+#[cfg(target_os="linux")]
 fn video_capture(
     camera_path: &str,
     wsclient_addr: Addr<WSClient>,
