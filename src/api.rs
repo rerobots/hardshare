@@ -1073,6 +1073,7 @@ impl HSAPIClient {
         let exit_result =
             camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
 
+        #[cfg(target_os="linux")]
         exit_result
     }
 
