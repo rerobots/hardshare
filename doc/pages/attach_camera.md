@@ -73,7 +73,7 @@ The contents of a map file is provided to the hardshare daemon via the
 command-line argument `--crop`, e.g.,
 
 ```bash
-hardshare attach-camera --crop $(cat mapfile) 0 c9 2a
+hardshare attach-camera --crop $(cat mapfile) /dev/video0
 ```
 
 If `--width-height` was specified earlier, then include it here.
@@ -90,11 +90,10 @@ allow you to then close the terminal window or sign-out of the host without
 interrupting video streams, then add `-d`, e.g.,
 
 ```bash
-hardshare attach-camera -d --crop $(cat mapfile) 0 c9 2a
+hardshare attach-camera -d --crop $(cat mapfile) /dev/video0
 ```
 
-After `hardshare attach-camera -d`, the following command can be used to stop
-all `attach-camera` background processes
+The following command can be used to stop all `attach-camera` processes:
 
 ```bash
 hardshare stop-cameras
