@@ -834,6 +834,15 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
     #[cfg(not(target_os="linux"))]
     return CliError::new("only Linux supported", 1);
 
+    if matches.values_of("id_prefix").is_some()
+        && matches.values_of("attach_camera_crop_config").is_some()
+    {
+        return CliError::new(
+            "Give either ID arguments or crop configuration, but not both.",
+            1,
+        );
+    }
+
     let mut local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
@@ -841,13 +850,17 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
 
     let camera_path = matches.value_of("camera_path").unwrap_or("/dev/video0");
 
-    let wds: Vec<&str> = match matches.values_of("id_prefix") {
-        Some(v) => v.collect(),
-        None => vec![],
-    };
-    let wds = match mgmt::expand_id_prefixes(&local_config, &wds) {
-        Ok(w) => w,
-        Err(err) => return CliError::new_std(err, 1),
+    let mut wds = if matches.values_of("attach_camera_crop_config").is_none() {
+        let wds = match matches.values_of("id_prefix") {
+            Some(v) => v.collect(),
+            None => vec![],
+        };
+        match mgmt::expand_id_prefixes(&local_config, &wds) {
+            Ok(w) => w,
+            Err(err) => return CliError::new_std(err, 1),
+        }
+    } else {
+        vec![]
     };
 
     let width_height = match matches.value_of("attach_camera_res") {
@@ -862,12 +875,20 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
         Some(c) => match serde_json::from_str::<CameraCrop>(c) {
             Ok(c) => {
                 for crop_wd in c.keys() {
-                    if !wds.contains(crop_wd) {
+                    let mut matched = false;
+                    for wd in local_config.wdeployments.iter() {
+                        if &wd.id == crop_wd {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if !matched {
                         return CliError::new(
                             &format!("unknown ID in crop configuration: {}", crop_wd),
                             1,
                         );
                     }
+                    wds.push(crop_wd.clone());
                 }
                 Some(c)
             }
@@ -1071,7 +1092,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .multiple(true)
-                         .help("id of workspace deployments for camera attachment"))
+                         .help("id of workspace deployments for camera attachment; if --crop is given, then IDs are read from there instead"))
                     .arg(Arg::with_name("attach_camera_res")
                          .long("width-height")
                          .value_name("W,H")
