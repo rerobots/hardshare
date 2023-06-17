@@ -1,3 +1,11 @@
+hardshare client (0.12.1)
+
+  * New client is ready to use on Linux. No camera and limited device support
+    on macOS, to be resolved in next version.
+
+ -- Scott C. Livingston <scott@rerobots.net>  Sat, 17 Jun 2023 08:44:36 -0700
+
+
 hardshare client (0.12.0)
 
   * New client is ready to use except for `attach-camera`.
