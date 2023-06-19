@@ -87,13 +87,15 @@ the "c" button).
 
 If you want `attach-camera` to execute as a background process, which would
 allow you to then close the terminal window or sign-out of the host without
-interrupting video streams, then add `-d`, e.g.,
+interrupting video streams, then
+run it with [GNU Screen](https://www.gnu.org/software/screen/) or
+[tmux](https://github.com/tmux/tmux/wiki). For example,
 
 ```bash
-hardshare attach-camera -d --crop $(cat mapfile) /dev/video0
+tmux new-session hardshare attach-camera --crop $(cat mapfile) /dev/video0 \; detach
 ```
 
-The following command can be used to stop all `attach-camera` processes:
+The following command will stop all `attach-camera` processes:
 
 ```bash
 hardshare stop-cameras

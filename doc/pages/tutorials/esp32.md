@@ -238,7 +238,7 @@ For most users, streaming video is most easily achieved with the command
 following those instructions, typically it suffices to
 
 ```bash
-hardshare attach-camera -d 0
+hardshare attach-camera
 ```
 
 to enable video streaming. Note that the camera is only active when there is an
