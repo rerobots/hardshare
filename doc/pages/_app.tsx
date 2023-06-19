@@ -29,6 +29,13 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
         title = 'hardshare documentation';
     }
 
+    let repoUrl = 'https://github.com/rerobots/hardshare';
+    if (markdoc?.frontmatter?.srcUrl) {
+        repoUrl = markdoc?.frontmatter?.srcUrl;
+    } else if (markdoc?.file?.path) {
+        repoUrl += '/blob/main/doc/pages' + markdoc.file.path;
+    }
+
     let ogImage = markdoc?.frontmatter?.image;
     if (!ogImage) {
         ogImage = 'https://docs.rerobots.net/smaller-logo.png';
@@ -99,6 +106,7 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
             <footer>
                 Copyright &copy; 2023 rerobots, Inc.<br />
                 <a href="https://rerobots.net/site/terms-of-service">terms of service</a> <a href="https://rerobots.net/contact">contact</a>
+                <a href={repoUrl}>source</a>
             </footer>
         </>
     );
