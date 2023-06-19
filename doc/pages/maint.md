@@ -8,7 +8,7 @@ This page describes troubleshooting and best practices for maintaining hardshare
 configurations and shared devices.
 
 
-## How to run the cient without keeping a terminal open?
+## How to run the client without keeping a terminal open?
 
 Run it with [GNU Screen](https://www.gnu.org/software/screen/) or
 [tmux](https://github.com/tmux/tmux/wiki). For example,
