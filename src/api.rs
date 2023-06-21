@@ -1066,14 +1066,9 @@ impl HSAPIClient {
         let pid = unistd::getpid();
         std::fs::write(&path, pid.to_string())?;
 
-        #[cfg(not(target_os="linux"))]
-        return error("not implemented");
-
-        #[cfg(target_os="linux")]
         let exit_result =
             camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
 
-        #[cfg(target_os="linux")]
         exit_result
     }
 

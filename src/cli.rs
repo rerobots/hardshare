@@ -831,7 +831,7 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 
 fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
-    #[cfg(not(target_os="linux"))]
+    #[cfg(not(any(target_os= "linux", target_os = "macos")))]
     return CliError::new("only Linux supported", 1);
 
     if matches.values_of("id_prefix").is_some()

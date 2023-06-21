@@ -1,7 +1,7 @@
 // Copyright (C) 2023 rerobots, Inc.
 
+use std::io::Cursor;
 use std::sync::mpsc;
-use std::thread;
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -18,19 +18,9 @@ use futures::stream::{SplitSink, StreamExt};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
-#[cfg(target_os="linux")]
-use v4l::io::traits::CaptureStream;
-
-#[cfg(target_os="linux")]
-use v4l::prelude::*;
-
-#[cfg(target_os="linux")]
-use v4l::video::Capture;
-
 use crate::api;
 
 
-#[cfg(target_os="linux")]
 pub fn stream_websocket(
     origin: &str,
     api_token: &str,
@@ -98,12 +88,100 @@ enum CaptureCommand {
 }
 
 
+#[cfg(target_os = "macos")]
+fn video_capture(
+    camera_path: &str,
+    wsclient_addr: Addr<WSClient>,
+    cap_command: mpsc::Receiver<CaptureCommand>,
+) {
+    use openpnp_capture::{Device, Format, Stream};
+    use ffimage::traits::Convert;
+
+    let devices = Device::enumerate();
+
+    let dev = match Device::new(devices[0]) {
+        Some(d) => d,
+        None => {
+            error!("failed to open camera device");
+            return;
+        }
+    };
+
+    let width = 1280;
+    let height = 720;
+    let format = Format::default().width(width).height(height);
+    let mut stream = None;
+
+    loop {
+        match cap_command.try_recv() {
+            Ok(m) => {
+                if m == CaptureCommand::Start {
+                    if stream.is_none() {
+                        let s = match Stream::new(&dev, &format) {
+                            Some(s) => s,
+                            None => {
+                                error!("failed to create camera stream");
+                                return;
+                            }
+                        };
+                        println!("{:?}", s);
+                        stream = Some(s);
+                    }
+                } else if m == CaptureCommand::Stop {
+                    stream = None;
+                } else {
+                    // CaptureCommand::Quit
+                    return;
+                }
+            }
+            Err(err) => {
+                if err != mpsc::TryRecvError::Empty {
+                    error!("caught: {}", err);
+                    return;
+                }
+            }
+        }
+
+        if let Some(s) = &mut stream {
+            s.advance();
+            let mut data = Vec::new();
+            if let Err(err) = s.read(&mut data) {
+                error!("error reading camera stream: {}", err);
+                return;
+            };
+
+            let yuv_buf = ffimage::packed::Image::<ffimage_yuv::yuv::Yuv<u8>, _>::from_buf(&data, width, height).unwrap();
+            let mut rgb_buf = ffimage::packed::Image::<ffimage::color::Rgb<u8>, _>::new(width, height, 0u8);
+            yuv_buf.convert(&mut rgb_buf);
+
+            let rgb_buf: Vec<u8> = rgb_buf.into_buf();
+
+            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = image::ImageBuffer::from_vec(width, height, rgb_buf).unwrap();
+            let mut jpg: Vec<u8> = Vec::new();
+            img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg).unwrap();
+
+            let b64data = base64::encode(jpg);
+            if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
+                error!("try_send failed; caught: {:?}", err);
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        } else {
+            std::thread::sleep(Duration::from_secs(2));
+        }
+    }
+}
+
+
 #[cfg(target_os="linux")]
 fn video_capture(
     camera_path: &str,
     wsclient_addr: Addr<WSClient>,
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
+    use v4l::io::traits::CaptureStream;
+    use v4l::prelude::*;
+    use v4l::video::Capture;
+
     let buffer_count = 4;
     let dev = match v4l::Device::with_path(camera_path) {
         Ok(d) => d,
@@ -169,9 +247,9 @@ fn video_capture(
             if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
                 error!("try_send failed; caught: {:?}", err);
             }
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(100));
         } else {
-            std::thread::sleep(std::time::Duration::from_secs(2));
+            std::thread::sleep(Duration::from_secs(2));
         }
     }
 }
