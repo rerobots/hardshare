@@ -294,6 +294,13 @@ impl CurrentInstance {
                         if let Err(err) = hostkey_file.read_to_string(&mut hostkey) {
                             return Err(format!("{}", err));
                         }
+                        drop(hostkey_file);
+                        if let Err(err) = std::fs::remove_file(hostkey_filename) {
+                            error!(
+                                "Failed to remove file {}; caught: {}",
+                                hostkey_filename, err
+                            );
+                        }
                         return Ok(hostkey);
                     } else {
                         warn!("waiting for host key...");
