@@ -832,7 +832,7 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     #[cfg(not(any(target_os= "linux", target_os = "macos")))]
-    return CliError::new("only Linux supported", 1);
+    return CliError::new("only Linux and Mac supported", 1);
 
     if matches.values_of("id_prefix").is_some()
         && matches.values_of("attach_camera_crop_config").is_some()
@@ -848,7 +848,12 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    let camera_path = matches.value_of("camera_path").unwrap_or("/dev/video0");
+    #[cfg(target_os = "linux")]
+    let camera_path_default = "/dev/video0";
+    #[cfg(target_os = "macos")]
+    let camera_path_default = "0";
+
+    let camera_path = matches.value_of("camera_path").unwrap_or(camera_path_default);
 
     let mut wds = if matches.values_of("attach_camera_crop_config").is_none() {
         let wds = match matches.values_of("id_prefix") {

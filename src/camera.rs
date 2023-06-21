@@ -97,9 +97,16 @@ fn video_capture(
     use openpnp_capture::{Device, Format, Stream};
     use ffimage::traits::Convert;
 
+    let camera_index: usize = match camera_path.parse() {
+        Ok(c) => c,
+        Err(err) => {
+            error!("error parsing camera index: {}", err);
+            return;
+        }
+    };
     let devices = Device::enumerate();
 
-    let dev = match Device::new(devices[0]) {
+    let dev = match Device::new(devices[camera_index]) {
         Some(d) => d,
         None => {
             error!("failed to open camera device");
@@ -124,7 +131,7 @@ fn video_capture(
                                 return;
                             }
                         };
-                        println!("{:?}", s);
+
                         stream = Some(s);
                     }
                 } else if m == CaptureCommand::Stop {
