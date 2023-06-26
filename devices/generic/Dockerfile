@@ -21,6 +21,6 @@ RUN apt-get update \
        python3 \
        python3-aiohttp
 
-COPY init.sh /sbin/rerobots-hs-init.sh
+COPY --chmod=0775 init.sh /sbin/rerobots-hs-init.sh
 
 CMD ["/sbin/rerobots-hs-init.sh"]
