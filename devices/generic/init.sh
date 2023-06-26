@@ -8,4 +8,9 @@ set -e
 
 rm -f /etc/ssh/ssh_host_*
 ssh-keygen -A
-exec /usr/sbin/sshd -D
+
+if [ -n "$HARDSHARE_LOG" ]; then
+    exec /usr/sbin/sshd -d
+else
+    exec /usr/sbin/sshd -D
+fi

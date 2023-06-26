@@ -12,6 +12,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 use actix::prelude::*;
+use log::{log_enabled, Level};
 use serde::Deserialize;
 use tempfile::NamedTempFile;
 
@@ -407,6 +408,9 @@ impl CurrentInstance {
             run_command = run_command.args(&instance.wdeployment.cargs);
             if cprovider == "podman" {
                 run_command = run_command.args(["-p", "127.0.0.1::22"]);
+            }
+            if log_enabled!(Level::Debug) {
+                run_command = run_command.args(["-e", "HARDSHARE_LOG=1"])
             }
             run_command = run_command.arg(image);
             let command_result = match run_command.output() {
