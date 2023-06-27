@@ -18,6 +18,14 @@ tmux new-session hardshare ad \; detach
 ```
 
 will start `ad`.
+If there is no need to re-attach to the process, then a more simple solution
+is [nohup](https://www.gnu.org/software/coreutils/manual/html_node/nohup-invocation.html)
+(or [in the FreeBSD manual](https://man.freebsd.org/cgi/man.cgi?query=nohup)).
+
+```bash
+nohup hardshare ad &
+```
+Then, exit the shell normally.
 
 
 ## How to log client output to a file?
