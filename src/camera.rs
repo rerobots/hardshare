@@ -179,7 +179,7 @@ fn video_capture(
 }
 
 
-#[cfg(target_os="linux")]
+#[cfg(target_os = "linux")]
 fn video_capture(
     camera_path: &str,
     wsclient_addr: Addr<WSClient>,
