@@ -8,6 +8,29 @@ This page describes troubleshooting and best practices for maintaining hardshare
 configurations and shared devices.
 
 
+## New instances will not launch, even though the deployment is being advertised. Why?
+
+Unrecoverable errors during `INIT` or `TERMINATING` cause the deployment to be
+locked.
+This is shown as `lock-out: true` in the listing from `hardshare config -l`,
+e.g.,
+
+```
+registration details for workspace deployments in local config:
+7ec9c3d2-6a74-47d9-bf9f-b3ff41c26ec0
+	created: 2021-02-26 01:29 UTC
+	desc: CubeCell with OLED
+	origin (address) of registration: (unknown)
+	lock-out: true
+```
+
+When locked, new instance requests are rejected. To allow instances again,
+
+```bash
+hardshare unlock
+```
+
+
 ## How to run the client without keeping a terminal open?
 
 Run it with [GNU Screen](https://www.gnu.org/software/screen/) or
