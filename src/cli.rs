@@ -267,13 +267,12 @@ fn print_config_w<T: Write>(
 
 
 fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Result<(), CliError> {
-    let create_if_missing = matches.is_present("create_config");
     let only_local_config = matches.is_present("onlylocalconfig");
     let include_dissolved = matches.is_present("includedissolved");
 
     if matches.is_present("list") {
         let show_all_remote = matches.is_present("list_all");
-        let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
+        let mut local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1),
         };
@@ -293,7 +292,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
 
         print_config(&local_config, &remote_config, pformat, show_all_remote).unwrap();
     } else if let Some(new_token_path) = matches.value_of("new_api_token") {
-        let mut local_config = match mgmt::get_local_config(create_if_missing, true) {
+        let mut local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1),
         };
@@ -333,10 +332,6 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
         match ac.declare_existing(declared_wdeployment_id) {
             Ok(()) => {}
             Err(err) => return CliError::new_std(err, 1),
-        }
-    } else if create_if_missing {
-        if let Err(err) = mgmt::get_local_config(true, false) {
-            return CliError::new_std(err, 1);
         }
     } else {
         // Remaining actions require a local configuration
@@ -922,6 +917,18 @@ fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn init_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    if mgmt::get_local_config(false, false).is_ok() {
+        return CliError::new("Cannot init: local configuration already exists", 1);
+    }
+    if let Err(err) = mgmt::get_local_config(true, false) {
+        return CliError::new_std(err, 1);
+    }
+
+    Ok(())
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -945,6 +952,8 @@ pub fn main() -> Result<(), CliError> {
              .value_name("PORT")
              .help("port for daemon")
              .default_value("6666"))
+        .subcommand(SubCommand::with_name("init")
+                    .about("Initialize local configuration"))
         .subcommand(SubCommand::with_name("config")
                     .about("Manage local and remote configuration")
                     .arg(Arg::with_name("list")
@@ -960,10 +969,6 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("includedissolved")
                          .long("--include-dissolved")
                          .help("Include configuration data of dissolved workspace deployments"))
-                    .arg(Arg::with_name("create_config")
-                         .short("c")
-                         .long("create")
-                         .help("If no local configuration is found, then create one"))
                     .arg(Arg::with_name("new_api_token")
                          .long("add-token")
                          .value_name("FILE")
@@ -1145,6 +1150,8 @@ pub fn main() -> Result<(), CliError> {
 
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
+    } else if let Some(matches) = matches.subcommand_matches("init") {
+        return init_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("config") {
         return config_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("config-addon") {
