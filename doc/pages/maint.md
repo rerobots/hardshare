@@ -12,7 +12,7 @@ configurations and shared devices.
 
 Unrecoverable errors during `INIT` or `TERMINATING` cause the deployment to be
 locked.
-This is shown as `lock-out: true` in the listing from `hardshare config -l`,
+This is shown as `lock-out: true` in the listing from `hardshare list`,
 e.g.,
 
 ```
@@ -90,7 +90,7 @@ first check that the Docker image is compatible with your host architecture. To
 do this, first
 
 ```bash
-hardshare config -l
+hardshare list
 ```
 
 and find the Docker image line; for example,
@@ -139,7 +139,7 @@ Finally, request an instance as usual.
 ## List local configurations
 
 ```bash
-hardshare --format=yaml config -l
+hardshare --format=yaml list
 ```
 
 ```

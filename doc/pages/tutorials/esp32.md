@@ -252,7 +252,7 @@ Go to <https://rerobots.net/hardshare> and, in the Devices section, find the
 `id` corresponding to the workspace deployment listed in your local configuration by
 
 ```bash
-hardshare config -l
+hardshare list
 ```
 
 In the Sandboxes section, push "create new". The form has the following parts:

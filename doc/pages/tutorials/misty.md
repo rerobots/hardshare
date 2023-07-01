@@ -38,7 +38,7 @@ the [rerobots CLI](https://docs.rerobots.net/tools/cli).
 The rerobots CLI requires an API token, much like the hardshare client. To find yours locally,
 
 ```bash
-hardshare config -l
+hardshare list
 ```
 
 and notice the path under the section "found API tokens". Now call `rerobots wdinfo`
@@ -228,7 +228,7 @@ deployments: each ID should correspond to precisely 1 Misty
 hardshare register --permit-more
 ```
 
-Now `hardshare config -l` will show a list of multiple IDs. All commands given
+Now `hardshare list` will show a list of multiple IDs. All commands given
 previously in this tutorial and in [Quickstart](/quickstart) can be used again with the
 new ID by specifying it on the command-line.
 

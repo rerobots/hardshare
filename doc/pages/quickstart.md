@@ -87,7 +87,7 @@ Now that the daemon is active, you can request an instance on your own device
 through https://rerobots.net. Go to the URL shown in
 
 ```bash
-hardshare config -l
+hardshare list
 ```
 
 It will look like
@@ -102,7 +102,7 @@ If instance initialization is interrupted by a loss of connection or the client
 crashing, then the instance will automatically be marked `INIT_FAIL`.
 Unrecoverable errors during `INIT` or `TERMINATING` cause the deployment to be
 locked.
-This is shown as `lock-out: true` in the listing from `hardshare config -l`,
+This is shown as `lock-out: true` in the listing from `hardshare list`,
 e.g.,
 
 ```
