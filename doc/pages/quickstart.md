@@ -45,7 +45,7 @@ https://docs.rerobots.net/web/making-and-revoking-api-tokens).) Then,
 initialize a new local configuration, and add the API token to it
 
 ```bash
-hardshare config -c
+hardshare init
 hardshare config --add-token path/to/your/rerobots-apitoken.txt
 ```
 

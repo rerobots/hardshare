@@ -35,7 +35,7 @@ cross build --target armv7-unknown-linux-musleabihf --release --locked
 An SSH key is required to create SSH tunnels through which remote users connect
 to containers that you host. This section describes how to manually create keys
 and some security considerations. Because a key pair is created as part of a new
-configuration (`hardshare config -c`) automatically, this section can be
+configuration (`hardshare init`) automatically, this section can be
 skipped unless something breaks.
 
 There might already be an SSH key at `~/.ssh/id_rsa`. If not, or if you want to

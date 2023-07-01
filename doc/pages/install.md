@@ -31,7 +31,7 @@ The main aspects to an operational `hardshare` installation:
 To begin, initialize a new configuration
 
 ```bash
-hardshare config -c
+hardshare init
 ```
 
 
