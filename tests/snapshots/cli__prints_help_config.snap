@@ -1,6 +1,6 @@
 ---
 source: tests/cli.rs
-assertion_line: 36
+assertion_line: 50
 expression: "String::from_utf8(output.stdout).unwrap()"
 ---
 hardshare-config 
@@ -10,19 +10,10 @@ USAGE:
     hardshare config [FLAGS] [OPTIONS] [ID]
 
 FLAGS:
-    -c, --create               If no local configuration is found, then create
-                               one
-    -h, --help                 Prints help information
-        --include-dissolved    Include configuration data of dissolved workspace
-                               deployments
-    -l, --list                 Lists configuration
-        --all                  lists all registered devices owned by this user,
-                               whether or not in the local configuration
-        --local                Only show local configuration data
-    -p, --prune                delete files in local API tokens directory that
-                               are not valid; to get list of files with errors,
-                               try `--list`
-    -V, --version              Prints version information
+    -h, --help       Prints help information
+    -p, --prune      delete files in local API tokens directory that are not
+                     valid; to get list of files with errors, try `--list`
+    -V, --version    Prints version information
 
 OPTIONS:
         --add-init-inside <PROGRAM>
@@ -52,12 +43,13 @@ OPTIONS:
 
         --rm-init-inside <PROGRAM>
             remove program from list of commands to execute inside; for example,
-            copy-and-paste value shown in `hardshare config -l` here
+            copy-and-paste value shown in `hardshare list` here
         --rm-terminate-prog <PROGRAM>
             remove program from list of commands to execute; for example, copy-
-            and-paste value shown in `hardshare config -l` here
+            and-paste value shown in `hardshare list` here
 
 ARGS:
     <ID>    id of workspace deployment for configuration changes (can be
             unique prefix); this argument is not required if there is only 1
             workspace deployment
+

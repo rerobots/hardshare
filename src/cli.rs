@@ -266,32 +266,38 @@ fn print_config_w<T: Write>(
 }
 
 
-fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Result<(), CliError> {
+fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Result<(), CliError> {
     let only_local_config = matches.is_present("onlylocalconfig");
     let include_dissolved = matches.is_present("includedissolved");
+    let show_all_remote = matches.is_present("list_all");
 
-    if matches.is_present("list") {
-        let show_all_remote = matches.is_present("list_all");
-        let mut local_config = match mgmt::get_local_config(false, true) {
-            Ok(lc) => lc,
-            Err(err) => return CliError::new_std(err, 1),
-        };
-        mgmt::append_urls(&mut local_config);
+    let mut local_config = match mgmt::get_local_config(false, true) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+    mgmt::append_urls(&mut local_config);
 
-        let mut remote_config = None;
-        if !only_local_config {
-            let ac = api::HSAPIClient::new();
-            remote_config = Some(match ac.get_remote_config(include_dissolved) {
-                Ok(rc) => rc,
-                Err(err) => {
-                    let err_message = format!("{}\nTo get only the local configuration, do\n\n    hardshare config -l --local", err);
-                    return CliError::new(err_message.as_str(), 1);
-                }
-            });
-        }
+    let mut remote_config = None;
+    if !only_local_config {
+        let ac = api::HSAPIClient::new();
+        remote_config = Some(match ac.get_remote_config(include_dissolved) {
+            Ok(rc) => rc,
+            Err(err) => {
+                let err_message = format!("{}\nTo get only the local configuration, do\n\n    hardshare list --local", err);
+                return CliError::new(err_message.as_str(), 1);
+            }
+        });
+    }
 
-        print_config(&local_config, &remote_config, pformat, show_all_remote).unwrap();
-    } else if let Some(new_token_path) = matches.value_of("new_api_token") {
+    match print_config(&local_config, &remote_config, pformat, show_all_remote) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
+fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+   if let Some(new_token_path) = matches.value_of("new_api_token") {
         let mut local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1),
@@ -554,7 +560,7 @@ fn config_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Res
                 None => CliError::new("no matching program found", 1),
             };
         } else {
-            let errmessage = "Use `hardshare config` with a switch. For example, `hardshare config -l`\nor to get a help message, enter\n\n    hardshare help config";
+            let errmessage = "Use `hardshare config` with a switch. To get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
         }
     }
@@ -954,21 +960,19 @@ pub fn main() -> Result<(), CliError> {
              .default_value("6666"))
         .subcommand(SubCommand::with_name("init")
                     .about("Initialize local configuration"))
-        .subcommand(SubCommand::with_name("config")
-                    .about("Manage local and remote configuration")
-                    .arg(Arg::with_name("list")
-                         .short("l")
-                         .long("list")
-                         .help("Lists configuration"))
+        .subcommand(SubCommand::with_name("list")
+                    .about("List configuration")
                     .arg(Arg::with_name("list_all")
                          .long("all")
-                         .help("lists all registered devices owned by this user, whether or not in the local configuration"))
+                         .help("Lists all registered devices owned by this user, whether or not in the local configuration"))
                     .arg(Arg::with_name("onlylocalconfig")
                          .long("local")
                          .help("Only show local configuration data"))
                     .arg(Arg::with_name("includedissolved")
                          .long("--include-dissolved")
-                         .help("Include configuration data of dissolved workspace deployments"))
+                         .help("Include configuration data of dissolved workspace deployments")))
+        .subcommand(SubCommand::with_name("config")
+                    .about("Manage local and remote configuration")
                     .arg(Arg::with_name("new_api_token")
                          .long("add-token")
                          .value_name("FILE")
@@ -1008,7 +1012,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("rm_terminate_prog")
                          .long("rm-terminate-prog")
                          .value_name("PROGRAM")
-                         .help("remove program from list of commands to execute; for example, copy-and-paste value shown in `hardshare config -l` here"))
+                         .help("remove program from list of commands to execute; for example, copy-and-paste value shown in `hardshare list` here"))
                     .arg(Arg::with_name("add_init_inside")
                          .long("add-init-inside")
                          .value_name("PROGRAM")
@@ -1016,7 +1020,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("rm_init_inside")
                          .long("rm-init-inside")
                          .value_name("PROGRAM")
-                         .help("remove program from list of commands to execute inside; for example, copy-and-paste value shown in `hardshare config -l` here"))
+                         .help("remove program from list of commands to execute inside; for example, copy-and-paste value shown in `hardshare list` here"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
@@ -1152,8 +1156,10 @@ pub fn main() -> Result<(), CliError> {
         println!(crate_version!());
     } else if let Some(matches) = matches.subcommand_matches("init") {
         return init_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("list") {
+        return list_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("config") {
-        return config_subcommand(matches, pformat);
+        return config_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("config-addon") {
         return config_addon_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("rules") {
