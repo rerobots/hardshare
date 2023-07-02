@@ -398,7 +398,7 @@ impl CurrentInstance {
             let name = instance.generate_local_name(&base_name);
             let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
 
-            let mut run_command = Command::new(&cprovider_execname);
+            let mut run_command = Command::new(cprovider_execname);
             let mut run_command = run_command.args([
                 "run",
                 "-d",
@@ -437,7 +437,7 @@ impl CurrentInstance {
             let addr: String = if cprovider == "podman" || cprovider == "docker-rootless" {
                 "127.0.0.1".into()
             } else {
-                match CurrentInstance::get_container_addr(&cprovider_execname, &name, 10) {
+                match CurrentInstance::get_container_addr(cprovider_execname, &name, 10) {
                     Ok(a) => a,
                     Err(err) => {
                         error!("{}", err);
@@ -451,7 +451,7 @@ impl CurrentInstance {
             let sshport = if cprovider == "docker" {
                 22
             } else {
-                match CurrentInstance::get_container_sshport(&cprovider, &name) {
+                match CurrentInstance::get_container_sshport(cprovider_execname, &name) {
                     Ok(a) => a,
                     Err(err) => {
                         error!("{}", err);
@@ -490,7 +490,7 @@ impl CurrentInstance {
                 }
             };
 
-            let mkdir_result = Command::new(&cprovider_execname)
+            let mkdir_result = Command::new(cprovider_execname)
                 .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
                 .status()
                 .unwrap();
@@ -501,7 +501,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let cp_result = Command::new(&cprovider_execname)
+            let cp_result = Command::new(cprovider_execname)
                 .args([
                     "cp",
                     public_key_file.path().to_str().unwrap(),
@@ -516,7 +516,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let chown_result = Command::new(&cprovider_execname)
+            let chown_result = Command::new(cprovider_execname)
                 .args([
                     "exec",
                     &name,
@@ -534,7 +534,7 @@ impl CurrentInstance {
             }
 
             let hostkey: String =
-                match CurrentInstance::get_container_hostkey(&cprovider_execname, &name, 10) {
+                match CurrentInstance::get_container_hostkey(cprovider_execname, &name, 10) {
                     Ok(k) => k,
                     Err(err) => {
                         error!("{}", err);
@@ -545,7 +545,7 @@ impl CurrentInstance {
                 };
 
             for script in instance.wdeployment.init_inside.iter() {
-                let status = Command::new(&cprovider_execname)
+                let status = Command::new(cprovider_execname)
                     .args(["exec", &name, "/bin/sh", "-c", script])
                     .status();
                 match status {
