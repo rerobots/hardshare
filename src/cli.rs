@@ -158,7 +158,11 @@ fn print_config_w<T: Write>(
                 wd.cprovider,
                 wd.cargs.join(", "),
             )?;
-            if wd.cprovider == "docker" || wd.cprovider == "podman" || wd.cprovider == "lxd" {
+            if wd.cprovider == "docker"
+                || wd.cprovider == "docker-rootless"
+                || wd.cprovider == "podman"
+                || wd.cprovider == "lxd"
+            {
                 match &wd.image {
                     Some(img) => {
                         writeln!(f, "\timg: {img}")?;
@@ -354,9 +358,11 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
         if let Some(cprovider) = matches.value_of("cprovider") {
             let selected_cprovider = cprovider.to_lowercase();
-            if !vec!["lxd", "docker", "podman", "proxy"].contains(&selected_cprovider.as_str()) {
+            if !vec!["lxd", "docker", "docker-rootless", "podman", "proxy"]
+                .contains(&selected_cprovider.as_str())
+            {
                 return CliError::new(
-                    "cprovider must be one of the following: lxd, docker, podman, proxy",
+                    "cprovider must be one of the following: lxd, docker, docker-rootless, podman, proxy",
                     1,
                 );
             }
@@ -369,7 +375,6 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             if local_config.wdeployments[wd_index].cprovider == "proxy" {
                 local_config.wdeployments[wd_index].image = None;
             } else {
-                // cprovider \in {lxd, docker, podman}
                 let default_img = "rerobots/hs-generic";
                 if local_config.wdeployments[wd_index].image.is_none() {
                     local_config.wdeployments[wd_index].image = Some(default_img.into());
@@ -398,7 +403,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
                 }
-                "docker" => {
+                "docker" | "docker-rootless" => {
                     let argv = vec!["docker", "image", "inspect", new_image];
                     let mut prog = Command::new(argv[0]);
 
@@ -984,7 +989,7 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("cprovider")
                          .long("cprovider")
                          .value_name("CPROVIDER")
-                         .help("select a container provider: lxd, docker, podman, proxy"))
+                         .help("select a container provider: lxd, docker, docker-rootless, podman, proxy"))
                     .arg(Arg::with_name("cprovider_img")
                          .long("assign-image")
                          .value_name("IMG")

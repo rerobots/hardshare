@@ -379,7 +379,12 @@ impl CurrentInstance {
 
     fn launch(mut instance: CurrentInstance, public_key: &str) {
         let cprovider = instance.wdeployment.cprovider.clone();
-        if cprovider == "docker" || cprovider == "podman" {
+        let cprovider_execname = if cprovider == "docker-rootless" {
+            "docker"
+        } else {
+            &cprovider
+        };
+        if cprovider == "docker" || cprovider == "docker-rootless" || cprovider == "podman" {
             let image = match &instance.wdeployment.image {
                 Some(img) => img.clone(),
                 None => {
@@ -393,7 +398,7 @@ impl CurrentInstance {
             let name = instance.generate_local_name(&base_name);
             let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
 
-            let mut run_command = Command::new(&cprovider);
+            let mut run_command = Command::new(&cprovider_execname);
             let mut run_command = run_command.args([
                 "run",
                 "-d",
@@ -406,7 +411,7 @@ impl CurrentInstance {
                 "--cap-add=CAP_SYS_CHROOT",
             ]);
             run_command = run_command.args(&instance.wdeployment.cargs);
-            if cprovider == "podman" {
+            if cprovider == "podman" || cprovider == "docker-rootless" {
                 run_command = run_command.args(["-p", "127.0.0.1::22"]);
             }
             if log_enabled!(Level::Debug) {
@@ -429,10 +434,10 @@ impl CurrentInstance {
                 return;
             }
 
-            let addr: String = if cprovider == "podman" {
+            let addr: String = if cprovider == "podman" || cprovider == "docker-rootless" {
                 "127.0.0.1".into()
             } else {
-                match CurrentInstance::get_container_addr(&cprovider, &name, 10) {
+                match CurrentInstance::get_container_addr(&cprovider_execname, &name, 10) {
                     Ok(a) => a,
                     Err(err) => {
                         error!("{}", err);
@@ -485,7 +490,7 @@ impl CurrentInstance {
                 }
             };
 
-            let mkdir_result = Command::new(&cprovider)
+            let mkdir_result = Command::new(&cprovider_execname)
                 .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
                 .status()
                 .unwrap();
@@ -496,7 +501,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let cp_result = Command::new(&cprovider)
+            let cp_result = Command::new(&cprovider_execname)
                 .args([
                     "cp",
                     public_key_file.path().to_str().unwrap(),
@@ -511,7 +516,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let chown_result = Command::new(&cprovider)
+            let chown_result = Command::new(&cprovider_execname)
                 .args([
                     "exec",
                     &name,
@@ -529,7 +534,7 @@ impl CurrentInstance {
             }
 
             let hostkey: String =
-                match CurrentInstance::get_container_hostkey(&cprovider, &name, 10) {
+                match CurrentInstance::get_container_hostkey(&cprovider_execname, &name, 10) {
                     Ok(k) => k,
                     Err(err) => {
                         error!("{}", err);
@@ -540,7 +545,7 @@ impl CurrentInstance {
                 };
 
             for script in instance.wdeployment.init_inside.iter() {
-                let status = Command::new(&cprovider)
+                let status = Command::new(&cprovider_execname)
                     .args(["exec", &name, "/bin/sh", "-c", script])
                     .status();
                 match status {
@@ -652,7 +657,9 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        if instance.wdeployment.cprovider == "docker" || instance.wdeployment.cprovider == "podman"
+        if instance.wdeployment.cprovider == "docker"
+            || instance.wdeployment.cprovider == "docker-rootless"
+            || instance.wdeployment.cprovider == "podman"
         {
             let name = instance.get_local_name().unwrap();
             let mut run_command = Command::new(&instance.wdeployment.cprovider);
