@@ -661,8 +661,13 @@ impl CurrentInstance {
             || instance.wdeployment.cprovider == "docker-rootless"
             || instance.wdeployment.cprovider == "podman"
         {
+            let cprovider_execname = if instance.wdeployment.cprovider == "docker-rootless" {
+                "docker"
+            } else {
+                &instance.wdeployment.cprovider
+            };
             let name = instance.get_local_name().unwrap();
-            let mut run_command = Command::new(&instance.wdeployment.cprovider);
+            let mut run_command = Command::new(cprovider_execname);
             let mut run_command = run_command.args(["rm", "-f", &name]);
             match run_command.status() {
                 Ok(s) => {
