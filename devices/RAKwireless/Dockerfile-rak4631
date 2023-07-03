@@ -1,0 +1,28 @@
+# Base image with packages required for RAK4631 development
+#
+#     docker build -t rerobots/hs-rakwireless-rak4631:latest -f Dockerfile-rak4631 .
+#
+#
+# SCL <scott@rerobots.net>
+# Copyright (C) 2023 rerobots, Inc.
+
+FROM rerobots/hs-generic-platformio:latest
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y unzip
+
+RUN cd /root/ \
+    && bash -c "source .platformio/penv/bin/activate \
+    && platformio pkg install -g --platform nordicnrf52 \
+    && platformio pkg install -g --library arduino \
+    && platformio pkg install -g --tool framework-arduinoadafruitnrf52 \
+    && platformio pkg install -g --tool framework-cmsis \
+    && platformio pkg install -g --tool tool-adafruit-nrfutil \
+    && platformio pkg install -g --tool tool-scons"
+
+RUN cd /root/ \
+    && wget https://github.com/RAKWireless/WisBlock/raw/8d851fba7693f9339db0f857a92cd816163c5f7a/PlatformIO/RAK_PATCH.zip -O RAK_PATCH.zip \
+    && mkdir .platformio/RAK_PATCH && cd .platformio/RAK_PATCH && unzip ../../RAK_PATCH.zip \
+    && python ./rak_patch.py
+# sha256sum d18cec33bc3fa297583fd3d9f6852c10c1b6cea4a361b9a6ea567f7cfcdbe9a3  RAK_PATCH.zip
+
+CMD ["/sbin/rerobots-hs-init.sh"]
