@@ -36,6 +36,8 @@ check that you have it
 docker version
 ```
 
+If Docker is configured to be [rootless](https://docs.docker.com/engine/security/rootless/),
+then [select the cprovider `docker-rootless`](/install#prepare-a-cprovider).
 
 ## Create Local Configuration
 
@@ -84,7 +86,7 @@ advertised deployments:
 ## Request Instance
 
 Now that the daemon is active, you can request an instance on your own device
-through https://rerobots.net. Go to the URL shown in
+through <https://rerobots.net/>. Go to the URL shown in
 
 ```bash
 hardshare list

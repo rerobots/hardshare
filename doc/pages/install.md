@@ -69,6 +69,13 @@ hardshare version
 
 ### Docker
 
+The default cprovider is `docker`, which works for installations of Docker
+from the package management systems of popular distributions.
+For [rootless Docker](https://docs.docker.com/engine/security/rootless/),
+```bash
+hardshare config --cprovider docker-rootless
+```
+
 In most cases, Docker images are available via Docker Hub. The correct image to
 use depends on your host architecture. On Linux, you can do
 
