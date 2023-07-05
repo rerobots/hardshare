@@ -176,7 +176,7 @@ impl CurrentInstance {
     }
 
 
-    fn init(&mut self, instance_id: &str, public_key: &str) -> Result<(), &str> {
+    fn init(&mut self, instance_id: &str, public_key: &str, repo_args: Option<RepoInfo>) -> Result<(), &str> {
         let mut status = self.status.lock().unwrap();
         match *status {
             Some(_) => {
@@ -191,7 +191,7 @@ impl CurrentInstance {
         let instance = self.clone();
         let public_key = String::from(public_key);
         thread::spawn(move || {
-            CurrentInstance::launch(instance, &public_key);
+            CurrentInstance::launch(instance, &public_key, repo_args);
         });
         Ok(())
     }
@@ -377,7 +377,7 @@ impl CurrentInstance {
     }
 
 
-    fn launch(mut instance: CurrentInstance, public_key: &str) {
+    fn launch(mut instance: CurrentInstance, public_key: &str, repo_args: Option<RepoInfo>) {
         let cprovider = instance.wdeployment.cprovider.clone();
         let cprovider_execname = if cprovider == "docker-rootless" {
             "docker"
@@ -566,6 +566,50 @@ impl CurrentInstance {
                 }
             }
 
+            if let Some(repo_info) = repo_args {
+                let status = Command::new(cprovider_execname)
+                    .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME && mkdir m && git clone {} m", repo_info.url)])
+                    .status();
+                match status {
+                    Ok(clone_result) => {
+                        if !clone_result.success() {
+                            error!("clone of {:?} failed: {}", repo_info, clone_result);
+                            instance.declare_status(InstanceStatus::InitFail);
+                            instance.send_status();
+                            return;
+                        }
+                    }
+                    Err(err) => {
+                        error!("clone of {:?} failed: {}", repo_info, err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+
+                if let Some(path) = repo_info.path {
+                    let status = Command::new(cprovider_execname)
+                        .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME/m && {}", path)])
+                        .status();
+                    match status {
+                        Ok(exec_result) => {
+                            if !exec_result.success() {
+                                error!("exec of {} failed: {}", path, exec_result);
+                                instance.declare_status(InstanceStatus::InitFail);
+                                instance.send_status();
+                                return;
+                            }
+                        }
+                        Err(err) => {
+                            error!("exec of {} failed: {}", path, err);
+                            instance.declare_status(InstanceStatus::InitFail);
+                            instance.send_status();
+                            return;
+                        }
+                    }
+                }
+            }
+
             if let Err(err) = instance.start_sshtun(&addr, sshport, &tunnelkey_path) {
                 error!("{}", err);
                 instance.declare_status(InstanceStatus::InitFail);
@@ -725,7 +769,7 @@ pub fn cworker(
 
         match req.command {
             CWorkerCommandType::InstanceLaunch => {
-                match current_instance.init(&req.instance_id, &req.publickey.unwrap()) {
+                match current_instance.init(&req.instance_id, &req.publickey.unwrap(), req.repo_args) {
                     Ok(()) => {
                         main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
@@ -873,6 +917,12 @@ pub struct TunnelInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct RepoInfo {
+    url: String,
+    path: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CWorkerCommand {
     command: CWorkerCommandType,
     instance_id: String, // \in UUID
@@ -880,6 +930,7 @@ pub struct CWorkerCommand {
     publickey: Option<String>,
     tunnelinfo: Option<TunnelInfo>,
     message_id: Option<String>,
+    repo_args: Option<RepoInfo>,
 }
 
 impl CWorkerCommand {
@@ -891,6 +942,7 @@ impl CWorkerCommand {
             publickey: None,
             tunnelinfo: None,
             message_id: Some(String::from(message_id)),
+            repo_args: None,
         }
     }
 
@@ -899,7 +951,16 @@ impl CWorkerCommand {
         message_id: &str,
         conntype: ConnType,
         public_key: &str,
+        repo_url: Option<&str>,
+        repo_path: Option<&str>,
     ) -> CWorkerCommand {
+        let repo_args = match repo_url {
+            Some(u) => Some(RepoInfo {
+                url: u.to_string(),
+                path: repo_path.map(|x| x.to_string()),
+            }),
+            None => None
+        };
         CWorkerCommand {
             command: CWorkerCommandType::InstanceLaunch,
             instance_id: String::from(instance_id),
@@ -907,6 +968,7 @@ impl CWorkerCommand {
             publickey: Some(String::from(public_key)),
             tunnelinfo: None,
             message_id: Some(String::from(message_id)),
+            repo_args: repo_args,
         }
     }
 
@@ -918,6 +980,7 @@ impl CWorkerCommand {
             publickey: None,
             tunnelinfo: None,
             message_id: Some(String::from(message_id)),
+            repo_args: None,
         }
     }
 
@@ -933,6 +996,7 @@ impl CWorkerCommand {
             publickey: None,
             tunnelinfo: Some(tunnelinfo.clone()),
             message_id: Some(String::from(message_id)),
+            repo_args: None,
         }
     }
 }

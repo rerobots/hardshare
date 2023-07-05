@@ -1304,6 +1304,8 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     payload["mi"].as_str().unwrap(),
                     control::ConnType::SshTun,
                     payload["pr"].as_str().unwrap(),
+                    payload["repo"].as_str(),
+                    payload["repo_path"].as_str(),
                 ),
                 "INSTANCE_STATUS" => CWorkerCommand::get_status(
                     payload["id"].as_str().unwrap(),
