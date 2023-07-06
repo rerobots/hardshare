@@ -123,10 +123,11 @@ and update the hardshare configuration with the tag name
 hardshare config --assign-image rerobots/hs-generic:x86_64-latest
 ```
 
-Now restart the hardshare daemon
+Now unlock the deployment, and restart the hardshare daemon
 
 ```bash
 hardshare stop-ad
+hardshare unlock
 hardshare ad
 ```
 
