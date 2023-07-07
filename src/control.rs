@@ -1035,8 +1035,8 @@ mod tests {
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
         let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment), None);
-        assert!(current_instance.init(instance_ids[0], "").is_ok());
+        assert!(current_instance.init(instance_ids[0], "", None).is_ok());
         assert!(current_instance.exists());
-        assert!(current_instance.init(instance_ids[1], "").is_err());
+        assert!(current_instance.init(instance_ids[1], "", None).is_err());
     }
 }
