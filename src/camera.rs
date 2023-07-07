@@ -95,7 +95,6 @@ fn video_capture(
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
     use openpnp_capture::{Device, Format, Stream};
-    use ffimage::traits::Convert;
 
     let camera_index: usize = match camera_path.parse() {
         Ok(c) => c,
@@ -157,13 +156,7 @@ fn video_capture(
                 return;
             };
 
-            let yuv_buf = ffimage::packed::Image::<ffimage_yuv::yuv::Yuv<u8>, _>::from_buf(&data, width, height).unwrap();
-            let mut rgb_buf = ffimage::packed::Image::<ffimage::color::Rgb<u8>, _>::new(width, height, 0u8);
-            yuv_buf.convert(&mut rgb_buf);
-
-            let rgb_buf: Vec<u8> = rgb_buf.into_buf();
-
-            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = image::ImageBuffer::from_vec(width, height, rgb_buf).unwrap();
+            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = image::ImageBuffer::from_vec(width, height, data).unwrap();
             let mut jpg: Vec<u8> = Vec::new();
             img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg).unwrap();
 
