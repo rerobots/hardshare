@@ -164,7 +164,6 @@ fn video_capture(
             if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
                 error!("try_send failed; caught: {:?}", err);
             }
-            std::thread::sleep(Duration::from_millis(100));
         } else {
             std::thread::sleep(Duration::from_secs(2));
         }
