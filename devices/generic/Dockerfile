@@ -21,6 +21,11 @@ RUN apt-get update \
        python3 \
        python3-aiohttp
 
+# Support launch from repository
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install \
+       git
+
 COPY --chmod=0775 init.sh /sbin/rerobots-hs-init.sh
 
 CMD ["/sbin/rerobots-hs-init.sh"]
