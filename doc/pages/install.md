@@ -101,6 +101,7 @@ hardshare config --assign-image rerobots/hs-generic:armv7l-latest
 
 Many consumer "desktop" and "laptop" computers have the `x86_64` architecture,
 so the corresponding image is instead `rerobots/hs-generic:x86_64-latest`.
+Recent versions of RaspberryPi have `aarch64` (also known as `arm64`).
 
 Images in this registry are defined by Dockerfiles [under the directory
 devices/ of the sourcetree](https://github.com/rerobots/hardshare/tree/main/devices).
