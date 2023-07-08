@@ -47,6 +47,6 @@ RUN cd /root/ \
 
 # Clean up
 RUN cd /root/ \
-    && rm -rf src platformio.ini
+    && rm -rf src platformio.ini RAK_PATCH.zip
 
 CMD ["/sbin/rerobots-hs-init.sh"]
