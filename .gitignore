@@ -7,3 +7,4 @@ ssh_host_ecdsa_key.pub
 /filters/*/target/
 
 /keys/
+.DS_Store
