@@ -1069,6 +1069,25 @@ impl HSAPIClient {
         let exit_result =
             camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
 
+        if exit_result.is_err() {
+            std::fs::remove_file(path)?;
+            let client = self.create_client_generator()?;
+            let origin = self.origin.clone();
+            actix::SystemRunner::block_on(&mut sys, async move {
+                let client = client();
+                let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
+                let mut resp = client.delete(url).send().await?;
+                if resp.status() != 200 {
+                    return error(format!(
+                        "error stopping camera {}: {}",
+                        hscamera_id,
+                        resp.status()
+                    ));
+                }
+                Ok(())
+            })?;
+        }
+
         exit_result
     }
 
