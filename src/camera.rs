@@ -199,7 +199,10 @@ fn video_capture(
     let mut format = dev.format().unwrap();
     format.fourcc = v4l::FourCC::new(b"MJPG");
     format = match dev.set_format(&format) {
-        Ok(f) => f,
+        Ok(f) => {
+            debug!("set format: {}", f);
+            f
+        },
         Err(err) => {
             error!("failed to set camera format MJPG: {}", err);
             return;
@@ -218,7 +221,10 @@ fn video_capture(
                             v4l::buffer::Type::VideoCapture,
                             buffer_count,
                         ) {
-                            Ok(s) => s,
+                            Ok(s) => {
+                                debug!("MmapStream, video capture");
+                                s
+                            },
                             Err(err) => {
                                 error!("failed to open stream: {}", err);
                                 return;
@@ -252,6 +258,7 @@ fn video_capture(
             };
             let data = buf.to_vec();
             let b64data = base64::encode(data);
+            debug!("sending frame");
             if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
                 error!("try_send failed; caught: {:?}", err);
             }
@@ -328,6 +335,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
     }
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
+        debug!("closing WebSocket");
         self.capture.send(CaptureCommand::Quit).unwrap();
         self.ws_sink.close();
         ctx.stop()
