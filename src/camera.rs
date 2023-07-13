@@ -49,6 +49,7 @@ pub fn stream_websocket(
             .header("Authorization", authheader)
             .finish();
 
+        debug!("opening camera websocket...");
         let (_, framed) = match client.ws(url).connect().await {
             Ok(c) => c,
             Err(err) => {
@@ -59,6 +60,7 @@ pub fn stream_websocket(
                 return;
             }
         };
+        debug!("camera websocket opened");
 
         let (sink, stream) = framed.split();
 
@@ -103,8 +105,10 @@ fn video_capture(
             return;
         }
     };
+    debug!("enumerating camera devices");
     let devices = Device::enumerate();
 
+    debug!("opening camera {}", camera_index);
     let dev = match Device::new(devices[camera_index]) {
         Some(d) => d,
         None => {
@@ -122,6 +126,7 @@ fn video_capture(
         match cap_command.try_recv() {
             Ok(m) => {
                 if m == CaptureCommand::Start {
+                    debug!("received start request");
                     if stream.is_none() {
                         let s = match Stream::new(&dev, &format) {
                             Some(s) => s,
@@ -134,6 +139,7 @@ fn video_capture(
                         stream = Some(s);
                     }
                 } else if m == CaptureCommand::Stop {
+                    debug!("received stop request");
                     stream = None;
                 } else {
                     // CaptureCommand::Quit
@@ -182,6 +188,7 @@ fn video_capture(
     use v4l::video::Capture;
 
     let buffer_count = 4;
+    debug!("opening camera {}", camera_path);
     let dev = match v4l::Device::with_path(camera_path) {
         Ok(d) => d,
         Err(err) => {
@@ -204,6 +211,7 @@ fn video_capture(
         match cap_command.try_recv() {
             Ok(m) => {
                 if m == CaptureCommand::Start {
+                    debug!("received start request");
                     if stream.is_none() {
                         let s = match MmapStream::with_buffers(
                             &dev,
@@ -219,6 +227,7 @@ fn video_capture(
                         stream = Some(s);
                     }
                 } else if m == CaptureCommand::Stop {
+                    debug!("received stop request");
                     stream = None;
                 } else {
                     // CaptureCommand::Quit

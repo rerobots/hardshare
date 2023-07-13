@@ -1056,6 +1056,7 @@ impl HSAPIClient {
             }
         });
         let hscamera_id = res?;
+        debug!("registered new hscamera: {}", hscamera_id);
 
         let base_path = mgmt::get_base_path().unwrap();
         let path = base_path.join("camera");
@@ -1066,6 +1067,7 @@ impl HSAPIClient {
         let pid = unistd::getpid();
         std::fs::write(&path, pid.to_string())?;
 
+        debug!("starting camera stream...");
         let exit_result =
             camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
 
