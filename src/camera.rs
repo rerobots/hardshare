@@ -249,13 +249,20 @@ fn video_capture(
         }
 
         if let Some(s) = &mut stream {
-            let (buf, _) = match s.next() {
+            let (buf, metadata) = match s.next() {
                 Ok(i) => i,
                 Err(err) => {
                     error!("error reading camera stream: {}", err);
                     return;
                 }
             };
+            debug!(
+                "metadata: bytesused {}, sequence {}, flags {}, length {}",
+                metadata.bytesused,
+                metadata.sequence,
+                metadata.flags,
+                buf.len()
+            );
             let data = buf.to_vec();
             let b64data = base64::encode(data);
             debug!("sending frame");
