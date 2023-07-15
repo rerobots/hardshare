@@ -95,7 +95,7 @@ run it with [GNU Screen](https://www.gnu.org/software/screen/) or
 tmux new-session hardshare attach-camera --crop $(cat mapfile) /dev/video0 \; detach
 ```
 
-The following command will stop all `attach-camera` processes:
+The following command will stop all local `attach-camera` processes:
 
 ```bash
 hardshare stop-cameras
