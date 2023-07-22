@@ -8,3 +8,4 @@ ssh_host_ecdsa_key.pub
 
 /keys/
 .DS_Store
+/.vscode/
