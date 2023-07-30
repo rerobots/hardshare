@@ -568,7 +568,7 @@ impl CurrentInstance {
 
             if let Some(repo_info) = repo_args {
                 let status = Command::new(cprovider_execname)
-                    .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME && mkdir m && git clone {} m", repo_info.url)])
+                    .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME && git clone {} m", repo_info.url)])
                     .status();
                 match status {
                     Ok(clone_result) => {
