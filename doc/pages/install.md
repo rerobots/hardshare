@@ -122,6 +122,24 @@ character devices inside. If SELinux is installed, try
 sudo setsebool -P container_use_devices=true
 ```
 
+Add the user as whom the hardshare processes will run to the group necessary
+for device access. This group is shown by a command like `stat /dev/ttyACM0`.
+If it is `dialout`, then
+
+```bash
+sudo usermod -a -G dialout username
+```
+
+and add the ID of this group to the range of subordinate group IDs for the user
+with a line in /etc/subgid like
+
+```
+username:20:1
+```
+
+If this is not sufficient, then find the GID of the character device inside the
+intended Podman image and use a switch like `podman run --group-add 65537`.
+
 For many operations, [podman](https://podman.io/) is a drop-in replacement for `docker`. To switch
 to it with an existing hardshare configuration (created as described above),
 
