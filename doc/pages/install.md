@@ -115,6 +115,13 @@ docker build -t rerobots/hs-generic:latest -f Dockerfile .
 
 ### Podman
 
+So-called rootless Linux containers can require extra configuration to present
+character devices inside. If SELinux is installed, try
+
+```bash
+sudo setsebool -P container_use_devices=true
+```
+
 For many operations, [podman](https://podman.io/) is a drop-in replacement for `docker`. To switch
 to it with an existing hardshare configuration (created as described above),
 
