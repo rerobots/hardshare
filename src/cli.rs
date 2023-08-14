@@ -812,7 +812,7 @@ fn reload_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), C
 
 
 fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
-    let mut local_config = match mgmt::get_local_config(false, false) {
+    let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
     };
@@ -848,7 +848,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
         );
     }
 
-    let mut local_config = match mgmt::get_local_config(false, false) {
+    let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
         Err(err) => return CliError::new_std(err, 1),
     };

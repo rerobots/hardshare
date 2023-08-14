@@ -968,7 +968,7 @@ impl CWorkerCommand {
             publickey: Some(String::from(public_key)),
             tunnelinfo: None,
             message_id: Some(String::from(message_id)),
-            repo_args: repo_args,
+            repo_args,
         }
     }
 
