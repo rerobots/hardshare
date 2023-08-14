@@ -1,7 +1,6 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
-use std::collections::HashMap;
 use std::io::prelude::*;
 use std::process::{Command, Stdio};
 

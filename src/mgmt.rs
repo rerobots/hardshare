@@ -491,8 +491,6 @@ fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, S
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use tempfile::tempdir;
 
     use super::find_id_prefix;
