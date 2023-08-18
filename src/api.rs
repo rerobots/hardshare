@@ -988,7 +988,7 @@ impl HSAPIClient {
                         matched_wd.insert("id".into(), json!(wd["id"].as_str().unwrap()));
                         matched_wd.insert(
                             "owner".into(),
-                            json!(parsed_body["owner"].as_str().unwrap())
+                            json!(parsed_body["owner"].as_str().unwrap()),
                         );
                         return Ok(Some(matched_wd));
                     }

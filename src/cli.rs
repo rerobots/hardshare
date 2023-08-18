@@ -286,7 +286,10 @@ fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Resul
         remote_config = Some(match ac.get_remote_config(include_dissolved) {
             Ok(rc) => rc,
             Err(err) => {
-                let err_message = format!("{}\nTo get only the local configuration, do\n\n    hardshare list --local", err);
+                let err_message = format!(
+                    "{}\nTo get only the local configuration, do\n\n    hardshare list --local",
+                    err
+                );
                 return CliError::new(err_message.as_str(), 1);
             }
         });
@@ -300,7 +303,7 @@ fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Resul
 
 
 fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
-   if let Some(new_token_path) = matches.value_of("new_api_token") {
+    if let Some(new_token_path) = matches.value_of("new_api_token") {
         let mut local_config = match mgmt::get_local_config(false, true) {
             Ok(lc) => lc,
             Err(err) => return CliError::new_std(err, 1),
@@ -858,7 +861,9 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
     #[cfg(target_os = "macos")]
     let camera_path_default = "0";
 
-    let camera_path = matches.value_of("camera_path").unwrap_or(camera_path_default);
+    let camera_path = matches
+        .value_of("camera_path")
+        .unwrap_or(camera_path_default);
 
     let mut wds = if matches.values_of("attach_camera_crop_config").is_none() {
         let wds = match matches.values_of("id_prefix") {

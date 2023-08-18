@@ -176,7 +176,12 @@ impl CurrentInstance {
     }
 
 
-    fn init(&mut self, instance_id: &str, public_key: &str, repo_args: Option<RepoInfo>) -> Result<(), &str> {
+    fn init(
+        &mut self,
+        instance_id: &str,
+        public_key: &str,
+        repo_args: Option<RepoInfo>,
+    ) -> Result<(), &str> {
         let mut status = self.status.lock().unwrap();
         match *status {
             Some(_) => {
@@ -568,7 +573,13 @@ impl CurrentInstance {
 
             if let Some(repo_info) = repo_args {
                 let status = Command::new(cprovider_execname)
-                    .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME && git clone {} m", repo_info.url)])
+                    .args([
+                        "exec",
+                        &name,
+                        "/bin/sh",
+                        "-c",
+                        &format!("cd $HOME && git clone {} m", repo_info.url),
+                    ])
                     .status();
                 match status {
                     Ok(clone_result) => {
@@ -589,7 +600,13 @@ impl CurrentInstance {
 
                 if let Some(path) = repo_info.path {
                     let status = Command::new(cprovider_execname)
-                        .args(["exec", &name, "/bin/sh", "-c", &format!("cd $HOME/m && {}", path)])
+                        .args([
+                            "exec",
+                            &name,
+                            "/bin/sh",
+                            "-c",
+                            &format!("cd $HOME/m && {}", path),
+                        ])
                         .status();
                     match status {
                         Ok(exec_result) => {
@@ -769,7 +786,11 @@ pub fn cworker(
 
         match req.command {
             CWorkerCommandType::InstanceLaunch => {
-                match current_instance.init(&req.instance_id, &req.publickey.unwrap(), req.repo_args) {
+                match current_instance.init(
+                    &req.instance_id,
+                    &req.publickey.unwrap(),
+                    req.repo_args,
+                ) {
                     Ok(()) => {
                         main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
@@ -959,7 +980,7 @@ impl CWorkerCommand {
                 url: u.to_string(),
                 path: repo_path.map(|x| x.to_string()),
             }),
-            None => None
+            None => None,
         };
         CWorkerCommand {
             command: CWorkerCommandType::InstanceLaunch,

@@ -162,12 +162,16 @@ fn video_capture(
                 return;
             };
 
-            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> = image::ImageBuffer::from_vec(width, height, data).unwrap();
+            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> =
+                image::ImageBuffer::from_vec(width, height, data).unwrap();
             let mut jpg: Vec<u8> = Vec::new();
-            img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg).unwrap();
+            img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
+                .unwrap();
 
             let b64data = base64::encode(jpg);
-            if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
+            if let Err(err) =
+                wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
+            {
                 error!("try_send failed; caught: {:?}", err);
             }
         } else {
@@ -202,7 +206,7 @@ fn video_capture(
         Ok(f) => {
             debug!("set format: {}", f);
             f
-        },
+        }
         Err(err) => {
             error!("failed to set camera format MJPG: {}", err);
             return;
@@ -224,7 +228,7 @@ fn video_capture(
                             Ok(s) => {
                                 debug!("MmapStream, video capture");
                                 s
-                            },
+                            }
                             Err(err) => {
                                 error!("failed to open stream: {}", err);
                                 return;
@@ -266,7 +270,9 @@ fn video_capture(
             let data = buf.to_vec();
             let b64data = base64::encode(data);
             debug!("sending frame");
-            if let Err(err) = wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data)) {
+            if let Err(err) =
+                wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
+            {
                 error!("try_send failed; caught: {:?}", err);
             }
             // TODO: This is too slow! The WebSocket connection is lost on
