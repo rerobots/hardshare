@@ -259,7 +259,7 @@ fn print_config_w<T: Write>(
                 }
                 let locked_out = wd["lockout"].as_bool().unwrap();
                 if locked_out {
-                    writeln!(f, "\tlock-out: {}", locked_out);
+                    writeln!(f, "\tlock-out: {}", locked_out)?;
                 }
             }
         }
