@@ -17,7 +17,6 @@ use openssl::pkey::PKey;
 extern crate jwt;
 use jwt::algorithm::openssl::PKeyWithDigest;
 use jwt::VerifyWithKey;
-use jwt::{Claims, Header, Token};
 
 
 // TODO: this should eventually be placed in a public key store
