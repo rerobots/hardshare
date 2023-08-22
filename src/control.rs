@@ -856,7 +856,9 @@ pub fn cworker(
                         ),
                     });
                     if status != InstanceStatus::Terminating {
-                        current_instance.terminate();
+                        if let Err(err) = current_instance.terminate() {
+                            error!("terminate request for instance {} failed: {}", &req.instance_id, err);
+                        }
                     }
                 } else {
                     error!("destroy request received when there is no active instance");
