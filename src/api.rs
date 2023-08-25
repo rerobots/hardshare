@@ -1113,7 +1113,7 @@ impl HSAPIClient {
                         .unwrap()
                         .trim()
                         .parse()?;
-                    signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM);
+                    signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM)?;
                     std::fs::remove_file(entry)?;
                 }
             }
