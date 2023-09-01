@@ -857,7 +857,10 @@ pub fn cworker(
                     });
                     if status != InstanceStatus::Terminating {
                         if let Err(err) = current_instance.terminate() {
-                            error!("terminate request for instance {} failed: {}", &req.instance_id, err);
+                            error!(
+                                "terminate request for instance {} failed: {}",
+                                &req.instance_id, err
+                            );
                         }
                     }
                 } else {
@@ -977,13 +980,10 @@ impl CWorkerCommand {
         repo_url: Option<&str>,
         repo_path: Option<&str>,
     ) -> CWorkerCommand {
-        let repo_args = match repo_url {
-            Some(u) => Some(RepoInfo {
-                url: u.to_string(),
-                path: repo_path.map(|x| x.to_string()),
-            }),
-            None => None,
-        };
+        let repo_args = repo_url.map(|u| RepoInfo {
+            url: u.to_string(),
+            path: repo_path.map(|x| x.to_string()),
+        });
         CWorkerCommand {
             command: CWorkerCommandType::InstanceLaunch,
             instance_id: String::from(instance_id),

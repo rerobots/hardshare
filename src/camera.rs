@@ -160,7 +160,7 @@ fn video_capture(
             if let Err(err) = s.read(&mut data) {
                 error!("error reading camera stream: {}", err);
                 return;
-            };
+            }
 
             let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> =
                 image::ImageBuffer::from_vec(width, height, data).unwrap();
