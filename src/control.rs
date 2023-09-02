@@ -2,7 +2,6 @@
 // Copyright (C) 2023 rerobots, Inc.
 
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Write;
