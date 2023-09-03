@@ -685,8 +685,7 @@ impl HSAPIClient {
         main_actor_addr.do_send(NewWS(Some(addr)));
 
         let ma_addr_for_cworker = main_actor_addr.clone();
-        let ac = ac.clone();
-        std::thread::spawn(move || control::cworker(ac, cworker_rx, ma_addr_for_cworker, wd));
+        std::thread::spawn(move || control::cworker(cworker_rx, ma_addr_for_cworker, wd));
 
         Ok(main_actor_addr)
     }

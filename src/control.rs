@@ -769,7 +769,6 @@ impl CurrentInstance {
 
 
 pub fn cworker(
-    ac: api::HSAPIClient,
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
     main_actor_addr: Addr<api::MainActor>,
     wdeployment: Arc<WDeployment>,
