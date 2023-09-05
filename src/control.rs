@@ -910,7 +910,9 @@ pub fn cworker(
             }
             CWorkerCommandType::CreateSshTunDone => {
                 if current_instance.exists() {
-                    current_instance.handle_response(&req);
+                    if let Err(err) = current_instance.handle_response(&req) {
+                        error!("command CREATE_SSHTUN_DONE: {}", err);
+                    }
                 } else {
                     error!("CREATE_SSHTUN_DONE received when there is no active instance");
                 }
