@@ -710,21 +710,28 @@ impl HSAPIClient {
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
         let mut ac_inner = ac.lock().unwrap();
-        if let Some(local_config) = &ac_inner.local_config {
-            let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
-                Ok(wi) => wi,
-                Err(err) => return actix_web::HttpResponse::NotFound().finish(),
-            };
-        }
+        let wdid_expanded = match &ac_inner.local_config {
+            Some(local_config) => {
+                let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
+                    Ok(wi) => wi,
+                    Err(err) => return actix_web::HttpResponse::NotFound().finish(),
+                };
+                local_config.wdeployments[wd_index].id.clone()
+            }
+            None => {
+                warn!("start ad called when no local configuration");
+                return actix_web::HttpResponse::InternalServerError().finish();
+            }
+        };
 
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
-            if wdid_tab.contains_key(&*wdid) {
-                warn!("start ad called when already advertising {}", &*wdid);
+            if wdid_tab.contains_key(&*wdid_expanded) {
+                warn!("start ad called when already advertising {}", &*wdid_expanded);
                 return actix_web::HttpResponse::Forbidden().finish();
             }
         }
 
-        let addr = match HSAPIClient::ad(&*ac_inner, wdid.clone()).await {
+        let addr = match HSAPIClient::ad(&*ac_inner, wdid_expanded.clone()).await {
             Ok(a) => a,
             Err(err) => {
                 error!("{}", err);
@@ -733,7 +740,7 @@ impl HSAPIClient {
         };
 
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
-            wdid_tab.insert(wdid.clone(), addr);
+            wdid_tab.insert(wdid_expanded.clone(), addr);
         }
 
         actix_web::HttpResponse::Ok().finish()
