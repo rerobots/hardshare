@@ -1,5 +1,6 @@
 // Copyright (C) 2023 rerobots, Inc.
 
+use std::convert::TryInto;
 use std::io::Cursor;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -117,8 +118,9 @@ fn video_capture(
         }
     };
 
-    let width = 1280;
-    let height = 720;
+    let width: u32 = 1280;
+    let height: u32 = 720;
+    let buf_capacity: usize = (width as usize) * (height as usize) * 3;
     let format = Format::default().width(width).height(height);
     let mut stream = None;
 
@@ -156,7 +158,7 @@ fn video_capture(
 
         if let Some(s) = &mut stream {
             s.advance();
-            let mut data = Vec::new();
+            let mut data = vec![0; buf_capacity];
             if let Err(err) = s.read(&mut data) {
                 error!("error reading camera stream: {}", err);
                 return;
