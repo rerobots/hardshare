@@ -917,8 +917,6 @@ pub fn cworker(
                     error!("CREATE_SSHTUN_DONE received when there is no active instance");
                 }
             }
-            CWorkerCommandType::HubPing => {
-            }
         }
     }
 }
@@ -930,7 +928,6 @@ enum CWorkerCommandType {
     InstanceDestroy,
     InstanceStatus,
     CreateSshTunDone,
-    HubPing,
 }
 
 #[derive(Clone, Debug, Deserialize)]
