@@ -726,7 +726,10 @@ impl HSAPIClient {
 
         if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
             if wdid_tab.contains_key(&*wdid_expanded) {
-                warn!("start ad called when already advertising {}", &*wdid_expanded);
+                warn!(
+                    "start ad called when already advertising {}",
+                    &*wdid_expanded
+                );
                 return actix_web::HttpResponse::Forbidden().finish();
             }
         }
