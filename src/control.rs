@@ -728,7 +728,7 @@ impl CurrentInstance {
             };
             let name = instance.get_local_name().unwrap();
             let mut run_command = Command::new(cprovider_execname);
-            let mut run_command = run_command.args(["rm", "-f", &name]);
+            let run_command = run_command.args(["rm", "-f", &name]);
             match run_command.status() {
                 Ok(s) => {
                     if !s.success() {

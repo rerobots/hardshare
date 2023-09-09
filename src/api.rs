@@ -1015,7 +1015,7 @@ impl HSAPIClient {
             }
         });
 
-        let mut matched_wd = match res? {
+        let matched_wd = match res? {
             Some(matched_wd) => matched_wd,
             None => {
                 return error("no previously registered workspace deployments found with given ID")
@@ -1087,7 +1087,7 @@ impl HSAPIClient {
             actix::SystemRunner::block_on(&mut sys, async move {
                 let client = client();
                 let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
-                let mut resp = client.delete(url).send().await?;
+                let resp = client.delete(url).send().await?;
                 if resp.status() != 200 {
                     return error(format!(
                         "error stopping camera {}: {}",
@@ -1166,7 +1166,7 @@ impl HSAPIClient {
                     }
 
                     let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
-                    let mut resp = client.delete(url).send().await?;
+                    let resp = client.delete(url).send().await?;
                     if resp.status() != 200 {
                         return error(format!(
                             "error stopping camera {}: {}",
