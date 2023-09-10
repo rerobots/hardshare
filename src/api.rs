@@ -331,7 +331,7 @@ impl HSAPIClient {
             let ruleset = get_access_rules_a(&client, &origin, &wdid).await?;
             for rule in ruleset.rules.iter() {
                 let url = format!("{}/deployment/{}/rule/{}", origin, wdid, rule.id);
-                let mut resp = client.delete(url).send().await?;
+                let resp = client.delete(url).send().await?;
                 if resp.status() != 200 {
                     return error(format!(
                         "error deleting rule {}: {}",
@@ -436,7 +436,7 @@ impl HSAPIClient {
         actix::SystemRunner::block_on(&mut sys, async move {
             let client = client();
 
-            let mut resp = client.post(url).send().await?;
+            let resp = client.post(url).send().await?;
             if resp.status() != 200 {
                 return error(format!("error dissolving: {}", resp.status()));
             }
@@ -591,7 +591,7 @@ impl HSAPIClient {
                 let mut update_payload: HashMap<String, serde_json::Value> = HashMap::new();
                 update_payload.insert("supported_addons".into(), supported_addons.into());
                 if payload.as_object().unwrap().contains_key("addons_config") {
-                    let mut addons_config = payload["addons_config"].take();
+                    let addons_config = payload["addons_config"].take();
                     update_payload.insert("addons_config".into(), addons_config);
                 }
                 if let Some(this_addon_config) = config {
@@ -836,7 +836,7 @@ impl HSAPIClient {
             drop(ac_inner);
 
             let mut manip = actix_web::HttpServer::new(move || {
-                let mut ac = Arc::clone(&ac);
+                let ac = Arc::clone(&ac);
                 actix_web::App::new()
                     .data(ac)
                     .wrap(actix_web::middleware::Logger::default())
@@ -907,7 +907,7 @@ impl HSAPIClient {
         let url = format!("http://{}/reload", bindaddr);
         let mut sys = System::new("dclient");
         actix::SystemRunner::block_on(&mut sys, async {
-            let mut resp = awc::Client::new().post(url).send().await?;
+            let resp = awc::Client::new().post(url).send().await?;
             if resp.status() == 200 {
                 Ok(())
             } else {
@@ -956,7 +956,7 @@ impl HSAPIClient {
                 error(format!("server indicated error: {}", resp.status()))
             }
         });
-        let mut new_wd = res?;
+        let new_wd = res?;
 
         local_config
             .wdeployments
