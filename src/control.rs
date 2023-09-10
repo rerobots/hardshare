@@ -273,7 +273,7 @@ impl CurrentInstance {
         let parts: Vec<&str> = s.split(':').collect();
         match Port::from_str(parts[1]) {
             Ok(port) => Ok(port),
-            Err(err) => Err("SSH port not found".into()),
+            Err(err) => Err(format!("SSH port not found: {}", err)),
         }
     }
 
