@@ -1,6 +1,5 @@
 // Copyright (C) 2023 rerobots, Inc.
 
-use std::convert::TryInto;
 use std::io::Cursor;
 use std::sync::mpsc;
 use std::time::Duration;
