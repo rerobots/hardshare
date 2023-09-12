@@ -1,8 +1,6 @@
 // SCL <scott@rerobots.net>
 // Copyright (C) 2020 rerobots, Inc.
 
-use std::io::prelude::*;
-
 use assert_cmd::Command;
 use tempfile::{tempdir, NamedTempFile};
 
