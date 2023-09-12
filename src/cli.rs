@@ -924,7 +924,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
 
 fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let all = matches.is_present("all_cameras");
-    let mut ac = api::HSAPIClient::new();
+    let ac = api::HSAPIClient::new();
     match ac.stop_cameras(all) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),

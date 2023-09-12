@@ -393,7 +393,7 @@ impl HSAPIClient {
         actix::SystemRunner::block_on(&mut sys, async move {
             let client = client();
             let url = format!("{}/deployment/{}/lockout", origin, wdid);
-            let mut resp = if make_locked {
+            let resp = if make_locked {
                 client.post(url).send().await?
             } else {
                 client.delete(url).send().await?
