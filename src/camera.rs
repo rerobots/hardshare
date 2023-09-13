@@ -13,6 +13,7 @@ use awc::{
     BoxedSocket,
 };
 
+use base64::engine::{general_purpose as base64_engine, Engine as _};
 use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
 
@@ -169,7 +170,7 @@ fn video_capture(
             img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
                 .unwrap();
 
-            let b64data = base64::encode(jpg);
+            let b64data = base64_engine::STANDARD.encode(jpg);
             if let Err(err) =
                 wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
             {
@@ -269,7 +270,7 @@ fn video_capture(
                 buf.len()
             );
             let data = buf.to_vec();
-            let b64data = base64::encode(data);
+            let b64data = base64_engine::STANDARD.encode(jpg);
             debug!("sending frame");
             if let Err(err) =
                 wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
