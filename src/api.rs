@@ -1122,7 +1122,14 @@ impl HSAPIClient {
                         .unwrap()
                         .trim()
                         .parse()?;
-                    signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM)?;
+                    if let Err(err) = signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM) {
+                        warn!(
+                            "failed to terminate local process {} for camera {}: {}",
+                            pid,
+                            stopped_via_pids.last().unwrap(),
+                            err
+                        );
+                    }
                     std::fs::remove_file(entry)?;
                 }
             }
