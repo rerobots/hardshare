@@ -662,16 +662,22 @@ impl HSAPIClient {
 
 
     async fn ad(
-        ac: &HSAPIClient,
+        ac: &Arc<Mutex<HSAPIClient>>,
         wdid: String,
     ) -> Result<Addr<MainActor>, Box<dyn std::error::Error>> {
-        let authheader = format!("Bearer {}", ac.cached_api_token.as_ref().unwrap());
-        let url = format!("{}/hardshare/ad/{}", ac.origin, wdid);
+        let authheader;
+        let url;
+        let wd;
+        {
+            let ac_inner = ac.lock().unwrap();
+            authheader = format!("Bearer {}", &ac_inner.cached_api_token.as_ref().unwrap());
+            url = format!("{}/hardshare/ad/{}", &ac_inner.origin, wdid);
 
-        let mut local_config = ac.local_config.clone().unwrap();
-        let wd_index = mgmt::find_id_prefix(&local_config, Some(&wdid))?;
-        local_config.wdeployments[wd_index].ssh_key = Some(local_config.ssh_key.clone());
-        let wd = Arc::new(local_config.wdeployments[wd_index].clone());
+            let local_config = &mut ac_inner.local_config.clone().unwrap();
+            let wd_index = mgmt::find_id_prefix(local_config, Some(&wdid))?;
+            local_config.wdeployments[wd_index].ssh_key = Some(local_config.ssh_key.clone());
+            wd = Arc::new(local_config.wdeployments[wd_index].clone());
+        }
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
         let main_actor_addr = MainActor::create(|ctx| MainActor {
@@ -709,32 +715,35 @@ impl HSAPIClient {
         wdid: actix_web::web::Path<String>,
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
-        let mut ac_inner = ac.lock().unwrap();
-        let wdid_expanded = match &ac_inner.local_config {
-            Some(local_config) => {
-                let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
-                    Ok(wi) => wi,
-                    Err(err) => return actix_web::HttpResponse::NotFound().finish(),
-                };
-                local_config.wdeployments[wd_index].id.clone()
-            }
-            None => {
-                warn!("start ad called when no local configuration");
-                return actix_web::HttpResponse::InternalServerError().finish();
-            }
-        };
+        let wdid_expanded;
+        {
+            let mut ac_inner = ac.lock().unwrap();
+            wdid_expanded = match &ac_inner.local_config {
+                Some(local_config) => {
+                    let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
+                        Ok(wi) => wi,
+                        Err(err) => return actix_web::HttpResponse::NotFound().finish(),
+                    };
+                    local_config.wdeployments[wd_index].id.clone()
+                }
+                None => {
+                    warn!("start ad called when no local configuration");
+                    return actix_web::HttpResponse::InternalServerError().finish();
+                }
+            };
 
-        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
-            if wdid_tab.contains_key(&*wdid_expanded) {
-                warn!(
-                    "start ad called when already advertising {}",
-                    &*wdid_expanded
-                );
-                return actix_web::HttpResponse::Forbidden().finish();
+            if let Some(wdid_tab) = &mut ac_inner.wdid_tab {
+                if wdid_tab.contains_key(&*wdid_expanded) {
+                    warn!(
+                        "start ad called when already advertising {}",
+                        &*wdid_expanded
+                    );
+                    return actix_web::HttpResponse::Forbidden().finish();
+                }
             }
         }
 
-        let addr = match HSAPIClient::ad(&*ac_inner, wdid_expanded.clone()).await {
+        let addr = match HSAPIClient::ad(&ac, wdid_expanded.clone()).await {
             Ok(a) => a,
             Err(err) => {
                 error!("{}", err);
@@ -742,8 +751,11 @@ impl HSAPIClient {
             }
         };
 
-        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
-            wdid_tab.insert(wdid_expanded.clone(), addr);
+        {
+            let mut ac_inner = ac.lock().unwrap();
+            if let Some(wdid_tab) = &mut ac_inner.wdid_tab {
+                wdid_tab.insert(wdid_expanded.clone(), addr);
+            }
         }
 
         actix_web::HttpResponse::Ok().finish()
@@ -755,7 +767,7 @@ impl HSAPIClient {
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
         let mut ac_inner = ac.lock().unwrap();
-        if let Some(wdid_tab) = &mut (*ac_inner).wdid_tab {
+        if let Some(wdid_tab) = &mut ac_inner.wdid_tab {
             match wdid_tab.remove(&*wdid) {
                 Some(addr) => {
                     if wdid_tab.is_empty() {
@@ -821,8 +833,7 @@ impl HSAPIClient {
         let (err_notify, err_rx) = mpsc::channel();
         let ac = Arc::new(Mutex::new(self.clone()));
         Arbiter::spawn(async move {
-            let mut ac_inner = ac.lock().unwrap();
-            let addr = match HSAPIClient::ad(&*ac_inner, wdid.clone()).await {
+            let addr = match HSAPIClient::ad(&ac, wdid.clone()).await {
                 Ok(a) => a,
                 Err(err) => {
                     err_notify.send(format!("{}", err)).unwrap();
@@ -832,8 +843,10 @@ impl HSAPIClient {
             };
             let mut wdid_tab = HashMap::new();
             wdid_tab.insert(wdid.clone(), addr.clone());
-            ac_inner.wdid_tab = Some(wdid_tab);
-            drop(ac_inner);
+            {
+                let mut ac_inner = ac.lock().unwrap();
+                ac_inner.wdid_tab = Some(wdid_tab);
+            }
 
             let mut manip = actix_web::HttpServer::new(move || {
                 let ac = Arc::clone(&ac);
