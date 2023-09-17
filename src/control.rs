@@ -152,20 +152,24 @@ impl CurrentInstance {
             let status = self.status.lock().unwrap();
             match &*status {
                 Some(s) => {
-                    main_actor_addr.do_send(api::ClientWorkerMessage {
-                        mtype: CWorkerMessageType::WsSend,
-                        body: Some(
-                            serde_json::to_string(&json!({
-                                "v": 0,
-                                "cmd": "CREATE_SSHTUN",
-                                "id": self.id.as_ref().clone(),
-                                "key": tunnelkey_public,
-                                "mi": message_id,
-                            }))
-                            .unwrap(),
-                        ),
-                    });
-                    Ok(message_id)
+                    if *s != InstanceStatus::Init && *s != InstanceStatus::Ready {
+                        Err(format!("called when instance status {}", s))
+                    } else {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
+                            mtype: CWorkerMessageType::WsSend,
+                            body: Some(
+                                serde_json::to_string(&json!({
+                                    "v": 0,
+                                    "cmd": "CREATE_SSHTUN",
+                                    "id": self.id.as_ref().clone(),
+                                    "key": tunnelkey_public,
+                                    "mi": message_id,
+                                }))
+                                .unwrap(),
+                            ),
+                        });
+                        Ok(message_id)
+                    }
                 }
                 None => Err("called when no active instance".into()),
             }
