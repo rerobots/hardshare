@@ -915,7 +915,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
     };
 
     let ac = api::HSAPIClient::new();
-    match ac.attach_camera(camera_path, &wds, &crop) {
+    match ac.attach_camera(camera_path, &wds, &width_height, &crop) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }

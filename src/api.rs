@@ -1051,6 +1051,7 @@ impl HSAPIClient {
         &self,
         camera_path: &str,
         wds: &Vec<String>,
+        dim: &Option<CameraDimensions>,
         crop: &Option<CameraCrop>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let api_token = self.cached_api_token.as_ref().ok_or("no valid API token")?;
