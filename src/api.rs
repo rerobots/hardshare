@@ -97,7 +97,7 @@ impl std::fmt::Display for AddOn {
     }
 }
 
-
+#[derive(Clone)]
 pub struct CameraDimensions {
     pub width: u32,
     pub height: u32,
@@ -1092,7 +1092,7 @@ impl HSAPIClient {
 
         debug!("starting camera stream...");
         let exit_result =
-            camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path);
+            camera::stream_websocket(&self.origin, api_token, &hscamera_id, camera_path, dim);
 
         if exit_result.is_err() {
             std::fs::remove_file(path)?;

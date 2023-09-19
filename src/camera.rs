@@ -19,7 +19,7 @@ use futures::stream::{SplitSink, StreamExt};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
-use crate::api;
+use crate::api::{self, CameraDimensions};
 
 
 pub fn stream_websocket(
@@ -27,8 +27,10 @@ pub fn stream_websocket(
     api_token: &str,
     hscamera_id: &str,
     camera_path: &str,
+    dimensions: &Option<CameraDimensions>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let camera_path = String::from(camera_path);
+    let dimensions = dimensions.as_ref().cloned();
     let authheader = format!("Bearer {}", api_token);
     let url = format!("{}/hardshare/cam/{}/upload", origin, hscamera_id);
     let sys = System::new("wsclient");
@@ -74,7 +76,7 @@ pub fn stream_websocket(
                 capture: capture_tx,
             }
         });
-        std::thread::spawn(move || video_capture(&camera_path, addr, capture_rx));
+        std::thread::spawn(move || video_capture(&camera_path, dimensions, addr, capture_rx));
     });
     match sys.run() {
         Ok(()) => Ok(()),
@@ -94,6 +96,7 @@ enum CaptureCommand {
 #[cfg(target_os = "macos")]
 fn video_capture(
     camera_path: &str,
+    dimensions: Option<CameraDimensions>,
     wsclient_addr: Addr<WSClient>,
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
@@ -186,6 +189,7 @@ fn video_capture(
 #[cfg(target_os = "linux")]
 fn video_capture(
     camera_path: &str,
+    dimensions: Option<CameraDimensions>,
     wsclient_addr: Addr<WSClient>,
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
