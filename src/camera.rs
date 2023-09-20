@@ -121,10 +121,12 @@ fn video_capture(
         }
     };
 
-    let width: u32 = 1280;
-    let height: u32 = 720;
-    let buf_capacity: usize = (width as usize) * (height as usize) * 3;
-    let format = Format::default().width(width).height(height);
+    let (mut width, mut height) = match dimensions {
+        Some(d) => (d.width, d.height),
+        None => (1280, 720),
+    };
+    let mut buf_capacity: usize = (width as usize) * (height as usize) * 3;
+    let mut format = Format::default().width(width).height(height);
     let mut stream = None;
 
     loop {
@@ -140,6 +142,15 @@ fn video_capture(
                                 return;
                             }
                         };
+                        if s.format().width != width || s.format().height != height {
+                            (width, height) = (s.format().width, s.format().height);
+                            buf_capacity = (width as usize) * (height as usize) * 3;
+                            format = Format::default().width(width).height(height);
+                            warn!(
+                                "requested format not feasible; falling back to ({}, {})",
+                                width, height
+                            );
+                        }
 
                         stream = Some(s);
                     }
@@ -167,17 +178,20 @@ fn video_capture(
                 return;
             }
 
-            let img: image::ImageBuffer<image::Rgb<u8>, Vec<u8>> =
-                image::ImageBuffer::from_vec(width, height, data).unwrap();
-            let mut jpg: Vec<u8> = Vec::new();
-            img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
-                .unwrap();
+            match image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_vec(width, height, data) {
+                Some(img) => {
+                    let mut jpg: Vec<u8> = Vec::new();
+                    img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
+                        .unwrap();
 
-            let b64data = base64_engine::STANDARD.encode(jpg);
-            if let Err(err) =
-                wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
-            {
-                error!("try_send failed; caught: {:?}", err);
+                    let b64data = base64_engine::STANDARD.encode(jpg);
+                    if let Err(err) = wsclient_addr
+                        .try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
+                    {
+                        error!("try_send failed; caught: {:?}", err);
+                    }
+                }
+                None => warn!("failed to decode camera image"),
             }
         } else {
             std::thread::sleep(Duration::from_secs(2));
