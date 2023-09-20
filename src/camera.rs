@@ -223,8 +223,20 @@ fn video_capture(
     };
     let mut format = dev.format().unwrap();
     format.fourcc = v4l::FourCC::new(b"MJPG");
+    if let Some(d) = &dimensions {
+        format.width = d.width;
+        format.height = d.height;
+    }
     format = match dev.set_format(&format) {
         Ok(f) => {
+            if let Some(d) = dimensions {
+                if f.width != d.width || f.height != d.height {
+                    warn!(
+                        "requested size not feasible; falling back to ({}, {})",
+                        f.width, f.height
+                    );
+                }
+            }
             debug!("set format: {}", f);
             f
         }
