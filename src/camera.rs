@@ -289,7 +289,7 @@ fn video_capture(
                 buf.len()
             );
             let data = buf.to_vec();
-            let b64data = base64_engine::STANDARD.encode(jpg);
+            let b64data = base64_engine::STANDARD.encode(data);
             debug!("sending frame");
             if let Err(err) =
                 wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
