@@ -1,6 +1,5 @@
 // Copyright (C) 2023 rerobots, Inc.
 
-use std::io::Cursor;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -100,6 +99,8 @@ fn video_capture(
     wsclient_addr: Addr<WSClient>,
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
+    use std::io::Cursor;
+
     use openpnp_capture::{Device, Format, Stream};
 
     let camera_index: usize = match camera_path.parse() {
