@@ -75,6 +75,9 @@ export default function App({ Component, pageProps }: AppProps<MarkdocNextJsPage
                 <meta property="og:type" content="website" />
                 <meta property="og:title" content={title} />
                 <meta property="og:image" content={ogImage} />
+                {(typeof process !== 'undefined') && process?.env?.NEXT_PUBLIC_ANALYTICS_ID && (
+                    <script async src="https://analytics.umami.is/script.js" data-website-id={process?.env?.NEXT_PUBLIC_ANALYTICS_ID}></script>
+                )}
             </Head>
             <nav className="navbar">
               <div className="navbar-header">
