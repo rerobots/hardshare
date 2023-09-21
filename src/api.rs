@@ -655,8 +655,14 @@ impl HSAPIClient {
                 .post(url)
                 .send()
                 .await
-                .map(|resp| ())
                 .or_else(error)
+                .and_then(|resp| {
+                    if resp.status() == 200 {
+                        Ok(())
+                    } else {
+                        error(format!("{}", resp.status()))
+                    }
+                })
         })
     }
 
