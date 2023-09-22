@@ -416,8 +416,10 @@ impl CurrentInstance {
                 &name,
                 "--device=/dev/net/tun:/dev/net/tun",
                 "--cap-add=NET_ADMIN",
-                "--cap-add=CAP_SYS_CHROOT",
             ]);
+            if cprovider != "docker" {
+                run_command = run_command.args(["--cap-add=CAP_SYS_CHROOT"]);
+            }
             run_command = run_command.args(&instance.wdeployment.cargs);
             if cprovider == "podman" || cprovider == "docker-rootless" {
                 run_command = run_command.args(["-p", "127.0.0.1::22"]);
