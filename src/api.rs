@@ -728,7 +728,7 @@ impl HSAPIClient {
                 Some(local_config) => {
                     let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
                         Ok(wi) => wi,
-                        Err(err) => return actix_web::HttpResponse::NotFound().finish(),
+                        Err(_) => return actix_web::HttpResponse::NotFound().finish(),
                     };
                     local_config.wdeployments[wd_index].id.clone()
                 }
