@@ -6,7 +6,7 @@
     "build": "next build && next export",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -r -f out"
+    "clean": "rm -r -f out .next"
   },
   "repository": "https://github.com/rerobots/docs",
   "author": "Scott C. Livingston <scott@rerobots.net>",
