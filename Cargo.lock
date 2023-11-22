@@ -1225,7 +1225,7 @@ dependencies = [
 
 [[package]]
 name = "hardshare"
-version = "0.13.0-devel"
+version = "0.13.0"
 dependencies = [
  "actix",
  "actix-codec",

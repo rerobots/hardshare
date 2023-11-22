@@ -1,3 +1,17 @@
+hardshare client (0.13.0)
+
+  * Support streaming from cameras on macOS.
+
+  * Move `config -l` and `config -c` to commands `list` and `init`, respectively.
+
+  * Support launching of instances that start with `git clone`. For example, this
+    corresponds to the repoUrl parameter in docslab, https://github.com/rerobots/docslab
+
+  * More, better logging
+
+ -- Scott C. Livingston <scott@rerobots.net>  Tue, 21 Nov 2023 18:27:03 -0800
+
+
 hardshare client (0.12.1)
 
   * New client is ready to use on Linux. No camera and limited device support
