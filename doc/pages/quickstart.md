@@ -36,6 +36,11 @@ check that you have it
 docker version
 ```
 
+You must be able to run `docker` without `sudo`. Typically, this is achieved
+by membership in the `docker` group. For example, if your username is `USER`
+and "docker" is not in the output of `groups`, then do
+`sudo useradd -a -G docker USER`.
+
 If Docker is configured to be [rootless](https://docs.docker.com/engine/security/rootless/),
 then [select the cprovider `docker-rootless`](/install#prepare-a-cprovider).
 
