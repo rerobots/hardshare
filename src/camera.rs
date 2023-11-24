@@ -347,7 +347,7 @@ impl Actor for WSClient {
         self.check_receive_timeout(ctx);
     }
 
-    fn stopped(&mut self, ctx: &mut Context<Self>) {
+    fn stopped(&mut self, _ctx: &mut Context<Self>) {
         debug!("WSClient actor stopped");
     }
 }
@@ -405,7 +405,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
 impl Handler<WSSend> for WSClient {
     type Result = ();
 
-    fn handle(&mut self, msg: WSSend, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
         self.ws_sink.write(Message::Text(msg.0));
         self.recent_txrx_instant = std::time::Instant::now();
     }

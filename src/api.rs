@@ -697,7 +697,7 @@ impl HSAPIClient {
         }
 
         let (cworker_tx, cworker_rx) = mpsc::channel();
-        let main_actor_addr = MainActor::create(|ctx| MainActor {
+        let main_actor_addr = MainActor::create(|_ctx| MainActor {
             worker_req: cworker_tx,
             wsclient_addr: None,
         });
@@ -1302,7 +1302,7 @@ impl Actor for WSClient {
         self.check_receive_timeout(ctx);
     }
 
-    fn stopped(&mut self, ctx: &mut Context<Self>) {
+    fn stopped(&mut self, _ctx: &mut Context<Self>) {
         debug!("WSClient actor stopped");
     }
 }
@@ -1324,13 +1324,13 @@ impl WSClient {
 impl Handler<WSSend> for WSClient {
     type Result = ();
 
-    fn handle(&mut self, msg: WSSend, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
         self.ws_sink.write(Message::Text(msg.0));
     }
 }
 
 impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
-    fn handle(&mut self, msg: Result<Frame, WsProtocolError>, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: Result<Frame, WsProtocolError>, _ctx: &mut Context<Self>) {
         self.recent_rx_instant = std::time::Instant::now();
 
         if let Ok(Frame::Text(txt)) = msg {
@@ -1440,11 +1440,11 @@ pub struct MainActor {
 impl Actor for MainActor {
     type Context = Context<Self>;
 
-    fn started(&mut self, ctx: &mut Context<Self>) {
+    fn started(&mut self, _ctx: &mut Context<Self>) {
         debug!("MainActor started");
     }
 
-    fn stopped(&mut self, ctx: &mut Context<Self>) {
+    fn stopped(&mut self, _ctx: &mut Context<Self>) {
         debug!("MainActor stopped");
     }
 }
@@ -1467,7 +1467,7 @@ struct NewWS(Option<Addr<WSClient>>);
 impl Handler<NewWS> for MainActor {
     type Result = ();
 
-    fn handle(&mut self, msg: NewWS, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: NewWS, _ctx: &mut Context<Self>) {
         match msg.0 {
             Some(ws) => {
                 info!("new WebSocket");
@@ -1502,7 +1502,7 @@ impl Handler<MainActorCommand> for MainActor {
 impl Handler<ClientWorkerMessage> for MainActor {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientWorkerMessage, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: ClientWorkerMessage, _ctx: &mut Context<Self>) {
         debug!("received client worker message: {:?}", msg);
         match msg.mtype {
             control::CWorkerMessageType::WsSend => match &self.wsclient_addr {
@@ -1524,7 +1524,7 @@ struct ClientCommand(CWorkerCommand);
 impl Handler<ClientCommand> for MainActor {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: ClientCommand, _ctx: &mut Context<Self>) {
         self.worker_req.send(msg.0).unwrap();
     }
 }

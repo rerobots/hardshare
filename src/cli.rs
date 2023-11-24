@@ -791,11 +791,7 @@ fn lock_wdeplyoment_subcommand(
 }
 
 
-fn status_subcommand(
-    matches: &clap::ArgMatches,
-    bindaddr: &str,
-    pformat: PrintingFormat,
-) -> Result<(), CliError> {
+fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.get_local_status(bindaddr) {
         Ok(r) => {
@@ -816,7 +812,7 @@ fn status_subcommand(
 }
 
 
-fn reload_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
+fn reload_subcommand(bindaddr: &str) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.req_reload_config(bindaddr) {
         Ok(()) => Ok(()),
@@ -943,7 +939,7 @@ fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
-fn init_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+fn init_subcommand() -> Result<(), CliError> {
     if mgmt::get_local_config(false, false).is_ok() {
         return CliError::new("Cannot init: local configuration already exists", 1);
     }
@@ -1174,8 +1170,8 @@ pub fn main() -> Result<(), CliError> {
 
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
-    } else if let Some(matches) = matches.subcommand_matches("init") {
-        return init_subcommand(matches);
+    } else if let Some(_) = matches.subcommand_matches("init") {
+        return init_subcommand();
     } else if let Some(matches) = matches.subcommand_matches("list") {
         return list_subcommand(matches, pformat);
     } else if let Some(matches) = matches.subcommand_matches("config") {
@@ -1196,12 +1192,12 @@ pub fn main() -> Result<(), CliError> {
         return lock_wdeplyoment_subcommand(matches, true);
     } else if let Some(matches) = matches.subcommand_matches("unlock") {
         return lock_wdeplyoment_subcommand(matches, false);
-    } else if let Some(matches) = matches.subcommand_matches("status") {
-        return status_subcommand(matches, &bindaddr, pformat);
+    } else if let Some(_) = matches.subcommand_matches("status") {
+        return status_subcommand(&bindaddr, pformat);
     } else if let Some(matches) = matches.subcommand_matches("dissolve") {
         return dissolve_subcommand(matches);
-    } else if let Some(matches) = matches.subcommand_matches("reload") {
-        return reload_subcommand(matches, &bindaddr);
+    } else if let Some(_) = matches.subcommand_matches("reload") {
+        return reload_subcommand(&bindaddr);
     } else if let Some(matches) = matches.subcommand_matches("attach-camera") {
         return attach_camera_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("stop-cameras") {
