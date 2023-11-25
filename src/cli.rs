@@ -1170,7 +1170,7 @@ pub fn main() -> Result<(), CliError> {
 
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
-    } else if let Some(_) = matches.subcommand_matches("init") {
+    } else if matches.subcommand_matches("init").is_some() {
         return init_subcommand();
     } else if let Some(matches) = matches.subcommand_matches("list") {
         return list_subcommand(matches, pformat);
@@ -1192,11 +1192,11 @@ pub fn main() -> Result<(), CliError> {
         return lock_wdeplyoment_subcommand(matches, true);
     } else if let Some(matches) = matches.subcommand_matches("unlock") {
         return lock_wdeplyoment_subcommand(matches, false);
-    } else if let Some(_) = matches.subcommand_matches("status") {
+    } else if matches.subcommand_matches("status").is_some() {
         return status_subcommand(&bindaddr, pformat);
     } else if let Some(matches) = matches.subcommand_matches("dissolve") {
         return dissolve_subcommand(matches);
-    } else if let Some(_) = matches.subcommand_matches("reload") {
+    } else if matches.subcommand_matches("reload").is_some() {
         return reload_subcommand(&bindaddr);
     } else if let Some(matches) = matches.subcommand_matches("attach-camera") {
         return attach_camera_subcommand(matches);
