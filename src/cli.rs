@@ -951,6 +951,11 @@ fn init_subcommand() -> Result<(), CliError> {
 }
 
 
+fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    Ok(())
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -1131,6 +1136,8 @@ pub fn main() -> Result<(), CliError> {
                          .long("crop")
                          .value_name("CROPCONFIG")
                          .help("image crop configuration; default: all wdeployments get full images")))
+        .subcommand(SubCommand::with_name("check")
+                    .about(""))
         .subcommand(SubCommand::with_name("stop-cameras")
                     .about("Stop camera streams previously started by attach-camera")
                     .arg(Arg::with_name("all_cameras")
@@ -1198,6 +1205,8 @@ pub fn main() -> Result<(), CliError> {
         return dissolve_subcommand(matches);
     } else if matches.subcommand_matches("reload").is_some() {
         return reload_subcommand(&bindaddr);
+    } else if let Some(matches) = matches.subcommand_matches("check") {
+        return check_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("attach-camera") {
         return attach_camera_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("stop-cameras") {
