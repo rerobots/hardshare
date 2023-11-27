@@ -15,11 +15,11 @@
 use std::process::Command;
 
 
-fn check_podman() -> Result<(), String> {
-    let output = match Command::new("podman").arg("version").output() {
+fn check_docker() -> Result<(), String> {
+    let output = match Command::new("docker").arg("version").output() {
         Ok(x) => x,
         Err(err) => {
-            return Err(err.to_string())
+            return Err(format!("error calling `docker version`: {}", err))
         }
     };
     Ok(())
@@ -27,5 +27,6 @@ fn check_podman() -> Result<(), String> {
 
 
 pub fn defaults() -> Result<(), String> {
+    check_docker()?;
     Ok(())
 }

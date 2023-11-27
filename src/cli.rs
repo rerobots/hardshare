@@ -20,7 +20,7 @@ use serde::Serialize;
 use clap::{Arg, SubCommand};
 
 use crate::api::{CameraCrop, CameraDimensions};
-use crate::{api, mgmt};
+use crate::{api, check, mgmt};
 
 
 pub struct CliError {
@@ -952,7 +952,10 @@ fn init_subcommand() -> Result<(), CliError> {
 
 
 fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
-    Ok(())
+    match check::defaults() {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new(&err, 1),
+    }
 }
 
 

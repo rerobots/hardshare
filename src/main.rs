@@ -23,6 +23,7 @@ extern crate serde_json;
 
 mod api;
 mod camera;
+mod check;
 mod cli;
 mod control;
 mod mgmt;
