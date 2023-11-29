@@ -952,6 +952,17 @@ fn init_subcommand() -> Result<(), CliError> {
 
 
 fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => Some(lc),
+        Err(_) => None,
+    };
+
+    if matches.value_of("id_prefix").is_some() {
+        if local_config.is_none() {
+            return CliError::new("given ID when local configuration is undefined", 1);
+        }
+    }
+
     match check::defaults() {
         Ok(()) => Ok(()),
         Err(err) => CliError::new(&err, 1),
