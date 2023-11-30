@@ -18,9 +18,16 @@ use std::process::Command;
 fn check_docker() -> Result<(), String> {
     let output = match Command::new("docker").arg("version").output() {
         Ok(x) => x,
-        Err(err) => {
-            return Err(format!("error calling `docker version`: {}", err))
-        }
+        Err(err) => return Err(format!("error calling `docker version`: {}", err)),
+    };
+    Ok(())
+}
+
+
+fn check_podman() -> Result<(), String> {
+    let output = match Command::new("podman").arg("version").output() {
+        Ok(x) => x,
+        Err(err) => return Err(format!("error calling `podman version`: {}", err)),
     };
     Ok(())
 }
