@@ -961,11 +961,32 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         if local_config.is_none() {
             return CliError::new("given ID when local configuration is undefined", 1);
         }
-    }
+        let local_config = local_config.unwrap();
 
-    match check::defaults() {
-        Ok(()) => Ok(()),
-        Err(err) => CliError::new(&err, 1),
+        let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+            Ok(wi) => wi,
+            Err(err) => return CliError::new_std(err, 1),
+        };
+
+        match check::config(&local_config, &local_config.wdeployments[wd_index].id) {
+            Ok(()) => Ok(()),
+            Err(err) => CliError::new(&err, 1),
+        }
+    } else if matches.is_present("all") {
+        if local_config.is_none() {
+            return CliError::new("local configuration is undefined", 1);
+        }
+        let local_config = local_config.unwrap();
+
+        match check::all_configurations(&local_config) {
+            Ok(()) => Ok(()),
+            Err(err) => CliError::new(&err, 1),
+        }
+    } else {
+        match check::defaults() {
+            Ok(()) => Ok(()),
+            Err(err) => CliError::new(&err, 1),
+        }
     }
 }
 
@@ -1152,6 +1173,9 @@ pub fn main() -> Result<(), CliError> {
                          .help("image crop configuration; default: all wdeployments get full images")))
         .subcommand(SubCommand::with_name("check")
                     .about("Check configuration, dependencies, runtime behavior")
+                    .arg(Arg::with_name("all")
+                         .long("all")
+                         .help("check all deployments in local configuration"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment to check")))
