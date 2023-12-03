@@ -14,6 +14,8 @@
 
 use std::process::Command;
 
+use crate::mgmt::Config;
+
 
 fn check_docker() -> Result<(), String> {
     let output = match Command::new("docker").arg("version").output() {
@@ -29,6 +31,16 @@ fn check_podman() -> Result<(), String> {
         Ok(x) => x,
         Err(err) => return Err(format!("error calling `podman version`: {}", err)),
     };
+    Ok(())
+}
+
+
+pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
+    Ok(())
+}
+
+
+pub fn all_configurations(local_config: &Config) -> Result<(), String> {
     Ok(())
 }
 
