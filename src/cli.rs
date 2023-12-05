@@ -952,10 +952,31 @@ fn init_subcommand() -> Result<(), CliError> {
 
 
 fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
-    let local_config = match mgmt::get_local_config(false, false) {
+    let mut at_least_one_error = false;
+
+    let local_config = match mgmt::get_local_config(false, true) {
         Ok(lc) => Some(lc),
         Err(_) => None,
     };
+
+    if let Some(config) = &local_config {
+        if let Some(err_tokens) = &config.err_api_tokens {
+            if !err_tokens.is_empty() {
+                at_least_one_error = true;
+                println!("found possible API tokens with errors:");
+            }
+            for (err_token_path, err) in err_tokens {
+                println!("\t {}: {}", err, err_token_path);
+            }
+        }
+        if config.api_tokens.is_empty() {
+            at_least_one_error = true;
+            println!("no valid API tokens");
+        }
+        if at_least_one_error && matches.is_present("fail_fast") {
+            return CliError::newrc(1);
+        }
+    }
 
     if matches.value_of("id_prefix").is_some() {
         if local_config.is_none() {
@@ -1176,6 +1197,9 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("all")
                          .long("all")
                          .help("check all deployments in local configuration"))
+                    .arg(Arg::with_name("fail_fast")
+                         .long("fail-fast")
+                         .help("quit upon first detected error"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment to check")))
