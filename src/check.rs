@@ -14,7 +14,7 @@
 
 use std::process::Command;
 
-use crate::mgmt::Config;
+use crate::mgmt::{self, Config};
 
 
 fn check_docker() -> Result<(), String> {
@@ -36,6 +36,18 @@ fn check_podman() -> Result<(), String> {
 
 
 pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
+    let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
+        Ok(wi) => wi,
+        Err(_) => return Err(format!("given ID not found in local config: {}", id)),
+    };
+
+    if local_config.wdeployments[wd_index].cprovider == "podman" {
+        check_podman()?;
+    } else if local_config.wdeployments[wd_index].cprovider == "docker" {
+        check_docker()?;
+    } else if local_config.wdeployments[wd_index].cprovider == "lxd" {
+    }
+
     Ok(())
 }
 
