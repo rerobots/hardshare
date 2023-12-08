@@ -17,7 +17,7 @@ use std::process::Command;
 use crate::mgmt::{self, Config};
 
 
-fn check_docker() -> Result<(), String> {
+fn check_docker(rootless: bool) -> Result<(), String> {
     let output = match Command::new("docker").arg("version").output() {
         Ok(x) => x,
         Err(err) => return Err(format!("error calling `docker version`: {}", err)),
@@ -58,8 +58,10 @@ pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
 
     if local_config.wdeployments[wd_index].cprovider == "podman" {
         check_podman()?;
-    } else if local_config.wdeployments[wd_index].cprovider == "docker" {
-        check_docker()?;
+    } else if local_config.wdeployments[wd_index].cprovider == "docker"
+        || local_config.wdeployments[wd_index].cprovider == "docker-rootless"
+    {
+        check_docker(local_config.wdeployments[wd_index].cprovider == "docker-rootless")?;
     } else if local_config.wdeployments[wd_index].cprovider == "lxd" {
         check_lxd()?;
     }
@@ -74,6 +76,6 @@ pub fn all_configurations(local_config: &Config) -> Result<(), String> {
 
 
 pub fn defaults() -> Result<(), String> {
-    check_docker()?;
+    check_docker(false)?;
     Ok(())
 }
