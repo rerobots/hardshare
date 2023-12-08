@@ -35,6 +35,21 @@ fn check_podman() -> Result<(), String> {
 }
 
 
+fn check_lxd() -> Result<(), String> {
+    let status = match Command::new("lxc").args(["list", "-c", "n"]).status() {
+        Ok(s) => s,
+        Err(err) => return Err(format!("error calling `lxc list`: {}", err)),
+    };
+    if !status.success() {
+        return Err(format!(
+            "`lxc list` failed with return code: {:?}",
+            status.code()
+        ));
+    }
+    Ok(())
+}
+
+
 pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
     let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
         Ok(wi) => wi,
@@ -46,6 +61,7 @@ pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
     } else if local_config.wdeployments[wd_index].cprovider == "docker" {
         check_docker()?;
     } else if local_config.wdeployments[wd_index].cprovider == "lxd" {
+        check_lxd()?;
     }
 
     Ok(())
