@@ -72,6 +72,7 @@ pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
 
 pub fn all_configurations(local_config: &Config) -> Result<(), String> {
     for wd in local_config.wdeployments.iter() {
+        info!("checking configuration of {} ...", &wd.id);
         if let Err(err) = config(local_config, &wd.id) {
             return Err(format!("{}: {}", &wd.id, err));
         }
