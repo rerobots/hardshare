@@ -27,6 +27,7 @@ fn check_docker(rootless: bool) -> Result<(), String> {
 
 
 fn check_podman() -> Result<(), String> {
+    info!("checking availability of podman");
     let output = match Command::new("podman").arg("version").output() {
         Ok(x) => x,
         Err(err) => return Err(format!("error calling `podman version`: {}", err)),
@@ -36,6 +37,7 @@ fn check_podman() -> Result<(), String> {
 
 
 fn check_lxd() -> Result<(), String> {
+    info!("checking availability of lxd");
     let status = match Command::new("lxc").args(["list", "-c", "n"]).status() {
         Ok(s) => s,
         Err(err) => return Err(format!("error calling `lxc list`: {}", err)),
