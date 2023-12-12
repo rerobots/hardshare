@@ -18,6 +18,10 @@ use crate::mgmt::{self, Config};
 
 
 fn check_docker(rootless: bool) -> Result<(), String> {
+    info!(
+        "checking availability of docker{}",
+        if rootless { " (rootless)" } else { "" }
+    );
     let output = match Command::new("docker").arg("version").output() {
         Ok(x) => x,
         Err(err) => return Err(format!("error calling `docker version`: {}", err)),
