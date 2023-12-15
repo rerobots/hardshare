@@ -26,6 +26,12 @@ fn check_docker(rootless: bool) -> Result<(), String> {
         Ok(x) => x,
         Err(err) => return Err(format!("error calling `docker version`: {}", err)),
     };
+    if !output.status.success() {
+        return Err(format!(
+            "`docker version` failed with return code: {:?}",
+            output.status.code()
+        ));
+    }
     Ok(())
 }
 
