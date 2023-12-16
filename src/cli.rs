@@ -994,6 +994,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
     }
 
+    // TODO: handle at_least_one_error and fail_fast below
     if matches.value_of("id_prefix").is_some() {
         if local_config.is_none() {
             return CliError::new("given ID when local configuration is undefined", 1);
@@ -1005,7 +1006,11 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => return CliError::new_std(err, 1),
         };
 
-        match check::config(&local_config, &local_config.wdeployments[wd_index].id) {
+        match check::config(
+            &local_config,
+            &local_config.wdeployments[wd_index].id,
+            matches.is_present("fail_fast"),
+        ) {
             Ok(()) => Ok(()),
             Err(err) => CliError::new(&err, 1),
         }
@@ -1015,12 +1020,12 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
         let local_config = local_config.unwrap();
 
-        match check::all_configurations(&local_config) {
+        match check::all_configurations(&local_config, matches.is_present("fail_fast")) {
             Ok(()) => Ok(()),
             Err(err) => CliError::new(&err, 1),
         }
     } else {
-        match check::defaults() {
+        match check::defaults(matches.is_present("fail_fast")) {
             Ok(()) => Ok(()),
             Err(err) => CliError::new(&err, 1),
         }

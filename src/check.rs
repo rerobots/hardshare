@@ -62,7 +62,7 @@ fn check_lxd() -> Result<(), String> {
 }
 
 
-pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
+pub fn config(local_config: &Config, id: &str, fail_fast: bool) -> Result<(), String> {
     let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
         Ok(wi) => wi,
         Err(_) => return Err(format!("given ID not found in local config: {}", id)),
@@ -143,9 +143,9 @@ pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
 }
 
 
-pub fn all_configurations(local_config: &Config) -> Result<(), String> {
+pub fn all_configurations(local_config: &Config, fail_fast: bool) -> Result<(), String> {
     for wd in local_config.wdeployments.iter() {
-        if let Err(err) = config(local_config, &wd.id) {
+        if let Err(err) = config(local_config, &wd.id, fail_fast) {
             return Err(format!("{}: {}", &wd.id, err));
         }
     }
@@ -153,7 +153,7 @@ pub fn all_configurations(local_config: &Config) -> Result<(), String> {
 }
 
 
-pub fn defaults() -> Result<(), String> {
+pub fn defaults(fail_fast: bool) -> Result<(), String> {
     check_docker(false)?;
     Ok(())
 }
