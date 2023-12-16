@@ -70,6 +70,65 @@ pub fn config(local_config: &Config, id: &str) -> Result<(), String> {
 
     info!("checking configuration of {} ...", id);
 
+    if local_config
+        .api_tokens
+        .contains_key(&local_config.wdeployments[wd_index].owner)
+    {
+        if local_config.api_tokens[&local_config.wdeployments[wd_index].owner].is_empty() {
+            return Err(format!("no valid API tokens for managing {}", id));
+        }
+    } else {
+        let default_org = match &local_config.default_org {
+            Some(default_org) => default_org.as_str(),
+            None => "()",
+        };
+        let mut at_least_one_in_default = false;
+        if local_config.api_tokens.contains_key(default_org) {
+            for token_path in local_config.api_tokens[default_org].iter() {
+                let username = mgmt::get_username(token_path)?;
+                if username == local_config.wdeployments[wd_index].owner {
+                    at_least_one_in_default = true;
+                    break;
+                }
+            }
+        }
+        if !at_least_one_in_default {
+            let mut at_least_one = false;
+            let mut org_with_match: Option<String> = None;
+            for org_name in local_config.api_tokens.keys() {
+                if org_name == default_org {
+                    continue;
+                }
+                for token_path in local_config.api_tokens[org_name].iter() {
+                    let username = mgmt::get_username(token_path)?;
+                    if username == local_config.wdeployments[wd_index].owner {
+                        at_least_one = true;
+                        org_with_match = Some(org_name.to_string());
+                        break;
+                    }
+                }
+                if at_least_one {
+                    break;
+                }
+            }
+            if !at_least_one {
+                return Err(format!("no valid API tokens for managing {}", id));
+            } else {
+                match org_with_match {
+                    Some(o) => {
+                        println!("warning: valid API token for managing {} with organization {}, which is not default org", id, o);
+                    }
+                    None => {
+                        println!(
+                            "warning: valid API token for managing {} not in default org",
+                            id
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     if local_config.wdeployments[wd_index].cprovider == "podman" {
         check_podman()?;
     } else if local_config.wdeployments[wd_index].cprovider == "docker"

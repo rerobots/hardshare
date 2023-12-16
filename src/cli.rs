@@ -972,7 +972,23 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         if config.api_tokens.is_empty() {
             at_least_one_error = true;
             println!("no valid API tokens");
+        } else {
+            let org_name = match &config.default_org {
+                Some(default_org) => default_org.as_str(),
+                None => "()",
+            };
+            if !config.api_tokens.contains_key(org_name) || config.api_tokens[org_name].is_empty() {
+                at_least_one_error = true;
+                let suffix = if config.default_org.is_none() {
+                    "".into()
+                } else {
+                    format!(": {}", org_name)
+                };
+                at_least_one_error = true;
+                println!("no valid API tokens for default org{}", suffix);
+            }
         }
+
         if at_least_one_error && matches.is_present("fail_fast") {
             return CliError::newrc(1);
         }

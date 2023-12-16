@@ -473,6 +473,14 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+pub fn get_username(token_path: &str) -> Result<String, String> {
+    let token = std::fs::read(token_path).unwrap();
+    let token = String::from_utf8(token).unwrap().trim().to_string();
+    let claims = get_jwt_claims(&token)?;
+    Ok(claims["sub"].as_str().unwrap().into())
+}
+
+
 fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, String> {
     let alg = PKeyWithDigest {
         digest: MessageDigest::sha256(),
