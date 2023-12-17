@@ -1010,7 +1010,13 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             &local_config.wdeployments[wd_index].id,
             matches.is_present("fail_fast"),
         ) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                if at_least_one_error {
+                    CliError::newrc(1)
+                } else {
+                    Ok(())
+                }
+            }
             Err(err) => CliError::new(&err, 1),
         }
     } else if matches.is_present("all") {
@@ -1020,12 +1026,24 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         let local_config = local_config.unwrap();
 
         match check::all_configurations(&local_config, matches.is_present("fail_fast")) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                if at_least_one_error {
+                    CliError::newrc(1)
+                } else {
+                    Ok(())
+                }
+            }
             Err(err) => CliError::new(&err, 1),
         }
     } else {
         match check::defaults(matches.is_present("fail_fast")) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                if at_least_one_error {
+                    CliError::newrc(1)
+                } else {
+                    Ok(())
+                }
+            }
             Err(err) => CliError::new(&err, 1),
         }
     }
