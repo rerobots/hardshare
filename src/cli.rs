@@ -992,7 +992,6 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 } else {
                     format!(": {}", org_name)
                 };
-                at_least_one_error = true;
                 println!("no valid API tokens for default org{}", suffix);
             }
         }
