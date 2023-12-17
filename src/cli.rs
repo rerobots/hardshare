@@ -994,7 +994,6 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
     }
 
-    // TODO: handle at_least_one_error and fail_fast below
     if matches.value_of("id_prefix").is_some() {
         if local_config.is_none() {
             return CliError::new("given ID when local configuration is undefined", 1);
