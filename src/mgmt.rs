@@ -473,11 +473,14 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
-pub fn get_username(token_path: &str) -> Result<String, String> {
-    let token = std::fs::read(token_path).unwrap();
-    let token = String::from_utf8(token).unwrap().trim().to_string();
+pub fn get_username(token_path: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let token = std::fs::read(token_path)?;
+    let token = String::from_utf8(token)?.trim().to_string();
     let claims = get_jwt_claims(&token)?;
-    Ok(claims["sub"].as_str().unwrap().into())
+    match claims["sub"].as_str() {
+        Some(u) => Ok(u.into()),
+        None => Err("token user not identified".into()),
+    }
 }
 
 

@@ -17,6 +17,34 @@ use std::process::Command;
 use crate::mgmt::{self, Config};
 
 
+#[derive(Debug)]
+pub struct Error {
+    pub description: Option<String>,
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.description {
+            Some(d) => write!(f, "{}", d),
+            None => write!(f, ""),
+        }
+    }
+}
+
+impl Error {
+    fn new(description: &str) -> Box<Self> {
+        Box::new(Error {
+            description: Some(description.into()),
+        })
+    }
+    fn new_empty() -> Box<Self> {
+        Box::new(Error { description: None })
+    }
+}
+
+
 fn check_docker(rootless: bool) -> Result<(), String> {
     info!(
         "checking availability of docker{}",
@@ -62,11 +90,22 @@ fn check_lxd() -> Result<(), String> {
 }
 
 
-pub fn config(local_config: &Config, id: &str, fail_fast: bool) -> Result<(), String> {
+pub fn config(
+    local_config: &Config,
+    id: &str,
+    fail_fast: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
         Ok(wi) => wi,
-        Err(_) => return Err(format!("given ID not found in local config: {}", id)),
+        Err(_) => {
+            return Err(Error::new(&format!(
+                "given ID not found in local config: {}",
+                id
+            )))
+        }
     };
+
+    let mut at_least_one_error = false;
 
     info!("checking configuration of {} ...", id);
 
@@ -75,7 +114,12 @@ pub fn config(local_config: &Config, id: &str, fail_fast: bool) -> Result<(), St
         .contains_key(&local_config.wdeployments[wd_index].owner)
     {
         if local_config.api_tokens[&local_config.wdeployments[wd_index].owner].is_empty() {
-            return Err(format!("no valid API tokens for managing {}", id));
+            let msg = format!("no valid API tokens for managing {}", id);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
         }
     } else {
         let default_org = match &local_config.default_org {
@@ -112,7 +156,12 @@ pub fn config(local_config: &Config, id: &str, fail_fast: bool) -> Result<(), St
                 }
             }
             if !at_least_one {
-                return Err(format!("no valid API tokens for managing {}", id));
+                let msg = format!("no valid API tokens for managing {}", id);
+                if fail_fast {
+                    return Err(Error::new(&msg));
+                }
+                at_least_one_error = true;
+                println!("{}", msg);
             } else {
                 match org_with_match {
                     Some(o) => {
@@ -139,17 +188,34 @@ pub fn config(local_config: &Config, id: &str, fail_fast: bool) -> Result<(), St
         check_lxd()?;
     }
 
-    Ok(())
+    if at_least_one_error {
+        Err(Error::new_empty())
+    } else {
+        Ok(())
+    }
 }
 
 
-pub fn all_configurations(local_config: &Config, fail_fast: bool) -> Result<(), String> {
+pub fn all_configurations(
+    local_config: &Config,
+    fail_fast: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut at_least_one_error = false;
     for wd in local_config.wdeployments.iter() {
         if let Err(err) = config(local_config, &wd.id, fail_fast) {
-            return Err(format!("{}: {}", &wd.id, err));
+            let msg = format!("{}: {}", &wd.id, err);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
         }
     }
-    Ok(())
+    if at_least_one_error {
+        Err(Error::new_empty())
+    } else {
+        Ok(())
+    }
 }
 
 

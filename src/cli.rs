@@ -47,6 +47,14 @@ impl std::fmt::Debug for CliError {
     }
 }
 
+impl From<Box<dyn std::error::Error>> for CliError {
+    fn from(value: Box<dyn std::error::Error>) -> Self {
+        let disp = format!("{}", value);
+        let msg = if disp.is_empty() { None } else { Some(disp) };
+        CliError { msg, exitcode: 1 }
+    }
+}
+
 impl CliError {
     fn new(msg: &str, exitcode: i32) -> Result<(), CliError> {
         Err(CliError {
@@ -1017,7 +1025,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     Ok(())
                 }
             }
-            Err(err) => CliError::new(&err, 1),
+            Err(err) => Err(err.into()),
         }
     } else if matches.is_present("all") {
         if local_config.is_none() {
@@ -1033,7 +1041,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     Ok(())
                 }
             }
-            Err(err) => CliError::new(&err, 1),
+            Err(err) => Err(err.into()),
         }
     } else {
         match check::defaults(matches.is_present("fail_fast")) {
