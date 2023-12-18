@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::TryFrom;
 use std::io::prelude::*;
 use std::process::{Command, Stdio};
 
@@ -20,6 +21,7 @@ use serde::Serialize;
 use clap::{Arg, SubCommand};
 
 use crate::api::{CameraCrop, CameraDimensions};
+use crate::mgmt::CProvider;
 use crate::{api, check, mgmt};
 
 
@@ -176,10 +178,10 @@ fn print_config_w<T: Write>(
                 wd.cprovider,
                 wd.cargs.join(", "),
             )?;
-            if wd.cprovider == "docker"
-                || wd.cprovider == "docker-rootless"
-                || wd.cprovider == "podman"
-                || wd.cprovider == "lxd"
+            if wd.cprovider == CProvider::Docker
+                || wd.cprovider == CProvider::DockerRootless
+                || wd.cprovider == CProvider::Podman
+                || wd.cprovider == CProvider::Lxd
             {
                 match &wd.image {
                     Some(img) => {
@@ -378,22 +380,22 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         };
 
         if let Some(cprovider) = matches.value_of("cprovider") {
-            let selected_cprovider = cprovider.to_lowercase();
-            if !vec!["lxd", "docker", "docker-rootless", "podman", "proxy"]
-                .contains(&selected_cprovider.as_str())
-            {
-                return CliError::new(
-                    "cprovider must be one of the following: lxd, docker, docker-rootless, podman, proxy",
-                    1,
-                );
-            }
+            let selected_cprovider = match CProvider::try_from(cprovider.to_lowercase().as_str()) {
+                Ok(c) => c,
+                Err(err) => {
+                    return CliError::new(
+                        "cprovider must be one of the following: lxd, docker, docker-rootless, podman, proxy",
+                        1,
+                    );
+                }
+            };
 
             if local_config.wdeployments[wd_index].cprovider == selected_cprovider {
                 return Ok(());
             }
             local_config.wdeployments[wd_index].cprovider = selected_cprovider;
 
-            if local_config.wdeployments[wd_index].cprovider == "proxy" {
+            if local_config.wdeployments[wd_index].cprovider == CProvider::Proxy {
                 local_config.wdeployments[wd_index].image = None;
             } else {
                 let default_img = "rerobots/hs-generic";
@@ -407,8 +409,8 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 Ok(()) => Ok(()),
             };
         } else if let Some(new_image) = matches.value_of("cprovider_img") {
-            match local_config.wdeployments[wd_index].cprovider.as_str() {
-                "podman" => {
+            match local_config.wdeployments[wd_index].cprovider {
+                CProvider::Podman => {
                     let argv = vec!["podman", "image", "exists", new_image];
                     let mut prog = Command::new(argv[0]);
 
@@ -424,7 +426,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
                 }
-                "docker" | "docker-rootless" => {
+                CProvider::Docker | CProvider::DockerRootless => {
                     let argv = vec!["docker", "image", "inspect", new_image];
                     let mut prog = Command::new(argv[0]);
 
@@ -444,7 +446,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         return CliError::new("given image name is not recognized by cprovider", 1);
                     }
                 }
-                "lxd" => {
+                CProvider::Lxd => {
                     let argv = vec!["lxc", "image", "show", new_image];
                     let mut prog = Command::new(argv[0]);
 
@@ -488,8 +490,8 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 return CliError::new("device does not exist", 1);
             }
             let device_path = device_path.to_str().unwrap();
-            if local_config.wdeployments[wd_index].cprovider == "docker"
-                || local_config.wdeployments[wd_index].cprovider == "podman"
+            if local_config.wdeployments[wd_index].cprovider == CProvider::Docker
+                || local_config.wdeployments[wd_index].cprovider == CProvider::Podman
             {
                 let new_carg = format!("--device={device_path}:{device_path}");
                 if local_config.wdeployments[wd_index]
@@ -508,8 +510,8 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 Ok(()) => Ok(()),
             };
         } else if let Some(device_path) = matches.value_of("remove_raw_device_path") {
-            if local_config.wdeployments[wd_index].cprovider == "docker"
-                || local_config.wdeployments[wd_index].cprovider == "podman"
+            if local_config.wdeployments[wd_index].cprovider == CProvider::Docker
+                || local_config.wdeployments[wd_index].cprovider == CProvider::Podman
             {
                 let mut carg = format!("--device={device_path}:{device_path}");
                 if !local_config.wdeployments[wd_index].cargs.contains(&carg) {

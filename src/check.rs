@@ -14,7 +14,7 @@
 
 use std::process::Command;
 
-use crate::mgmt::{self, Config};
+use crate::mgmt::{self, CProvider, Config};
 
 
 #[derive(Debug)]
@@ -178,13 +178,13 @@ pub fn config(
         }
     }
 
-    if local_config.wdeployments[wd_index].cprovider == "podman" {
+    if local_config.wdeployments[wd_index].cprovider == CProvider::Podman {
         check_podman()?;
-    } else if local_config.wdeployments[wd_index].cprovider == "docker"
-        || local_config.wdeployments[wd_index].cprovider == "docker-rootless"
+    } else if local_config.wdeployments[wd_index].cprovider == CProvider::Docker
+        || local_config.wdeployments[wd_index].cprovider == CProvider::DockerRootless
     {
-        check_docker(local_config.wdeployments[wd_index].cprovider == "docker-rootless")?;
-    } else if local_config.wdeployments[wd_index].cprovider == "lxd" {
+        check_docker(local_config.wdeployments[wd_index].cprovider == CProvider::DockerRootless)?;
+    } else if local_config.wdeployments[wd_index].cprovider == CProvider::Lxd {
         check_lxd()?;
     }
 

@@ -27,7 +27,7 @@ use serde::Deserialize;
 use tempfile::NamedTempFile;
 
 use crate::api;
-use crate::mgmt::WDeployment;
+use crate::mgmt::{CProvider, WDeployment};
 
 
 #[derive(PartialEq, Debug, Clone)]
@@ -236,12 +236,17 @@ impl CurrentInstance {
     }
 
 
-    fn get_container_addr(cprovider: &str, name: &str, timeout: u64) -> Result<String, String> {
+    fn get_container_addr(
+        cprovider: &CProvider,
+        name: &str,
+        timeout: u64,
+    ) -> Result<String, String> {
+        let execname = cprovider.get_execname().unwrap();
         let max_duration = std::time::Duration::from_secs(timeout);
         let sleep_time = std::time::Duration::from_secs(2);
         let now = std::time::Instant::now();
         while now.elapsed() <= max_duration {
-            let mut run_command = Command::new(cprovider);
+            let mut run_command = Command::new(&execname);
             let run_command = run_command.args(["inspect", name]);
             let command_result = match run_command.output() {
                 Ok(o) => o,
@@ -272,8 +277,9 @@ impl CurrentInstance {
     }
 
 
-    fn get_container_sshport(cprovider: &str, name: &str) -> Result<Port, String> {
-        let mut run_command = Command::new(cprovider);
+    fn get_container_sshport(cprovider: &CProvider, name: &str) -> Result<Port, String> {
+        let execname = cprovider.get_execname().unwrap();
+        let mut run_command = Command::new(execname);
         let run_command = run_command.args(["port", name, "22"]);
         let command_result = match run_command.output() {
             Ok(o) => o,
@@ -293,14 +299,19 @@ impl CurrentInstance {
     }
 
 
-    fn get_container_hostkey(cprovider: &str, name: &str, timeout: u64) -> Result<String, String> {
+    fn get_container_hostkey(
+        cprovider: &CProvider,
+        name: &str,
+        timeout: u64,
+    ) -> Result<String, String> {
+        let execname = cprovider.get_execname().unwrap();
         let hostkey_filename = "ssh_host_ecdsa_key.pub";
         let hostkey_contained_path = String::from(name) + ":/etc/ssh/" + hostkey_filename;
         let max_duration = std::time::Duration::from_secs(timeout);
         let sleep_time = std::time::Duration::from_secs(2);
         let now = std::time::Instant::now();
         while now.elapsed() <= max_duration {
-            match Command::new(cprovider)
+            match Command::new(&execname)
                 .args(["cp", &hostkey_contained_path, "."])
                 .status()
             {
@@ -398,12 +409,11 @@ impl CurrentInstance {
 
     fn launch(mut instance: CurrentInstance, public_key: &str, repo_args: Option<RepoInfo>) {
         let cprovider = instance.wdeployment.cprovider.clone();
-        let cprovider_execname = if cprovider == "docker-rootless" {
-            "docker"
-        } else {
-            &cprovider
-        };
-        if cprovider == "docker" || cprovider == "docker-rootless" || cprovider == "podman" {
+        if cprovider == CProvider::Docker
+            || cprovider == CProvider::DockerRootless
+            || cprovider == CProvider::Podman
+        {
+            let cprovider_execname = cprovider.get_execname().unwrap();
             let image = match &instance.wdeployment.image {
                 Some(img) => img.clone(),
                 None => {
@@ -417,7 +427,7 @@ impl CurrentInstance {
             let name = instance.generate_local_name(&base_name);
             let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
 
-            let mut run_command = Command::new(cprovider_execname);
+            let mut run_command = Command::new(&cprovider_execname);
             let mut run_command = run_command.args([
                 "run",
                 "-d",
@@ -428,11 +438,11 @@ impl CurrentInstance {
                 "--device=/dev/net/tun:/dev/net/tun",
                 "--cap-add=NET_ADMIN",
             ]);
-            if cprovider != "docker" {
+            if cprovider != CProvider::Docker {
                 run_command = run_command.args(["--cap-add=CAP_SYS_CHROOT"]);
             }
             run_command = run_command.args(&instance.wdeployment.cargs);
-            if cprovider == "podman" || cprovider == "docker-rootless" {
+            if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
                 run_command = run_command.args(["-p", "127.0.0.1::22"]);
             }
             if log_enabled!(Level::Debug) {
@@ -455,24 +465,25 @@ impl CurrentInstance {
                 return;
             }
 
-            let addr: String = if cprovider == "podman" || cprovider == "docker-rootless" {
-                "127.0.0.1".into()
-            } else {
-                match CurrentInstance::get_container_addr(cprovider_execname, &name, 10) {
-                    Ok(a) => a,
-                    Err(err) => {
-                        error!("{}", err);
-                        instance.declare_status(InstanceStatus::InitFail);
-                        instance.send_status();
-                        return;
+            let addr: String =
+                if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
+                    "127.0.0.1".into()
+                } else {
+                    match CurrentInstance::get_container_addr(&cprovider, &name, 10) {
+                        Ok(a) => a,
+                        Err(err) => {
+                            error!("{}", err);
+                            instance.declare_status(InstanceStatus::InitFail);
+                            instance.send_status();
+                            return;
+                        }
                     }
-                }
-            };
+                };
 
-            let sshport = if cprovider == "docker" {
+            let sshport = if cprovider == CProvider::Docker {
                 22
             } else {
-                match CurrentInstance::get_container_sshport(cprovider_execname, &name) {
+                match CurrentInstance::get_container_sshport(&cprovider, &name) {
                     Ok(a) => a,
                     Err(err) => {
                         error!("{}", err);
@@ -511,7 +522,7 @@ impl CurrentInstance {
                 }
             };
 
-            let mkdir_result = Command::new(cprovider_execname)
+            let mkdir_result = Command::new(&cprovider_execname)
                 .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
                 .status()
                 .unwrap();
@@ -522,7 +533,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let cp_result = Command::new(cprovider_execname)
+            let cp_result = Command::new(&cprovider_execname)
                 .args([
                     "cp",
                     public_key_file.path().to_str().unwrap(),
@@ -537,7 +548,7 @@ impl CurrentInstance {
                 return;
             }
 
-            let chown_result = Command::new(cprovider_execname)
+            let chown_result = Command::new(&cprovider_execname)
                 .args([
                     "exec",
                     &name,
@@ -555,7 +566,7 @@ impl CurrentInstance {
             }
 
             let hostkey: String =
-                match CurrentInstance::get_container_hostkey(cprovider_execname, &name, 10) {
+                match CurrentInstance::get_container_hostkey(&cprovider, &name, 10) {
                     Ok(k) => k,
                     Err(err) => {
                         error!("{}", err);
@@ -566,7 +577,7 @@ impl CurrentInstance {
                 };
 
             for script in instance.wdeployment.init_inside.iter() {
-                let status = Command::new(cprovider_execname)
+                let status = Command::new(&cprovider_execname)
                     .args(["exec", &name, "/bin/sh", "-c", script])
                     .status();
                 match status {
@@ -588,7 +599,7 @@ impl CurrentInstance {
             }
 
             if let Some(repo_info) = repo_args {
-                let status = Command::new(cprovider_execname)
+                let status = Command::new(&cprovider_execname)
                     .args([
                         "exec",
                         &name,
@@ -649,12 +660,12 @@ impl CurrentInstance {
                 instance.send_status();
                 return;
             }
-        } else if cprovider == "lxd" {
+        } else if cprovider == CProvider::Lxd {
             error!("lxd cprovider not implemented yet");
             instance.declare_status(InstanceStatus::InitFail);
             instance.send_status();
             return;
-        } else if cprovider == "proxy" {
+        } else if cprovider == CProvider::Proxy {
             error!("proxy cprovider not implemented yet");
             instance.declare_status(InstanceStatus::InitFail);
             instance.send_status();
@@ -734,15 +745,11 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        if instance.wdeployment.cprovider == "docker"
-            || instance.wdeployment.cprovider == "docker-rootless"
-            || instance.wdeployment.cprovider == "podman"
+        if instance.wdeployment.cprovider == CProvider::Docker
+            || instance.wdeployment.cprovider == CProvider::DockerRootless
+            || instance.wdeployment.cprovider == CProvider::Podman
         {
-            let cprovider_execname = if instance.wdeployment.cprovider == "docker-rootless" {
-                "docker"
-            } else {
-                &instance.wdeployment.cprovider
-            };
+            let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
             let name = instance.get_local_name().unwrap();
             let mut run_command = Command::new(cprovider_execname);
             let run_command = run_command.args(["rm", "-f", &name]);

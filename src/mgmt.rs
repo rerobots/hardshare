@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
 use std::process::{Command, Stdio};
 
 extern crate serde;
@@ -62,11 +63,61 @@ fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
 }
 
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CProvider {
+    Docker,
+    DockerRootless,
+    Lxd,
+    Podman,
+    Proxy,
+}
+
+impl CProvider {
+    pub fn get_execname(&self) -> Option<String> {
+        if self == &Self::DockerRootless {
+            Some("docker".into())
+        } else if self == &Self::Proxy {
+            None
+        } else {
+            Some(self.to_string())
+        }
+    }
+}
+
+impl TryFrom<&str> for CProvider {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "docker" => Ok(Self::Docker),
+            "docker-rootless" => Ok(Self::DockerRootless),
+            "lxd" => Ok(Self::Lxd),
+            "podman" => Ok(Self::Podman),
+            "proxy" => Ok(Self::Proxy),
+            _ => Err("unrecognized cprovider"),
+        }
+    }
+}
+
+impl std::fmt::Display for CProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Docker => write!(f, "docker"),
+            Self::DockerRootless => write!(f, "docker-rootless"),
+            Self::Lxd => write!(f, "lxd"),
+            Self::Podman => write!(f, "podman"),
+            Self::Proxy => write!(f, "proxy"),
+        }
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WDeployment {
     pub id: String,
     pub owner: String,
-    pub cprovider: String,
+    pub cprovider: CProvider,
     pub cargs: Vec<String>,
     pub container_name: String,
     pub init_inside: Vec<String>,
@@ -84,12 +135,11 @@ pub struct WDeployment {
 
 impl WDeployment {
     pub fn from_json(h: &HashMap<String, serde_json::Value>) -> Self {
-        let cprovider: String = if h.contains_key("cprovider") {
-            h["cprovider"].as_str().unwrap()
+        let cprovider: CProvider = if h.contains_key("cprovider") {
+            CProvider::try_from(h["cprovider"].as_str().unwrap()).unwrap()
         } else {
-            "docker"
-        }
-        .into();
+            CProvider::Docker
+        };
 
         let cargs: Vec<String> = if h.contains_key("cargs") {
             h["cargs"]
@@ -133,7 +183,7 @@ impl WDeployment {
 
         let image = if h.contains_key("image") {
             Some(h["image"].as_str().unwrap().into())
-        } else if cprovider != "proxy" {
+        } else if cprovider != CProvider::Proxy {
             Some("rerobots/hs-generic".into())
         } else {
             None
