@@ -14,6 +14,7 @@
 
 use std::process::Command;
 
+use crate::control;
 use crate::mgmt::{self, CProvider, Config};
 
 
@@ -34,9 +35,12 @@ impl std::fmt::Display for Error {
 }
 
 impl Error {
-    fn new(description: &str) -> Box<Self> {
+    pub fn new<S>(description: S) -> Box<Self>
+    where
+        S: ToString,
+    {
         Box::new(Error {
-            description: Some(description.into()),
+            description: Some(description.to_string()),
         })
     }
     fn new_empty() -> Box<Self> {
@@ -98,7 +102,7 @@ pub fn config(
     let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
         Ok(wi) => wi,
         Err(_) => {
-            return Err(Error::new(&format!(
+            return Err(Error::new(format!(
                 "given ID not found in local config: {}",
                 id
             )))
@@ -186,6 +190,32 @@ pub fn config(
         check_docker(local_config.wdeployments[wd_index].cprovider == CProvider::DockerRootless)?;
     } else if local_config.wdeployments[wd_index].cprovider == CProvider::Lxd {
         check_lxd()?;
+    }
+
+    info!("simulating instance launch ...");
+    let cname = "check";
+    if let Err(err) = control::CurrentInstance::launch_container(
+        &local_config.wdeployments[wd_index],
+        cname,
+        "checkkey",
+    ) {
+        let msg = format!("caught while creating test container: {}", err);
+        if fail_fast {
+            return Err(Error::new(&msg));
+        }
+        at_least_one_error = true;
+        println!("{}", msg);
+    }
+
+    if let Err(err) =
+        control::CurrentInstance::destroy_container(&local_config.wdeployments[wd_index], cname)
+    {
+        let msg = format!("caught while destroying test container: {}", err);
+        if fail_fast {
+            return Err(Error::new(&msg));
+        }
+        at_least_one_error = true;
+        println!("{}", msg);
     }
 
     if at_least_one_error {

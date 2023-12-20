@@ -27,6 +27,7 @@ use serde::Deserialize;
 use tempfile::NamedTempFile;
 
 use crate::api;
+use crate::check::Error;
 use crate::mgmt::{CProvider, WDeployment};
 
 
@@ -61,16 +62,21 @@ pub enum ConnType {
 }
 
 
+pub struct ContainerAddress {
+    ip: String,
+    port: Port,
+}
+
+
 struct SshTunnel {
     proc: std::process::Child,
     tunnelkey_path: std::path::PathBuf,
-    container_addr: String,
-    container_port: Port,
+    container_addr: ContainerAddress,
 }
 
 
 #[derive(Clone)]
-struct CurrentInstance {
+pub struct CurrentInstance {
     wdeployment: Arc<WDeployment>,
     status: Arc<Mutex<Option<InstanceStatus>>>,
     id: Option<String>,
@@ -350,8 +356,7 @@ impl CurrentInstance {
 
     fn start_sshtun(
         &self,
-        container_addr: &str,
-        container_port: Port,
+        container_addr: ContainerAddress,
         tunnelkey_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let tunnelkey_public_path = String::from(tunnelkey_path) + ".pub";
@@ -382,7 +387,7 @@ impl CurrentInstance {
             "-T",
             "-N",
             "-R",
-            &format!(":2210:{container_addr}:{container_port}"),
+            &format!(":2210:{}:{}", container_addr.ip, container_addr.port),
             "-i",
             tunnelkey_path,
             "-p",
@@ -400,282 +405,92 @@ impl CurrentInstance {
         *tunnel = Some(SshTunnel {
             proc: tunnel_process,
             tunnelkey_path: tunnelkey_path.into(),
-            container_addr: container_addr.into(),
-            container_port,
+            container_addr,
         });
         Ok(())
     }
 
 
     fn launch(mut instance: CurrentInstance, public_key: &str, repo_args: Option<RepoInfo>) {
-        let cprovider = instance.wdeployment.cprovider.clone();
-        if cprovider == CProvider::Docker
-            || cprovider == CProvider::DockerRootless
-            || cprovider == CProvider::Podman
+        let base_name = instance.wdeployment.container_name.clone();
+        let name = instance.generate_local_name(&base_name);
+        let container_addr = match Self::launch_container(&instance.wdeployment, &name, public_key)
         {
-            let cprovider_execname = cprovider.get_execname().unwrap();
-            let image = match &instance.wdeployment.image {
-                Some(img) => img.clone(),
-                None => {
-                    error!("no image in configuration");
-                    instance.declare_status(InstanceStatus::InitFail);
-                    instance.send_status();
-                    return;
-                }
-            };
-            let base_name = instance.wdeployment.container_name.clone();
-            let name = instance.generate_local_name(&base_name);
-            let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
-
-            let mut run_command = Command::new(&cprovider_execname);
-            let mut run_command = run_command.args([
-                "run",
-                "-d",
-                "-h",
-                &name,
-                "--name",
-                &name,
-                "--device=/dev/net/tun:/dev/net/tun",
-                "--cap-add=NET_ADMIN",
-            ]);
-            if cprovider != CProvider::Docker {
-                run_command = run_command.args(["--cap-add=CAP_SYS_CHROOT"]);
-            }
-            run_command = run_command.args(&instance.wdeployment.cargs);
-            if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
-                run_command = run_command.args(["-p", "127.0.0.1::22"]);
-            }
-            if log_enabled!(Level::Debug) {
-                run_command = run_command.args(["-e", "HARDSHARE_LOG=1"])
-            }
-            run_command = run_command.arg(image);
-            let command_result = match run_command.output() {
-                Ok(o) => o,
-                Err(err) => {
-                    error!("{}", err);
-                    instance.declare_status(InstanceStatus::InitFail);
-                    instance.send_status();
-                    return;
-                }
-            };
-            if !command_result.status.success() {
-                error!("run command failed: {:?}", command_result);
-                instance.declare_status(InstanceStatus::InitFail);
-                instance.send_status();
-                return;
-            }
-
-            let addr: String =
-                if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
-                    "127.0.0.1".into()
-                } else {
-                    match CurrentInstance::get_container_addr(&cprovider, &name, 10) {
-                        Ok(a) => a,
-                        Err(err) => {
-                            error!("{}", err);
-                            instance.declare_status(InstanceStatus::InitFail);
-                            instance.send_status();
-                            return;
-                        }
-                    }
-                };
-
-            let sshport = if cprovider == CProvider::Docker {
-                22
-            } else {
-                match CurrentInstance::get_container_sshport(&cprovider, &name) {
-                    Ok(a) => a,
-                    Err(err) => {
-                        error!("{}", err);
-                        instance.declare_status(InstanceStatus::InitFail);
-                        instance.send_status();
-                        return;
-                    }
-                }
-            };
-
-            let mut public_key_file = match NamedTempFile::new() {
-                Ok(f) => f,
-                Err(err) => {
-                    error!("{}", err);
-                    instance.declare_status(InstanceStatus::InitFail);
-                    instance.send_status();
-                    return;
-                }
-            };
-            match write!(public_key_file, "{}", public_key) {
-                Ok(()) => {
-                    debug!(
-                        "wrote public key file: {}",
-                        public_key_file.path().to_string_lossy()
-                    );
-                }
-                Err(err) => {
-                    error!(
-                        "failed to write public key file ({}): {:?}",
-                        public_key_file.path().to_string_lossy(),
-                        err
-                    );
-                    instance.declare_status(InstanceStatus::InitFail);
-                    instance.send_status();
-                    return;
-                }
-            };
-
-            let mkdir_result = Command::new(&cprovider_execname)
-                .args(["exec", &name, "/bin/mkdir", "-p", "/root/.ssh"])
-                .status()
-                .unwrap();
-            if !mkdir_result.success() {
-                error!("mkdir command failed: {:?}", mkdir_result);
-                instance.declare_status(InstanceStatus::InitFail);
-                instance.send_status();
-                return;
-            }
-
-            let cp_result = Command::new(&cprovider_execname)
-                .args([
-                    "cp",
-                    public_key_file.path().to_str().unwrap(),
-                    &(name.clone() + ":/root/.ssh/authorized_keys"),
-                ])
-                .status()
-                .unwrap();
-            if !cp_result.success() {
-                error!("cp command failed: {:?}", cp_result);
-                instance.declare_status(InstanceStatus::InitFail);
-                instance.send_status();
-                return;
-            }
-
-            let chown_result = Command::new(&cprovider_execname)
-                .args([
-                    "exec",
-                    &name,
-                    "/bin/chown",
-                    "0:0",
-                    "/root/.ssh/authorized_keys",
-                ])
-                .status()
-                .unwrap();
-            if !chown_result.success() {
-                error!("chown command failed: {:?}", chown_result);
-                instance.declare_status(InstanceStatus::InitFail);
-                instance.send_status();
-                return;
-            }
-
-            let hostkey: String =
-                match CurrentInstance::get_container_hostkey(&cprovider, &name, 10) {
-                    Ok(k) => k,
-                    Err(err) => {
-                        error!("{}", err);
-                        instance.declare_status(InstanceStatus::InitFail);
-                        instance.send_status();
-                        return;
-                    }
-                };
-
-            for script in instance.wdeployment.init_inside.iter() {
-                let status = Command::new(&cprovider_execname)
-                    .args(["exec", &name, "/bin/sh", "-c", script])
-                    .status();
-                match status {
-                    Ok(script_result) => {
-                        if !script_result.success() {
-                            error!("`{script}` failed: {}", script_result);
-                            instance.declare_status(InstanceStatus::InitFail);
-                            instance.send_status();
-                            return;
-                        }
-                    }
-                    Err(err) => {
-                        error!("`{script}` failed: {}", err);
-                        instance.declare_status(InstanceStatus::InitFail);
-                        instance.send_status();
-                        return;
-                    }
-                }
-            }
-
-            if let Some(repo_info) = repo_args {
-                let status = Command::new(&cprovider_execname)
-                    .args([
-                        "exec",
-                        &name,
-                        "/bin/sh",
-                        "-c",
-                        &format!("cd $HOME && git clone {} m", repo_info.url),
-                    ])
-                    .status();
-                match status {
-                    Ok(clone_result) => {
-                        if !clone_result.success() {
-                            error!("clone of {:?} failed: {}", repo_info, clone_result);
-                            instance.declare_status(InstanceStatus::InitFail);
-                            instance.send_status();
-                            return;
-                        }
-                    }
-                    Err(err) => {
-                        error!("clone of {:?} failed: {}", repo_info, err);
-                        instance.declare_status(InstanceStatus::InitFail);
-                        instance.send_status();
-                        return;
-                    }
-                }
-
-                if let Some(path) = repo_info.path {
-                    let status = Command::new(cprovider_execname)
-                        .args([
-                            "exec",
-                            &name,
-                            "/bin/sh",
-                            "-c",
-                            &format!("cd $HOME/m && {}", path),
-                        ])
-                        .status();
-                    match status {
-                        Ok(exec_result) => {
-                            if !exec_result.success() {
-                                error!("exec of {} failed: {}", path, exec_result);
-                                instance.declare_status(InstanceStatus::InitFail);
-                                instance.send_status();
-                                return;
-                            }
-                        }
-                        Err(err) => {
-                            error!("exec of {} failed: {}", path, err);
-                            instance.declare_status(InstanceStatus::InitFail);
-                            instance.send_status();
-                            return;
-                        }
-                    }
-                }
-            }
-
-            if let Err(err) = instance.start_sshtun(&addr, sshport, &tunnelkey_path) {
+            Ok(ca) => ca,
+            Err(err) => {
                 error!("{}", err);
                 instance.declare_status(InstanceStatus::InitFail);
                 instance.send_status();
                 return;
             }
-        } else if cprovider == CProvider::Lxd {
-            error!("lxd cprovider not implemented yet");
-            instance.declare_status(InstanceStatus::InitFail);
-            instance.send_status();
-            return;
-        } else if cprovider == CProvider::Proxy {
-            error!("proxy cprovider not implemented yet");
-            instance.declare_status(InstanceStatus::InitFail);
-            instance.send_status();
-            return;
-        } else {
-            error!("unknown cprovider: {}", cprovider);
+        };
+
+        let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
+        let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
+
+        if let Some(repo_info) = repo_args {
+            let status = Command::new(&cprovider_execname)
+                .args([
+                    "exec",
+                    &name,
+                    "/bin/sh",
+                    "-c",
+                    &format!("cd $HOME && git clone {} m", repo_info.url),
+                ])
+                .status();
+            match status {
+                Ok(clone_result) => {
+                    if !clone_result.success() {
+                        error!("clone of {:?} failed: {}", repo_info, clone_result);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+                Err(err) => {
+                    error!("clone of {:?} failed: {}", repo_info, err);
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            }
+
+            if let Some(path) = repo_info.path {
+                let status = Command::new(cprovider_execname)
+                    .args([
+                        "exec",
+                        &name,
+                        "/bin/sh",
+                        "-c",
+                        &format!("cd $HOME/m && {}", path),
+                    ])
+                    .status();
+                match status {
+                    Ok(exec_result) => {
+                        if !exec_result.success() {
+                            error!("exec of {} failed: {}", path, exec_result);
+                            instance.declare_status(InstanceStatus::InitFail);
+                            instance.send_status();
+                            return;
+                        }
+                    }
+                    Err(err) => {
+                        error!("exec of {} failed: {}", path, err);
+                        instance.declare_status(InstanceStatus::InitFail);
+                        instance.send_status();
+                        return;
+                    }
+                }
+            }
+        }
+
+        if let Err(err) = instance.start_sshtun(container_addr, &tunnelkey_path) {
+            error!("{}", err);
             instance.declare_status(InstanceStatus::InitFail);
             instance.send_status();
             return;
         }
+
         instance.declare_status(InstanceStatus::Ready);
         instance.send_status();
     }
@@ -745,51 +560,234 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        if instance.wdeployment.cprovider == CProvider::Docker
-            || instance.wdeployment.cprovider == CProvider::DockerRootless
-            || instance.wdeployment.cprovider == CProvider::Podman
-        {
-            let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
-            let name = instance.get_local_name().unwrap();
-            let mut run_command = Command::new(cprovider_execname);
-            let run_command = run_command.args(["rm", "-f", &name]);
-            match run_command.status() {
-                Ok(s) => {
-                    if !s.success() {
-                        error!("exit code: {:?}", s.code());
-                        instance.declare_status(InstanceStatus::Fault);
-                        return;
-                    }
-                }
-                Err(err) => {
-                    error!("{}", err);
-                    instance.declare_status(InstanceStatus::Fault);
-                    return;
-                }
-            }
-        }
-
-        for script in instance.wdeployment.terminate.iter() {
-            match Command::new("/bin/sh").args(["-c", script]).status() {
-                Ok(script_result) => {
-                    if !script_result.success() {
-                        error!("`{script}` failed: {}", script_result);
-                        instance.declare_status(InstanceStatus::Fault);
-                        return;
-                    }
-                }
-                Err(err) => {
-                    error!("`{script}` failed: {}", err);
-                    instance.declare_status(InstanceStatus::Fault);
-                    return;
-                }
-            }
+        let name = instance.get_local_name().unwrap();
+        if let Err(err) = Self::destroy_container(&instance.wdeployment, &name) {
+            error!("caught: {}", err);
+            instance.declare_status(InstanceStatus::Fault);
+            return;
         }
 
         instance.clear_status();
         instance.send_destroy_done();
     }
-}
+
+
+    pub fn launch_container(
+        wdeployment: &WDeployment,
+        name: &str,
+        public_key: &str,
+    ) -> Result<ContainerAddress, Box<dyn std::error::Error>> {
+        let cprovider = wdeployment.cprovider.clone();
+        let ip: String;
+        let port: Port;
+        if cprovider == CProvider::Docker
+            || cprovider == CProvider::DockerRootless
+            || cprovider == CProvider::Podman
+        {
+            let cprovider_execname = cprovider.get_execname().unwrap();
+            let image = match &wdeployment.image {
+                Some(img) => img.clone(),
+                None => {
+                    return Err(Error::new("no image in configuration"));
+                }
+            };
+
+            let mut run_command = Command::new(&cprovider_execname);
+            let mut run_command = run_command.args([
+                "run",
+                "-d",
+                "-h",
+                name,
+                "--name",
+                name,
+                "--device=/dev/net/tun:/dev/net/tun",
+                "--cap-add=NET_ADMIN",
+            ]);
+            if cprovider != CProvider::Docker {
+                run_command = run_command.args(["--cap-add=CAP_SYS_CHROOT"]);
+            }
+            run_command = run_command.args(&wdeployment.cargs);
+            if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
+                run_command = run_command.args(["-p", "127.0.0.1::22"]);
+            }
+            if log_enabled!(Level::Debug) {
+                run_command = run_command.args(["-e", "HARDSHARE_LOG=1"])
+            }
+            run_command = run_command.arg(image);
+            let command_result = match run_command.output() {
+                Ok(o) => o,
+                Err(err) => {
+                    return Err(Error::new(format!("{}", err)));
+                }
+            };
+            if !command_result.status.success() {
+                return Err(Error::new(format!(
+                    "run command failed: {:?}",
+                    command_result
+                )));
+            }
+
+            ip = if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
+                "127.0.0.1".into()
+            } else {
+                match CurrentInstance::get_container_addr(&cprovider, name, 10) {
+                    Ok(a) => a,
+                    Err(err) => {
+                        return Err(Error::new(err));
+                    }
+                }
+            };
+
+            port = if cprovider == CProvider::Docker {
+                22
+            } else {
+                match CurrentInstance::get_container_sshport(&cprovider, name) {
+                    Ok(a) => a,
+                    Err(err) => {
+                        return Err(Error::new(err));
+                    }
+                }
+            };
+
+            let mut public_key_file = match NamedTempFile::new() {
+                Ok(f) => f,
+                Err(err) => {
+                    return Err(Error::new(err));
+                }
+            };
+            match write!(public_key_file, "{}", public_key) {
+                Ok(()) => {
+                    debug!(
+                        "wrote public key file: {}",
+                        public_key_file.path().to_string_lossy()
+                    );
+                }
+                Err(err) => {
+                    return Err(Error::new(format!(
+                        "failed to write public key file ({}): {:?}",
+                        public_key_file.path().to_string_lossy(),
+                        err
+                    )));
+                }
+            };
+
+            let mkdir_result = Command::new(&cprovider_execname)
+                .args(["exec", name, "/bin/mkdir", "-p", "/root/.ssh"])
+                .status()
+                .unwrap();
+            if !mkdir_result.success() {
+                return Err(Error::new(format!(
+                    "mkdir command failed: {:?}",
+                    mkdir_result
+                )));
+            }
+
+            let cp_result = Command::new(&cprovider_execname)
+                .args([
+                    "cp",
+                    public_key_file.path().to_str().unwrap(),
+                    &(name.to_string() + ":/root/.ssh/authorized_keys"),
+                ])
+                .status()
+                .unwrap();
+            if !cp_result.success() {
+                return Err(Error::new(format!("cp command failed: {:?}", cp_result)));
+            }
+
+            let chown_result = Command::new(&cprovider_execname)
+                .args([
+                    "exec",
+                    name,
+                    "/bin/chown",
+                    "0:0",
+                    "/root/.ssh/authorized_keys",
+                ])
+                .status()
+                .unwrap();
+            if !chown_result.success() {
+                return Err(Error::new(format!(
+                    "chown command failed: {:?}",
+                    chown_result
+                )));
+            }
+
+            let hostkey: String = match CurrentInstance::get_container_hostkey(&cprovider, name, 10)
+            {
+                Ok(k) => k,
+                Err(err) => {
+                    return Err(Error::new(err));
+                }
+            };
+
+            for script in wdeployment.init_inside.iter() {
+                let status = Command::new(&cprovider_execname)
+                    .args(["exec", name, "/bin/sh", "-c", script])
+                    .status();
+                match status {
+                    Ok(script_result) => {
+                        if !script_result.success() {
+                            return Err(Error::new(format!(
+                                "`{script}` failed: {}",
+                                script_result
+                            )));
+                        }
+                    }
+                    Err(err) => {
+                        return Err(Error::new(format!("`{script}` failed: {}", err)));
+                    }
+                }
+            }
+        } else if cprovider == CProvider::Lxd {
+            return Err(Error::new("lxd cprovider not implemented yet"));
+        } else if cprovider == CProvider::Proxy {
+            return Err(Error::new("proxy cprovider not implemented yet"));
+        } else {
+            return Err(Error::new(format!("unknown cprovider: {}", cprovider)));
+        }
+
+        Ok(ContainerAddress { ip, port })
+    }
+
+
+    pub fn destroy_container(
+        wdeployment: &WDeployment,
+        name: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if wdeployment.cprovider == CProvider::Docker
+            || wdeployment.cprovider == CProvider::DockerRootless
+            || wdeployment.cprovider == CProvider::Podman
+        {
+            let cprovider_execname = wdeployment.cprovider.get_execname().unwrap();
+            let mut run_command = Command::new(cprovider_execname);
+            let run_command = run_command.args(["rm", "-f", name]);
+            match run_command.status() {
+                Ok(s) => {
+                    if !s.success() {
+                        return Err(Error::new(format!("exit code: {:?}", s.code())));
+                    }
+                }
+                Err(err) => {
+                    return Err(Error::new(err));
+                }
+            }
+        }
+
+        for script in wdeployment.terminate.iter() {
+            match Command::new("/bin/sh").args(["-c", script]).status() {
+                Ok(script_result) => {
+                    if !script_result.success() {
+                        return Err(Error::new(format!("`{script}` failed: {}", script_result)));
+                    }
+                }
+                Err(err) => {
+                    return Err(Error::new(format!("`{script}` failed: {}", err)));
+                }
+            }
+        }
+
+        Ok(())
+    }
+} // impl CurrentInstance
 
 
 pub fn cworker(
