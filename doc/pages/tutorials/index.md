@@ -15,3 +15,4 @@ coordinate efforts.
 
 * [ESP32](/tutorials/esp32) - [ESP32-DevKitC](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html) with PlatformIO
 * [Misty](/tutorials/misty) - the [Misty](https://www.mistyrobotics.com/) robot in a Python sandbox
+* [XIAO](/tutorials/xiao) - Seeed Studio XIAO SAMD21
