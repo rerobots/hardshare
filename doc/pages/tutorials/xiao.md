@@ -11,4 +11,12 @@ The main intuition of hardshare is to add reproducibility to a workspace that is
 already known to be operational.
 
 
+## Prepare Docker image
+
+To facilitate efficient reproducibility, we want to prepare a container
+image that has requirements already installed so the user can simply
+"build-and-flash" without having to wait for additional toolchains to be
+downloaded, built, etc.
+
+
 ## Add USB device to hardshare configuration
