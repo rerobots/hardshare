@@ -27,5 +27,7 @@ downloaded, built, etc.
 
 ## Stream video
 
+Read more about the `attach-camera` command in the section: [Attach External Camera](/attach_camera).
+
 
 ## Make a sandbox
