@@ -134,6 +134,13 @@ pub struct WDeployment {
 }
 
 impl WDeployment {
+    pub fn new_min(id: &str, owner: &str) -> Self {
+        let mut wd = HashMap::new();
+        wd.insert("id".into(), json!(id));
+        wd.insert("owner".into(), json!(owner));
+        Self::from_json(&wd)
+    }
+
     pub fn from_json(h: &HashMap<String, serde_json::Value>) -> Self {
         let cprovider: CProvider = if h.contains_key("cprovider") {
             CProvider::try_from(h["cprovider"].as_str().unwrap()).unwrap()

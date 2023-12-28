@@ -1053,7 +1053,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     Ok(())
                 }
             }
-            Err(err) => CliError::new(&err, 1),
+            Err(err) => Err(err.into()),
         }
     }
 }

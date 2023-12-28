@@ -15,7 +15,7 @@
 use std::process::Command;
 
 use crate::control;
-use crate::mgmt::{self, CProvider, Config};
+use crate::mgmt::{self, CProvider, Config, WDeployment};
 
 
 #[derive(Debug)]
@@ -249,7 +249,36 @@ pub fn all_configurations(
 }
 
 
-pub fn defaults(fail_fast: bool) -> Result<(), String> {
+pub fn defaults(fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let mut at_least_one_error = false;
+
     check_docker(false)?;
-    Ok(())
+
+    let wdeployment = WDeployment::new_min("68a1be97-9365-4007-b726-14c56bd69eef", "owner");
+
+    info!("simulating instance launch ...");
+    let cname = "check";
+    if let Err(err) = control::CurrentInstance::launch_container(&wdeployment, cname, "checkkey") {
+        let msg = format!("caught while creating test container: {}", err);
+        if fail_fast {
+            return Err(Error::new(&msg));
+        }
+        at_least_one_error = true;
+        println!("{}", msg);
+    }
+
+    if let Err(err) = control::CurrentInstance::destroy_container(&wdeployment, cname) {
+        let msg = format!("caught while destroying test container: {}", err);
+        if fail_fast {
+            return Err(Error::new(&msg));
+        }
+        at_least_one_error = true;
+        println!("{}", msg);
+    }
+
+    if at_least_one_error {
+        Err(Error::new_empty())
+    } else {
+        Ok(())
+    }
 }
