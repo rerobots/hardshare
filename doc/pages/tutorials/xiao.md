@@ -24,6 +24,10 @@ downloaded, built, etc.
 
 ## Termination scripts
 
+You have the choice of executing a script at the end of every instance.
+This script provides automatic clean-up to prepare for the next user,
+for example, by erasing memory.
+
 
 ## Stream video
 
