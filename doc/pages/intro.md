@@ -60,7 +60,7 @@ you might get a "compute node" from a "cloud computing" company:
    force termination at any time.)
 
 The lifecycle of instances is illustrated below. In summary, every instance
-begins at `INIT`, can be used while `READY`. If there is an error during
+begins at `INIT` and can be used when `READY`. If there is an error during
 initialization, the instance is marked as `INIT_FAIL`. While `READY`, the
 instance can be terminated (that is, permanently stopped), either automatically
 when it expires or manually by the user or owner.
