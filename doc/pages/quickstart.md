@@ -65,6 +65,12 @@ hardshare register
 This command can fail if your account cannot register more new devices. Please
 [contact us](https://rerobots.net/contact) to raise the limit.
 
+Confirm that the configuration and dependencies are all ready:
+
+```bash
+hardshare check
+```
+
 
 ## Start Sharing!
 
