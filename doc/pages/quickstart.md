@@ -28,21 +28,6 @@ command-line interface (CLI)
 hardshare version
 ```
 
-A container provider must be installed before `hardshare` can create
-instances. The default is [Docker](https://www.docker.com/get-started). To
-check that you have it
-
-```bash
-docker version
-```
-
-You must be able to run `docker` without `sudo`. Typically, this is achieved
-by membership in the `docker` group. For example, if your username is `USER`
-and "docker" is not in the output of `groups`, then do
-`sudo useradd -a -G docker USER`.
-
-If Docker is configured to be [rootless](https://docs.docker.com/engine/security/rootless/),
-then [select the cprovider `docker-rootless`](/install#prepare-a-cprovider).
 
 ## Create Local Configuration
 
@@ -70,6 +55,10 @@ Confirm that the configuration and dependencies are all ready:
 ```bash
 hardshare check
 ```
+
+If an error is detected, the `check` command will print details and
+suggest how to fix it. If the suggestion does not work for you, then
+read the [Installation Instructions](/install).
 
 
 ## Start Sharing!

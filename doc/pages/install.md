@@ -67,11 +67,26 @@ hardshare version
 
 ## Prepare a cprovider
 
+A container provider must be installed before `hardshare` can create
+instances.
+
 ### Docker
 
-The default cprovider is `docker`, which works for installations of Docker
-from the package management systems of popular distributions.
-For [rootless Docker](https://docs.docker.com/engine/security/rootless/),
+The default cprovider is [docker](https://www.docker.com/get-started),
+which works for installations of Docker from the package management systems of popular distributions.
+To check that you have it,
+
+```bash
+docker version
+```
+
+You must be able to run `docker` without `sudo`. Typically, this is achieved
+by membership in the `docker` group. For example, if your username is `USER`
+and "docker" is not in the output of `groups`, then do
+`sudo useradd -a -G docker USER`.
+
+If Docker is configured to be [rootless](https://docs.docker.com/engine/security/rootless/),
+then
 ```bash
 hardshare config --cprovider docker-rootless
 ```
