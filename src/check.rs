@@ -100,6 +100,18 @@ fn check_lxd() -> Result<(), String> {
 }
 
 
+fn check_cprovider(cp: &CProvider) -> Result<(), Box<dyn std::error::Error>> {
+    if cp == &CProvider::Podman {
+        check_podman()?;
+    } else if cp == &CProvider::Docker || cp == &CProvider::DockerRootless {
+        check_docker(cp == &CProvider::DockerRootless)?;
+    } else if cp == &CProvider::Lxd {
+        check_lxd()?;
+    }
+    Ok(())
+}
+
+
 pub fn config(
     local_config: &Config,
     id: &str,
@@ -188,15 +200,7 @@ pub fn config(
         }
     }
 
-    if local_config.wdeployments[wd_index].cprovider == CProvider::Podman {
-        check_podman()?;
-    } else if local_config.wdeployments[wd_index].cprovider == CProvider::Docker
-        || local_config.wdeployments[wd_index].cprovider == CProvider::DockerRootless
-    {
-        check_docker(local_config.wdeployments[wd_index].cprovider == CProvider::DockerRootless)?;
-    } else if local_config.wdeployments[wd_index].cprovider == CProvider::Lxd {
-        check_lxd()?;
-    }
+    check_cprovider(&local_config.wdeployments[wd_index].cprovider)?;
 
     info!("simulating instance launch ...");
     let cname = "check";
@@ -258,9 +262,9 @@ pub fn all_configurations(
 pub fn defaults(fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mut at_least_one_error = false;
 
-    check_docker(false)?;
-
     let wdeployment = WDeployment::new_min("68a1be97-9365-4007-b726-14c56bd69eef", "owner");
+
+    check_cprovider(&wdeployment.cprovider)?;
 
     info!("simulating instance launch ...");
     let cname = "check";
