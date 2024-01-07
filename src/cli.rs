@@ -1249,7 +1249,7 @@ pub fn main() -> Result<(), CliError> {
                          .help("quit upon first detected error"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
-                         .help("id of workspace deployment to check")))
+                         .help("id of workspace deployment to check; if neither --all nor ID is given, then check whether a deployment with the default configuration has all requirements satisfied")))
         .subcommand(SubCommand::with_name("stop-cameras")
                     .about("Stop camera streams previously started by attach-camera")
                     .arg(Arg::with_name("all_cameras")
