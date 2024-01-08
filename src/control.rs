@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Write;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -759,7 +759,7 @@ impl CurrentInstance {
         {
             let cprovider_execname = wdeployment.cprovider.get_execname().unwrap();
             let mut run_command = Command::new(cprovider_execname);
-            let run_command = run_command.args(["rm", "-f", name]);
+            let run_command = run_command.args(["rm", "-f", name]).stdout(Stdio::null());
             match run_command.status() {
                 Ok(s) => {
                     if !s.success() {
