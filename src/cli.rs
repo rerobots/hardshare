@@ -814,10 +814,7 @@ fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliE
             }
             Ok(())
         }
-        Err(err) => CliError::new(
-            &format!("{}\nIs the local hardshare client active?", err),
-            1,
-        ),
+        Err(err) => CliError::new(format!("{}\nIs the local hardshare client active?", err), 1),
     }
 }
 
@@ -898,7 +895,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
     let width_height = match matches.value_of("attach_camera_res") {
         Some(wh) => match wh.parse::<CameraDimensions>() {
             Ok(c) => Some(c),
-            Err(err) => return CliError::new(&err, 1),
+            Err(err) => return CliError::new(err, 1),
         },
         None => None,
     };
@@ -916,7 +913,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
                     }
                     if !matched {
                         return CliError::new(
-                            &format!("unknown ID in crop configuration: {}", crop_wd),
+                            format!("unknown ID in crop configuration: {}", crop_wd),
                             1,
                         );
                     }
@@ -925,7 +922,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
                 Some(c)
             }
             Err(err) => {
-                return CliError::new(&format!("failed to parse crop configuration: {}", err), 1)
+                return CliError::new(format!("failed to parse crop configuration: {}", err), 1)
             }
         },
         None => None,
