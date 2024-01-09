@@ -95,7 +95,7 @@ impl TryFrom<&str> for CProvider {
             "lxd" => Ok(Self::Lxd),
             "podman" => Ok(Self::Podman),
             "proxy" => Ok(Self::Proxy),
-            _ => Err("unrecognized cprovider"),
+            _ => Err("error: cprovider must be one of the following: docker, docker-rootless, lxd, podman, proxy"),
         }
     }
 }

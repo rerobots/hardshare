@@ -58,9 +58,12 @@ impl From<Box<dyn std::error::Error>> for CliError {
 }
 
 impl CliError {
-    fn new(msg: &str, exitcode: i32) -> Result<(), CliError> {
+    fn new<S>(msg: S, exitcode: i32) -> Result<(), CliError>
+    where
+        S: ToString,
+    {
         Err(CliError {
-            msg: Some(String::from(msg)),
+            msg: Some(msg.to_string()),
             exitcode,
         })
     }
@@ -383,10 +386,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             let selected_cprovider = match CProvider::try_from(cprovider.to_lowercase().as_str()) {
                 Ok(c) => c,
                 Err(err) => {
-                    return CliError::new(
-                        "cprovider must be one of the following: lxd, docker, docker-rootless, podman, proxy",
-                        1,
-                    );
+                    return CliError::new(err, 1);
                 }
             };
 
