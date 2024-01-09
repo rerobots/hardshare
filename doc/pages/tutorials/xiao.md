@@ -18,6 +18,11 @@ image that has requirements already installed so the user can simply
 "build-and-flash" without having to wait for additional toolchains to be
 downloaded, built, etc.
 
+With this in mind, we will begin with a base image that already has [PlatformIO](https://docs.platformio.org/en/latest/what-is-platformio.html)
+installed. Then, we will build example code in a process that will automatically
+install required packages for that example. Finally, the resulting container
+will be committed as an image that can be re-used.
+
 
 ## Add USB device to hardshare configuration
 
