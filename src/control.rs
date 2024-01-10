@@ -18,6 +18,7 @@ use std::io::prelude::*;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::sync::atomic::{self, AtomicBool};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
@@ -201,7 +202,7 @@ impl CurrentInstance {
         instance_id: &str,
         public_key: &str,
         repo_args: Option<RepoInfo>,
-    ) -> Result<(), &str> {
+    ) -> Result<(thread::JoinHandle<()>, Arc<AtomicBool>), &str> {
         let mut status = self.status.lock().unwrap();
         match *status {
             Some(_) => {
@@ -215,10 +216,16 @@ impl CurrentInstance {
 
         let instance = self.clone();
         let public_key = String::from(public_key);
-        thread::spawn(move || {
-            CurrentInstance::launch(instance, &public_key, repo_args);
-        });
-        Ok(())
+
+        let abort_launch = Arc::new(AtomicBool::new(false));
+        let abort_launch_clone = abort_launch.clone();
+
+        Ok((
+            thread::spawn(move || {
+                CurrentInstance::launch(instance, &public_key, repo_args, abort_launch_clone);
+            }),
+            abort_launch,
+        ))
     }
 
     fn exists(&self) -> bool {
@@ -411,7 +418,12 @@ impl CurrentInstance {
     }
 
 
-    fn launch(mut instance: CurrentInstance, public_key: &str, repo_args: Option<RepoInfo>) {
+    fn launch(
+        mut instance: CurrentInstance,
+        public_key: &str,
+        repo_args: Option<RepoInfo>,
+        abort_launch: Arc<AtomicBool>,
+    ) {
         let base_name = instance.wdeployment.container_name.clone();
         let name = instance.generate_local_name(&base_name);
         let container_addr = match Self::launch_container(&instance.wdeployment, &name, public_key)
@@ -424,6 +436,12 @@ impl CurrentInstance {
                 return;
             }
         };
+        if abort_launch.load(atomic::Ordering::Relaxed) {
+            error!("received request to abort launch");
+            instance.declare_status(InstanceStatus::InitFail);
+            instance.send_status();
+            return;
+        }
 
         let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
         let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
@@ -811,7 +829,7 @@ pub fn cworker(
                     &req.publickey.unwrap(),
                     req.repo_args,
                 ) {
-                    Ok(()) => {
+                    Ok(_) => {
                         main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
@@ -1051,14 +1069,15 @@ pub enum CWorkerMessageType {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::sync::{atomic, Arc};
 
     use super::CurrentInstance;
+    use crate::mgmt::WDeployment;
 
 
     #[test]
     fn cannot_init_when_busy() {
-        let wdeployment = serde_json::from_str(
+        let wdeployment: WDeployment = serde_json::from_str(
             r#"
             {
                 "id": "68a1be97-9365-4007-b726-14c56bd69eef",
@@ -1076,9 +1095,17 @@ mod tests {
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
-        let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment), None);
-        assert!(current_instance.init(instance_ids[0], "", None).is_ok());
+        let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment.clone()), None);
+        let result = current_instance.init(instance_ids[0], "", None);
+        assert!(result.is_ok());
+        let (thread_handle, abort_launch) = result.unwrap();
+
         assert!(current_instance.exists());
         assert!(current_instance.init(instance_ids[1], "", None).is_err());
+
+        abort_launch.store(true, atomic::Ordering::Relaxed);
+        thread_handle.join().unwrap();
+        let name = current_instance.get_local_name().unwrap();
+        CurrentInstance::destroy_container(&wdeployment, &name).unwrap();
     }
 }
