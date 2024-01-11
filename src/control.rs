@@ -1075,9 +1075,8 @@ mod tests {
     use crate::mgmt::WDeployment;
 
 
-    #[test]
-    fn cannot_init_when_busy() {
-        let wdeployment: WDeployment = serde_json::from_str(
+    fn create_example_wdeployment() -> WDeployment {
+        serde_json::from_str(
             r#"
             {
                 "id": "68a1be97-9365-4007-b726-14c56bd69eef",
@@ -1090,7 +1089,13 @@ mod tests {
                 "container_name": "rrc"
             }"#,
         )
-        .unwrap();
+        .unwrap()
+    }
+
+
+    #[test]
+    fn cannot_init_when_busy() {
+        let wdeployment = create_example_wdeployment();
         let instance_ids = vec![
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
@@ -1107,5 +1112,15 @@ mod tests {
         thread_handle.join().unwrap();
         let name = current_instance.get_local_name().unwrap();
         CurrentInstance::destroy_container(&wdeployment, &name).unwrap();
+    }
+
+
+    #[test]
+    fn generated_local_name_random() {
+        let wdeployment = create_example_wdeployment();
+        let mut instance = CurrentInstance::new(&Arc::new(wdeployment), None);
+        let first = instance.generate_local_name("base");
+        let second = instance.generate_local_name("base");
+        assert_ne!(first, second);
     }
 }
