@@ -1120,6 +1120,8 @@ mod tests {
         let wdeployment = create_example_wdeployment();
         let mut instance = CurrentInstance::new(&Arc::new(wdeployment), None);
         let first = instance.generate_local_name("base");
+        let first_as_stored = instance.get_local_name().unwrap();
+        assert_eq!(first, first_as_stored);
         let second = instance.generate_local_name("base");
         assert_ne!(first, second);
     }
