@@ -51,9 +51,11 @@ hardshare config --add-token path/to/your/jwt.txt
 ### Containers
 
 Hardshare shares hardware among remote users through containers. The term
-*container* in the context of hardshare includes Linux containers. Supporting
-software that facilitates containers in hardshare are known *cproviders*. For new
-users, Docker is a good first cprovider to try and is the default in a
+*container* in the context of hardshare includes Linux containers and other
+kinds of contained runtime environments, such as [bhyve](https://wiki.freebsd.org/bhyve),
+emulators, and proxies.
+Supporting software that facilitates containers in hardshare are known *cproviders*.
+For new users, Docker is a good first cprovider to try and is the default in a
 newly installed `hardshare` client configuration.
 
 Finally, releases of the client are available at <https://github.com/rerobots/hardshare/releases>
