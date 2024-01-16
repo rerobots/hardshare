@@ -975,6 +975,9 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             for (err_token_path, err) in err_tokens {
                 println!("\t {}: {}", err, err_token_path);
             }
+            if !err_tokens.is_empty() {
+                println!("remove these with the following command:\n\n    hardshare config -p\n");
+            }
         }
         if config.api_tokens.is_empty() {
             at_least_one_error = true;
