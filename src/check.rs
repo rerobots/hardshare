@@ -264,7 +264,12 @@ pub fn defaults(fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     let wdeployment = WDeployment::new_min("68a1be97-9365-4007-b726-14c56bd69eef", "owner");
 
-    check_cprovider(&wdeployment.cprovider)?;
+    if let Err(err) = check_cprovider(&wdeployment.cprovider) {
+        return Err(Error::new(format!(
+            "{}\nIs {} installed correctly?",
+            err, &wdeployment.cprovider
+        )));
+    }
 
     info!("simulating instance launch ...");
     let cname = "check";
