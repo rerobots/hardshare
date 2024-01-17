@@ -200,7 +200,12 @@ pub fn config(
         }
     }
 
-    check_cprovider(&local_config.wdeployments[wd_index].cprovider)?;
+    if let Err(err) = check_cprovider(&local_config.wdeployments[wd_index].cprovider) {
+        return Err(Error::new(format!(
+            "{}\nIs {} installed correctly?",
+            err, &local_config.wdeployments[wd_index].cprovider
+        )));
+    }
 
     info!("simulating instance launch ...");
     let cname = "check";
