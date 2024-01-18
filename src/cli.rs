@@ -981,7 +981,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
         if config.api_tokens.is_empty() {
             at_least_one_error = true;
-            println!("no valid API tokens");
+            println!("no valid API tokens\nCreate and manage API tokens at\n\n    https://rerobots.net/tokens\n");
         } else {
             let org_name = match &config.default_org {
                 Some(default_org) => default_org.as_str(),
