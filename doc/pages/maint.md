@@ -56,7 +56,7 @@ Then, exit the shell normally.
 For example,
 
 ```bash
-./hardshare -v ad 2>&1 | tee -a hs.log
+hardshare -v ad 2>&1 | tee -a hs.log
 ```
 
 will run `ad` with verbose logging and pipe through
