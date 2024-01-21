@@ -214,8 +214,14 @@ pub fn config(
         cname,
         "checkkey",
     ) {
-        let msg = format!("caught while creating test container: {}", err);
+        let mut msg = format!("caught while creating test container: {}", err);
         if fail_fast {
+            if local_config.wdeployments[wd_index].cprovider != CProvider::Proxy {
+                msg += &format!(
+                    "\nYou may need to manually stop or remove it using {}: {}",
+                    local_config.wdeployments[wd_index].cprovider, cname
+                );
+            }
             return Err(Error::new(&msg));
         }
         at_least_one_error = true;
