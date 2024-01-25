@@ -33,6 +33,14 @@ use openssl::ssl::{SslConnector, SslMethod};
 use crate::api::{self, CameraDimensions};
 
 
+pub fn get_default_dev() -> String {
+    #[cfg(target_os = "linux")]
+    return "/dev/video0".into();
+    #[cfg(target_os = "macos")]
+    return "0".into();
+}
+
+
 pub fn stream_websocket(
     origin: &str,
     api_token: &str,

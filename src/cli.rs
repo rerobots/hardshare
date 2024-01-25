@@ -21,6 +21,7 @@ use serde::Serialize;
 use clap::{Arg, SubCommand};
 
 use crate::api::{CameraCrop, CameraDimensions};
+use crate::camera;
 use crate::mgmt::CProvider;
 use crate::{api, check, mgmt};
 
@@ -870,14 +871,8 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    #[cfg(target_os = "linux")]
-    let camera_path_default = "/dev/video0";
-    #[cfg(target_os = "macos")]
-    let camera_path_default = "0";
-
-    let camera_path = matches
-        .value_of("camera_path")
-        .unwrap_or(camera_path_default);
+    let default_dev = camera::get_default_dev();
+    let camera_path = matches.value_of("camera_path").unwrap_or(&default_dev);
 
     let mut wds = if matches.values_of("attach_camera_crop_config").is_none() {
         let wds = match matches.values_of("id_prefix") {
