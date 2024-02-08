@@ -1012,6 +1012,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         match check::config(
             &local_config,
             &local_config.wdeployments[wd_index].id,
+            None,
             matches.is_present("fail_fast"),
         ) {
             Ok(()) => {

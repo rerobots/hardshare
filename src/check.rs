@@ -14,8 +14,8 @@
 
 use std::process::Command;
 
-use crate::control;
 use crate::mgmt::{self, CProvider, Config, WDeployment};
+use crate::{api, control};
 
 
 #[derive(Debug)]
@@ -112,9 +112,28 @@ fn check_cprovider(cp: &CProvider) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 
+fn check_deployment_in_remote(
+    id: &str,
+    remote_config: &serde_json::Value,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut found = false;
+    for wd in remote_config["wdeployments"].as_array().unwrap().iter() {
+        if wd["id"] == id {
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        return Err(Error::new("This deployment is not known by rerobots! Compare with your devices shown at https://rerobots.net/hardshare\nDid you manually edit local configuration files?"));
+    }
+    Ok(())
+}
+
+
 pub fn config(
     local_config: &Config,
     id: &str,
+    remote_config: Option<&serde_json::Value>,
     fail_fast: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let wd_index = match mgmt::find_id_prefix(local_config, Some(id)) {
@@ -130,6 +149,42 @@ pub fn config(
     let mut at_least_one_error = false;
 
     info!("checking configuration of {} ...", id);
+
+    match remote_config {
+        Some(rc) => {
+            let res = check_deployment_in_remote(id, rc);
+            if let Err(err) = res {
+                at_least_one_error = true;
+                if fail_fast {
+                    return Err(err);
+                }
+                println!("{}: {}", id, err);
+            }
+        }
+        None => {
+            let ac = api::HSAPIClient::new();
+            match ac.get_remote_config(false) {
+                Ok(rc) => {
+                    let res = check_deployment_in_remote(id, &rc);
+                    if let Err(err) = res {
+                        at_least_one_error = true;
+                        if fail_fast {
+                            return Err(err);
+                        }
+                        println!("{}: {}", id, err);
+                    }
+                }
+                Err(err) => {
+                    let msg = format!("caught while checking registration on server: {}", err);
+                    if fail_fast {
+                        return Err(Error::new(&msg));
+                    }
+                    at_least_one_error = true;
+                    println!("{}", msg);
+                }
+            };
+        }
+    }
 
     if local_config
         .api_tokens
@@ -252,8 +307,23 @@ pub fn all_configurations(
     fail_fast: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut at_least_one_error = false;
+
+    let ac = api::HSAPIClient::new();
+    let remote_config = match ac.get_remote_config(false) {
+        Ok(rc) => Some(rc),
+        Err(err) => {
+            let msg = format!("caught while checking registration on server: {}", err);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
+            None
+        }
+    };
+
     for wd in local_config.wdeployments.iter() {
-        if let Err(err) = config(local_config, &wd.id, fail_fast) {
+        if let Err(err) = config(local_config, &wd.id, remote_config.as_ref(), fail_fast) {
             let msg = format!("{}: {}", &wd.id, err);
             if fail_fast {
                 return Err(Error::new(&msg));
