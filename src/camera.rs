@@ -289,6 +289,10 @@ fn verify_capture_ability(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    use v4l::prelude::*;
+    use v4l::video::Capture;
+
+    let buffer_count = 4;
     debug!("opening camera {}", camera_path);
     let dev = match v4l::Device::with_path(camera_path) {
         Ok(d) => d,
