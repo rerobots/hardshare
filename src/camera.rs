@@ -31,6 +31,7 @@ use futures::stream::{SplitSink, StreamExt};
 use openssl::ssl::{SslConnector, SslMethod};
 
 use crate::api::{self, CameraDimensions};
+use crate::check::Error as CheckError;
 
 
 pub fn get_default_dev() -> String {
@@ -38,6 +39,11 @@ pub fn get_default_dev() -> String {
     return "/dev/video0".into();
     #[cfg(target_os = "macos")]
     return "0".into();
+}
+
+
+pub fn check_camera(camera_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    verify_capture_ability(camera_path, None)
 }
 
 
@@ -109,6 +115,63 @@ enum CaptureCommand {
     Start, // Read images from camera
     Stop,  // Do not read images from camera
     Quit,  // Return from (close) the thread
+}
+
+
+#[cfg(target_os = "macos")]
+fn verify_capture_ability(
+    camera_path: &str,
+    dimensions: Option<CameraDimensions>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use openpnp_capture::{Device, Format, Stream};
+
+    let camera_index: usize = match camera_path.parse() {
+        Ok(c) => c,
+        Err(err) => {
+            return Err(CheckError::new(format!(
+                "error parsing camera index: {}",
+                err
+            )));
+        }
+    };
+    debug!("enumerating camera devices");
+    let devices = Device::enumerate();
+
+    debug!("opening camera {}", camera_index);
+    if camera_index > devices.len() - 1 {
+        return Err(CheckError::new(format!(
+            "camera index is out of range: {}",
+            camera_index
+        )));
+    }
+    let dev = match Device::new(devices[camera_index]) {
+        Some(d) => d,
+        None => {
+            return Err(CheckError::new("failed to open camera device"));
+        }
+    };
+
+    let (mut width, mut height) = match dimensions {
+        Some(d) => (d.width, d.height),
+        None => (1280, 720),
+    };
+    let format = Format::default().width(width).height(height);
+
+    let stream = match Stream::new(&dev, &format) {
+        Some(s) => s,
+        None => {
+            return Err(CheckError::new("failed to create camera stream"));
+        }
+    };
+    if stream.format().width != width || stream.format().height != height {
+        (width, height) = (stream.format().width, stream.format().height);
+        warn!(
+            "requested format not feasible; falling back to ({}, {})",
+            width, height
+        );
+    }
+
+    Ok(())
 }
 
 
@@ -218,6 +281,63 @@ fn video_capture(
             std::thread::sleep(Duration::from_secs(2));
         }
     }
+}
+
+
+#[cfg(target_os = "linux")]
+fn verify_capture_ability(
+    camera_path: &str,
+    dimensions: Option<CameraDimensions>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    debug!("opening camera {}", camera_path);
+    let dev = match v4l::Device::with_path(camera_path) {
+        Ok(d) => d,
+        Err(err) => {
+            return Err(CheckError::new(format!(
+                "when opening camera device, caught {}",
+                err
+            )));
+        }
+    };
+    let mut format = dev.format().unwrap();
+    format.fourcc = v4l::FourCC::new(b"MJPG");
+    if let Some(d) = &dimensions {
+        format.width = d.width;
+        format.height = d.height;
+    }
+    format = match dev.set_format(&format) {
+        Ok(f) => {
+            if let Some(d) = dimensions {
+                if f.width != d.width || f.height != d.height {
+                    warn!(
+                        "requested size not feasible; falling back to ({}, {})",
+                        f.width, f.height
+                    );
+                }
+            }
+            debug!("set format: {}", f);
+            f
+        }
+        Err(err) => {
+            return Err(CheckError::new(format!(
+                "failed to set camera format MJPG: {}",
+                err
+            )));
+        }
+    };
+
+    let stream = match MmapStream::with_buffers(&dev, v4l::buffer::Type::VideoCapture, buffer_count)
+    {
+        Ok(s) => {
+            debug!("MmapStream, video capture");
+            s
+        }
+        Err(err) => {
+            return Err(CheckError::new(format!("failed to open stream: {}", err)));
+        }
+    };
+
+    Ok(())
 }
 
 

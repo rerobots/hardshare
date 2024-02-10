@@ -1011,6 +1011,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
         match check::config(
             &local_config,
+            matches.is_present("camera"),
             &local_config.wdeployments[wd_index].id,
             None,
             matches.is_present("fail_fast"),
@@ -1030,7 +1031,11 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
         let local_config = local_config.unwrap();
 
-        match check::all_configurations(&local_config, matches.is_present("fail_fast")) {
+        match check::all_configurations(
+            &local_config,
+            matches.is_present("camera"),
+            matches.is_present("fail_fast"),
+        ) {
             Ok(()) => {
                 if at_least_one_error {
                     CliError::newrc(1)
@@ -1041,7 +1046,10 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => Err(err.into()),
         }
     } else {
-        match check::defaults(matches.is_present("fail_fast")) {
+        match check::defaults(
+            matches.is_present("camera"),
+            matches.is_present("fail_fast"),
+        ) {
             Ok(()) => {
                 if at_least_one_error {
                     CliError::newrc(1)
@@ -1243,6 +1251,9 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("fail_fast")
                          .long("fail-fast")
                          .help("quit upon first detected error"))
+                    .arg(Arg::with_name("camera")
+                         .long("camera")
+                         .help("check camera and image capture (not streaming)"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment to check; if neither --all nor ID is given, then check whether a deployment with the default configuration has all requirements satisfied")))

@@ -15,7 +15,7 @@
 use std::process::Command;
 
 use crate::mgmt::{self, CProvider, Config, WDeployment};
-use crate::{api, control};
+use crate::{api, camera, control};
 
 
 #[derive(Debug)]
@@ -132,6 +132,7 @@ fn check_deployment_in_remote(
 
 pub fn config(
     local_config: &Config,
+    check_camera: bool,
     id: &str,
     remote_config: Option<&serde_json::Value>,
     fail_fast: bool,
@@ -304,6 +305,7 @@ pub fn config(
 
 pub fn all_configurations(
     local_config: &Config,
+    check_camera: bool,
     fail_fast: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut at_least_one_error = false;
@@ -323,7 +325,13 @@ pub fn all_configurations(
     };
 
     for wd in local_config.wdeployments.iter() {
-        if let Err(err) = config(local_config, &wd.id, remote_config.as_ref(), fail_fast) {
+        if let Err(err) = config(
+            local_config,
+            check_camera,
+            &wd.id,
+            remote_config.as_ref(),
+            fail_fast,
+        ) {
             let msg = format!("{}: {}", &wd.id, err);
             if fail_fast {
                 return Err(Error::new(&msg));
@@ -340,10 +348,21 @@ pub fn all_configurations(
 }
 
 
-pub fn defaults(fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mut at_least_one_error = false;
 
     let wdeployment = WDeployment::new_min("68a1be97-9365-4007-b726-14c56bd69eef", "owner");
+
+    if check_camera {
+        if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
+            let msg = format!("caught while checking camera: {}", err);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
+        }
+    }
 
     if let Err(err) = check_cprovider(&wdeployment.cprovider) {
         return Err(Error::new(format!(
