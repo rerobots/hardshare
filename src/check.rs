@@ -187,6 +187,17 @@ pub fn config(
         }
     }
 
+    if check_camera {
+        if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
+            let msg = format!("caught while checking camera: {}", err);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
+        }
+    }
+
     if local_config
         .api_tokens
         .contains_key(&local_config.wdeployments[wd_index].owner)
@@ -324,10 +335,21 @@ pub fn all_configurations(
         }
     };
 
+    if check_camera {
+        if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
+            let msg = format!("caught while checking camera: {}", err);
+            if fail_fast {
+                return Err(Error::new(&msg));
+            }
+            at_least_one_error = true;
+            println!("{}", msg);
+        }
+    }
+
     for wd in local_config.wdeployments.iter() {
         if let Err(err) = config(
             local_config,
-            check_camera,
+            false,
             &wd.id,
             remote_config.as_ref(),
             fail_fast,
