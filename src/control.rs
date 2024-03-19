@@ -781,7 +781,11 @@ impl CurrentInstance {
             match run_command.status() {
                 Ok(s) => {
                     if !s.success() {
-                        return Err(Error::new(format!("exit code: {:?}", s.code())));
+                        return Err(Error::new(format!(
+                            "exit code from {}: {:?}",
+                            wdeployment.cprovider.get_execname().unwrap(),
+                            s.code()
+                        )));
                     }
                 }
                 Err(err) => {
@@ -1111,7 +1115,9 @@ mod tests {
         abort_launch.store(true, atomic::Ordering::Relaxed);
         thread_handle.join().unwrap();
         let name = current_instance.get_local_name().unwrap();
-        CurrentInstance::destroy_container(&wdeployment, &name).unwrap();
+        if let Err(err) = CurrentInstance::destroy_container(&wdeployment, &name) {
+            panic!("{}", err);
+        }
     }
 
 
