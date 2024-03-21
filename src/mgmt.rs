@@ -501,7 +501,7 @@ pub fn find_id_prefix(
 
 pub fn expand_id_prefixes(
     config: &Config,
-    id_prefixes: &Vec<&str>,
+    id_prefixes: &[&str],
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     if id_prefixes.is_empty() {
         let index = find_id_prefix(config, None)?;

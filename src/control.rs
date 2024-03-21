@@ -15,7 +15,6 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::Write;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::sync::atomic::{self, AtomicBool};
