@@ -1600,7 +1600,7 @@ mod tests {
 
     #[test]
     fn register_new() {
-        let expected_new_wdids = vec![
+        let expected_new_wdids = [
             "68a1be97-9365-4007-b726-14c56bd69eef",
             "2d6039bc-7c83-4d46-8567-c8df4711c386",
         ];

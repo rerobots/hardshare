@@ -1099,7 +1099,7 @@ mod tests {
     #[test]
     fn cannot_init_when_busy() {
         let wdeployment = create_example_wdeployment();
-        let instance_ids = vec![
+        let instance_ids = [
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
