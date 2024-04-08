@@ -570,6 +570,33 @@ impl HSAPIClient {
     }
 
 
+    fn is_locked_out(&self, wdid: &str) -> Result<bool, Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let url = format!("{}/deployment/{}", origin, wdid);
+            let client = client();
+            let mut resp = client.get(url).send().await?;
+            if resp.status() == 200 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                Ok(payload["lockout"].as_bool().unwrap_or(false))
+            } else if resp.status() == 400 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                error(payload["error_message"].as_str().unwrap())
+            } else {
+                error(format!(
+                    "error contacting core API server: {}",
+                    resp.status()
+                ))
+            }
+        })
+    }
+
+
     fn upsert_addon(
         &self,
         wdid: &str,
@@ -821,6 +848,19 @@ impl HSAPIClient {
     pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         if self.cached_api_token.is_none() {
             return error("No valid API tokens found.");
+        }
+
+        match self.is_locked_out(wdid) {
+            Ok(locked_out) => {
+                if locked_out {
+                    warn!("advertised deployment {} is locked out", wdid);
+                    warn!("new instances will be rejected until unlock");
+                }
+            }
+            Err(err) => {
+                error!("failed to determine whether deployment is locked out");
+                return Err(err);
+            }
         }
 
         // Try to start via daemon, if exists
