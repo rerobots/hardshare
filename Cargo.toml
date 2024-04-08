@@ -7,9 +7,9 @@ license = "Apache-2.0"
 version = "0.13.1-devel"
 authors = ["Scott C. Livingston <scott@rerobots.net>"]
 edition = "2018"
+readme = "README.md"
 include = [
     "/src",
-    "/README.md",
     "/CHANGELOG",
     "/keys/public.pem",
 ]
