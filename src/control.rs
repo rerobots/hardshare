@@ -364,6 +364,7 @@ impl CurrentInstance {
         &self,
         container_addr: ContainerAddress,
         tunnelkey_path: &str,
+        timeout: u64,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let tunnelkey_public_path = String::from(tunnelkey_path) + ".pub";
         let mut f = File::open(tunnelkey_public_path)?;
@@ -371,18 +372,26 @@ impl CurrentInstance {
         f.read_to_string(&mut tunnelkey_public)?;
         let message_id = self.send_create_sshtun(&tunnelkey_public)?;
         let st = std::time::Duration::from_secs(2);
-        let tunnelinfo;
-        loop {
+        let mut tunnelinfo = None;
+
+        let max_duration = std::time::Duration::from_secs(timeout);
+        let now = std::time::Instant::now();
+        while now.elapsed() <= max_duration {
             std::thread::sleep(st);
             {
                 let responses = self.responses.lock().unwrap();
                 if let Some(res) = &responses[&message_id] {
-                    tunnelinfo = res.tunnelinfo.clone().unwrap();
+                    tunnelinfo = Some(res.tunnelinfo.clone().unwrap());
                     break;
                 }
             }
             info!("waiting for sshtun creation...");
         }
+        if tunnelinfo.is_none() {
+            return Err("failed to create sshtun within time limit".into());
+        }
+        let tunnelinfo = tunnelinfo.unwrap();
+
         let tunnel_process_args = [
             "-o",
             "ServerAliveInterval=10",
@@ -501,7 +510,7 @@ impl CurrentInstance {
             }
         }
 
-        if let Err(err) = instance.start_sshtun(container_addr, &tunnelkey_path) {
+        if let Err(err) = instance.start_sshtun(container_addr, &tunnelkey_path, 30) {
             error!("{}", err);
             instance.declare_status(InstanceStatus::InitFail);
             instance.send_status();
