@@ -65,6 +65,7 @@ pub enum ConnType {
 pub struct ContainerAddress {
     ip: String,
     port: Port,
+    hostkey: String,
 }
 
 
@@ -606,6 +607,7 @@ impl CurrentInstance {
         let cprovider = wdeployment.cprovider.clone();
         let ip: String;
         let port: Port;
+        let hostkey: String;
         if cprovider == CProvider::Docker
             || cprovider == CProvider::DockerRootless
             || cprovider == CProvider::Podman
@@ -737,8 +739,7 @@ impl CurrentInstance {
                 )));
             }
 
-            let hostkey: String = match CurrentInstance::get_container_hostkey(&cprovider, name, 10)
-            {
+            hostkey = match CurrentInstance::get_container_hostkey(&cprovider, name, 10) {
                 Ok(k) => k,
                 Err(err) => {
                     return Err(Error::new(err));
@@ -771,7 +772,7 @@ impl CurrentInstance {
             return Err(Error::new(format!("unknown cprovider: {}", cprovider)));
         }
 
-        Ok(ContainerAddress { ip, port })
+        Ok(ContainerAddress { ip, port, hostkey })
     }
 
 
