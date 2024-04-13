@@ -133,14 +133,30 @@ impl CurrentInstance {
             let status = self.status.lock().unwrap();
             match &*status {
                 Some(s) => {
+                    let hostkey = {
+                        let tunnel = self.tunnel.lock().unwrap();
+                        (*tunnel).as_ref().map(|t| t.container_addr.hostkey.clone())
+                    };
+
                     main_actor_addr.do_send(api::ClientWorkerMessage {
                         mtype: CWorkerMessageType::WsSend,
                         body: Some(
-                            serde_json::to_string(&json!({
-                                "v": 0,
-                                "cmd": "INSTANCE_STATUS",
-                                "s": s.to_string(),
-                            }))
+                            serde_json::to_string(&if hostkey.is_some()
+                                && (*s == InstanceStatus::Ready || *s == InstanceStatus::Init)
+                            {
+                                json!({
+                                    "v": 0,
+                                    "cmd": "INSTANCE_STATUS",
+                                    "s": s.to_string(),
+                                    "h": hostkey.unwrap(),
+                                })
+                            } else {
+                                json!({
+                                    "v": 0,
+                                    "cmd": "INSTANCE_STATUS",
+                                    "s": s.to_string(),
+                                })
+                            })
                             .unwrap(),
                         ),
                     });
