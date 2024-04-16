@@ -1,0 +1,32 @@
+# docker build -t rerobots/hs-sim-avr:latest -f Dockerfile-avr .
+
+FROM debian:stable
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install \
+       openssh-server \
+       openvpn \
+       avahi-daemon \
+       nano \
+       git \
+       python3 \
+       python3-aiohttp \
+    && mkdir -p /var/run/sshd
+
+COPY --chmod=0775 init.sh /sbin/rerobots-hs-init.sh
+
+WORKDIR /root
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
+    build-essential \
+    pkgconf \
+    gcc-avr \
+    avr-libc \
+    libelf-dev \
+    avrdude
+
+RUN git clone --depth=10 https://github.com/buserror/simavr.git \
+    && cd simavr && git checkout 26375838c521c60280ebdf205d17bb8b2e4fde47
+
+
+CMD ["/sbin/rerobots-hs-init.sh"]
