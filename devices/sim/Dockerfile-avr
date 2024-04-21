@@ -28,5 +28,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
 RUN git clone --depth=10 https://github.com/buserror/simavr.git \
     && cd simavr && git checkout 26375838c521c60280ebdf205d17bb8b2e4fde47
 
+RUN cd simavr \
+    && make build-simavr \
+    && make install-simavr
 
 CMD ["/sbin/rerobots-hs-init.sh"]
