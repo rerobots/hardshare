@@ -32,4 +32,6 @@ RUN cd simavr \
     && make build-simavr \
     && make install-simavr
 
+RUN git clone --depth=10 https://github.com/rerobots/simboard.git \
+
 CMD ["/sbin/rerobots-hs-init.sh"]
