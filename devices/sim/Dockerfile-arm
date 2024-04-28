@@ -1,0 +1,21 @@
+# docker build -t rerobots/hs-sim-arm:latest -f Dockerfile-arm .
+
+FROM debian:stable
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install \
+       openssh-server \
+       openvpn \
+       avahi-daemon \
+       nano \
+       git \
+       python3 \
+       python3-aiohttp \
+    && mkdir -p /var/run/sshd
+
+COPY --chmod=0775 init.sh /sbin/rerobots-hs-init.sh
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    qemu-system-arm
+
+CMD ["/sbin/rerobots-hs-init.sh"]
