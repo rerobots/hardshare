@@ -86,6 +86,8 @@ fn check_podman() -> Result<(), String> {
 
 fn check_lxd() -> Result<(), String> {
     info!("checking availability of lxd");
+    // `lxc list` because it has nonzero exit code if the server is unreachable
+    // whereas `lxc version` indicates success, only shows the fault in stdout
     let status = match Command::new("lxc").args(["list", "-c", "n"]).status() {
         Ok(s) => s,
         Err(err) => return Err(format!("error calling `lxc list`: {}", err)),
