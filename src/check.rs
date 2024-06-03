@@ -102,15 +102,15 @@ fn check_lxd() -> Result<(), String> {
 }
 
 
-fn check_cprovider(cp: &CProvider) -> Result<(), Box<dyn std::error::Error>> {
-    if cp == &CProvider::Podman {
-        check_podman()?;
-    } else if cp == &CProvider::Docker || cp == &CProvider::DockerRootless {
-        check_docker(cp == &CProvider::DockerRootless)?;
-    } else if cp == &CProvider::Lxd {
-        check_lxd()?;
+fn check_cprovider(cp: &CProvider) -> Result<(), String> {
+    match cp {
+        CProvider::Podman => check_podman(),
+        CProvider::Docker | CProvider::DockerRootless => {
+            check_docker(*cp == CProvider::DockerRootless)
+        }
+        CProvider::Lxd => check_lxd(),
+        CProvider::Proxy => Ok(()),
     }
-    Ok(())
 }
 
 
