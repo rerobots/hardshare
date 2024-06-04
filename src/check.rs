@@ -297,6 +297,7 @@ pub fn config(
         println!("{}", msg);
     }
 
+    info!("simulating instance terminate ...");
     if let Err(err) =
         control::CurrentInstance::destroy_container(&local_config.wdeployments[wd_index], cname)
     {
@@ -406,6 +407,7 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
         println!("{}", msg);
     }
 
+    info!("simulating instance terminate ...");
     if let Err(err) = control::CurrentInstance::destroy_container(&wdeployment, cname) {
         let msg = format!("caught while destroying test container: {}", err);
         if fail_fast {
