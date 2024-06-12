@@ -61,6 +61,9 @@ To build for release on x86-64 Linux,
 
     cargo build --target x86_64-unknown-linux-musl --release --locked
 
+Current [CI report](https://github.com/rerobots/hardshare/actions/workflows/main.yml):
+![build status from GitHub Actions](https://github.com/rerobots/hardshare/actions/workflows/main.yml/badge.svg)
+
 
 Participating
 -------------
