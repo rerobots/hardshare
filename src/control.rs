@@ -1122,9 +1122,26 @@ mod tests {
     }
 
 
+    fn create_example_proxy_wdeployment() -> WDeployment {
+        serde_json::from_str(
+            r#"
+            {
+                "id": "8449a67a-fe0d-42b3-9f2d-89c9aa2e9410",
+                "owner": "frodo",
+                "cprovider": "proxy",
+                "cargs": [],
+                "init_inside": [],
+                "terminate": [],
+                "container_name": "rrc"
+            }"#,
+        )
+        .unwrap()
+    }
+
+
     #[test]
     fn cannot_init_when_busy() {
-        let wdeployment = create_example_wdeployment();
+        let wdeployment = create_example_proxy_wdeployment();
         let instance_ids = [
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
