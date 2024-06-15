@@ -20,9 +20,6 @@ Navigating the Sourcetree
 -------------------------
 
 The main repository is https://github.com/rerobots/hardshare.git
-and cloning requires [Git LFS](https://git-lfs.github.com/).
-Note that `git clone` will succeed without `git lfs` available, but some large
-files will not be fetched.
 
 Besides the root README (you are reading it), the sourcetree contains more
 README files in subdirectories that describe contents therein.
