@@ -1,7 +1,0 @@
-/_build
-*.mo
-/shipit.sh
-node_modules/
-next-env.d.ts
-/out/
-/.next/
