@@ -26,15 +26,8 @@ README files in subdirectories that describe contents therein.
 
 Summary:
 
-* doc - source of the user guide.
 * devices - code and configuration data for target hardware.
 * src - main source code.
-
-
-Building Documentation
-----------------------
-
-Go to doc/
 
 
 Building and Testing
