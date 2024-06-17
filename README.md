@@ -7,7 +7,7 @@ Introduction
 **hardshare** is a system for sharing your hardware through the
 [rerobots](https://rerobots.net) infrastructure.
 
-If you are a new or potential user, then begin reading at https://docs.hardshare.dev/
+If you are a new or potential user, then begin reading at https://docs.rerobots.net/hardshare
 where you will find instructions about installation and sharing your robots!
 
 If you want to contribute to development, then read more below, and clone the
