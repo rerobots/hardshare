@@ -14,6 +14,9 @@ jobs:
               run: |
                 mkdir keys
                 touch keys/public.pem
+            - name: Lint
+              run: |
+                cargo check
             - name: Run tests
               run: |
                 cargo test
