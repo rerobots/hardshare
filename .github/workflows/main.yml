@@ -16,7 +16,9 @@ jobs:
                 touch keys/public.pem
             - name: Lint
               run: |
+                cargo +nightly fmt --check
                 cargo check
+                cargo clippy --tests -- -D clippy::all
             - name: Run tests
               run: |
                 cargo test
