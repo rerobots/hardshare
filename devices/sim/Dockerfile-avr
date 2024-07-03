@@ -19,11 +19,20 @@ WORKDIR /root
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
     build-essential \
+    cmake \
     pkgconf \
+    curl \
     gcc-avr \
     avr-libc \
     libelf-dev \
+    libssl-dev \
     avrdude
+
+RUN curl -L -o lws.tgz https://github.com/warmcat/libwebsockets/archive/refs/tags/v4.3.3.tar.gz \
+    && tar -xzf lws.tgz
+RUN cd libwebsockets-4.3.3 \
+    && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. \
+    && make && make install
 
 RUN git clone --depth=10 https://github.com/buserror/simavr.git \
     && cd simavr && git checkout 26375838c521c60280ebdf205d17bb8b2e4fde47
@@ -32,6 +41,9 @@ RUN cd simavr \
     && make build-simavr \
     && make install-simavr
 
-RUN git clone --depth=10 https://github.com/rerobots/simboard.git \
+RUN git clone --depth=10 https://github.com/rerobots/simboard.git
+RUN cd simboard/wrapper-simavr \
+    && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELEASE .. \
+    && make
 
 CMD ["/sbin/rerobots-hs-init.sh"]
