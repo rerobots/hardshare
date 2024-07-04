@@ -35,7 +35,7 @@ RUN cd libwebsockets-4.3.3 \
     && make && make install
 
 RUN git clone --depth=10 https://github.com/buserror/simavr.git \
-    && cd simavr && git checkout 26375838c521c60280ebdf205d17bb8b2e4fde47
+    && cd simavr && git checkout d51f593d8959fd5b5e7c1b90b46fa3a4b8529465
 
 RUN cd simavr \
     && make build-simavr \
