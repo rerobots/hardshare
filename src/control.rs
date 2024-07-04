@@ -216,6 +216,7 @@ impl CurrentInstance {
     fn init(
         &mut self,
         instance_id: &str,
+        conn_type: ConnType,
         public_key: &str,
         repo_args: Option<RepoInfo>,
     ) -> Result<(thread::JoinHandle<()>, Arc<AtomicBool>), &str> {
@@ -855,6 +856,7 @@ pub fn cworker(
             CWorkerCommandType::InstanceLaunch => {
                 match current_instance.init(
                     &req.instance_id,
+                    req.conntype.unwrap(),
                     &req.publickey.unwrap(),
                     req.repo_args,
                 ) {
@@ -1100,7 +1102,7 @@ pub enum CWorkerMessageType {
 mod tests {
     use std::sync::{atomic, Arc};
 
-    use super::CurrentInstance;
+    use super::{ConnType, CurrentInstance};
     use crate::mgmt::WDeployment;
 
 
@@ -1147,12 +1149,14 @@ mod tests {
             "0f2576b5-17d9-477e-ba70-f07142faa2d9",
         ];
         let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment.clone()), None);
-        let result = current_instance.init(instance_ids[0], "", None);
+        let result = current_instance.init(instance_ids[0], ConnType::SshTun, "", None);
         assert!(result.is_ok());
         let (thread_handle, abort_launch) = result.unwrap();
 
         assert!(current_instance.exists());
-        assert!(current_instance.init(instance_ids[1], "", None).is_err());
+        assert!(current_instance
+            .init(instance_ids[1], ConnType::SshTun, "", None)
+            .is_err());
 
         abort_launch.store(true, atomic::Ordering::Relaxed);
         thread_handle.join().unwrap();
