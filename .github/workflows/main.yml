@@ -5,8 +5,8 @@ on:
     push:
     pull_request:
 jobs:
-    build:
-        name: Build
+    build-and-test:
+        name: Build and test
         runs-on: ubuntu-22.04
         steps:
             - uses: actions/checkout@v4
