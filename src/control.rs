@@ -399,7 +399,12 @@ impl CurrentInstance {
             {
                 let responses = self.responses.lock().unwrap();
                 if let Some(res) = &responses[&message_id] {
-                    tunnelinfo = Some(res.tunnelinfo.clone().unwrap());
+                    let ti = res.tunnelinfo.clone().unwrap();
+                    info!(
+                        "opened public ssh tunnel at {}:{} with host key \"{}\"",
+                        ti.ipv4, ti.port, ti.hostkey
+                    );
+                    tunnelinfo = Some(ti);
                     break;
                 }
             }

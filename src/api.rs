@@ -1425,7 +1425,10 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 ),
                 "CREATE_SSHTUN_DONE" => {
                     let tunnelinfo: TunnelInfo = match serde_json::from_slice(txt.as_ref()) {
-                        Ok(x) => x,
+                        Ok(x) => {
+                            debug!("received tunnel info: {:?}", x);
+                            x
+                        }
                         Err(err) => {
                             error!("failed to parse tunnel info from {:?}: {}", txt, err);
                             return;
