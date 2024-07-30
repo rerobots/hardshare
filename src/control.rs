@@ -238,8 +238,13 @@ impl CurrentInstance {
         let abort_launch_clone = abort_launch.clone();
 
         Ok((
-            thread::spawn(move || {
-                CurrentInstance::launch(instance, &public_key, repo_args, abort_launch_clone);
+            thread::spawn(move || match conn_type {
+                ConnType::SshTun => CurrentInstance::launch_sshtun(
+                    instance,
+                    &public_key,
+                    repo_args,
+                    abort_launch_clone,
+                ),
             }),
             abort_launch,
         ))
@@ -449,7 +454,7 @@ impl CurrentInstance {
     }
 
 
-    fn launch(
+    fn launch_sshtun(
         mut instance: CurrentInstance,
         public_key: &str,
         repo_args: Option<RepoInfo>,
@@ -1060,7 +1065,7 @@ impl CWorkerCommand {
         CWorkerCommand {
             command: CWorkerCommandType::InstanceLaunch,
             instance_id: String::from(instance_id),
-            conntype: Some(ConnType::SshTun),
+            conntype: Some(conntype),
             publickey: Some(String::from(public_key)),
             tunnelinfo: None,
             message_id: Some(String::from(message_id)),
