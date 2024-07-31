@@ -71,7 +71,6 @@ pub struct ContainerAddress {
 
 struct SshTunnel {
     proc: std::process::Child,
-    tunnelkey_path: std::path::PathBuf,
     container_addr: ContainerAddress,
 }
 
@@ -447,7 +446,6 @@ impl CurrentInstance {
         let mut tunnel = self.tunnel.lock().unwrap();
         *tunnel = Some(SshTunnel {
             proc: tunnel_process,
-            tunnelkey_path: tunnelkey_path.into(),
             container_addr,
         });
         Ok(())
