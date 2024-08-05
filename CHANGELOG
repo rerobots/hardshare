@@ -1,3 +1,12 @@
+hardshare client (0.13.1)
+
+  * New command to check correctness of local configuration: `hardshare check`
+
+  * Documentation moved to main rerobots docs repository: https://github.com/rerobots/docs
+
+ -- Scott C. Livingston <scott@rerobots.net>  Mon, 05 Aug 2024 12:53:38 -0700
+
+
 hardshare client (0.13.0)
 
   * Support streaming from cameras on macOS.
