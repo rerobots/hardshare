@@ -22,7 +22,7 @@ actix-web-actors = "3"
 awc = { version = "2", features = ["openssl"] }
 base64 = "0.21"
 bytes = "0.5"
-env_logger = "0.8"
+env_logger = "0.11.5"
 futures = "0.3"
 home = "0.5.3"
 image = "0.24.6"
