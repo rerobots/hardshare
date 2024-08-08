@@ -764,7 +764,7 @@ impl CurrentInstance {
                 )));
             }
 
-            hostkey = match CurrentInstance::get_container_hostkey(&cprovider, name, 10) {
+            hostkey = match CurrentInstance::get_container_hostkey(&cprovider, name, 20) {
                 Ok(k) => k,
                 Err(err) => {
                     return Err(Error::new(err));
