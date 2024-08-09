@@ -26,6 +26,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get -y install \
        git
 
-COPY --chmod=0775 init.sh /sbin/rerobots-hs-init.sh
+COPY init.sh /sbin/rerobots-hs-init.sh
+RUN chmod 0755 /sbin/rerobots-hs-init.sh
 
 CMD ["/sbin/rerobots-hs-init.sh"]
