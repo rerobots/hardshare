@@ -309,7 +309,7 @@ fn verify_capture_ability(
         format.width = d.width;
         format.height = d.height;
     }
-    format = match dev.set_format(&format) {
+    match dev.set_format(&format) {
         Ok(f) => {
             if let Some(d) = dimensions {
                 if f.width != d.width || f.height != d.height {
@@ -371,7 +371,7 @@ fn video_capture(
         format.width = d.width;
         format.height = d.height;
     }
-    format = match dev.set_format(&format) {
+    match dev.set_format(&format) {
         Ok(f) => {
             if let Some(d) = dimensions {
                 if f.width != d.width || f.height != d.height {
