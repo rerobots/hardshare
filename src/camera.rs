@@ -330,8 +330,7 @@ fn verify_capture_ability(
         }
     };
 
-    match MmapStream::with_buffers(&dev, v4l::buffer::Type::VideoCapture, buffer_count)
-    {
+    match MmapStream::with_buffers(&dev, v4l::buffer::Type::VideoCapture, buffer_count) {
         Ok(s) => {
             debug!("MmapStream, video capture");
             s
