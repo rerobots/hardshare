@@ -1263,6 +1263,11 @@ pub fn main() -> Result<(), CliError> {
                          .short("a")
                          .long("all")
                          .help("Stop all attached cameras associated with this user account, whether or not started on this host")))
+        .subcommand(SubCommand::with_name("monitor")
+                    .about("Detect and handle errors in a deployment")
+                    .arg(Arg::with_name("id_prefix")
+                         .value_name("ID")
+                         .help("id of workspace deployment to monitor")))
         ;
 
     let matches = app.get_matches();
