@@ -36,6 +36,7 @@ SUBCOMMANDS:
     init             Initialize local configuration
     list             List configuration
     lock             Lock a workspace deployment to prevent new instances
+    monitor          Detect and handle errors in a deployment
     register         Register new workspace deployment
     reload           Reload configuration in a running hardshare client
     rules            Modify access rules (also known as capabilities or
