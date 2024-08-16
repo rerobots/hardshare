@@ -31,6 +31,9 @@ OPTIONS:
         --declare <ID>
             declare that workspace deployment is hosted here. (This only works
             if it has been previously registered under the same user account.)
+        --monitor-prog <PROGRAM>
+            declare program to run in a monitor cycle; use `-` to declare none
+
         --add-token <FILE>                add new API token
         --add-ssh-path <FILE>
             add path of SSH key pair (does not copy the key)

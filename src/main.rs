@@ -27,6 +27,7 @@ mod check;
 mod cli;
 mod control;
 mod mgmt;
+mod monitor;
 
 
 fn main() {

@@ -122,6 +122,7 @@ pub struct WDeployment {
     pub container_name: String,
     pub init_inside: Vec<String>,
     pub terminate: Vec<String>,
+    pub monitor: Option<String>,
 
     #[serde(default)]
     pub image: Option<String>,
@@ -188,6 +189,12 @@ impl WDeployment {
             vec![]
         };
 
+        let monitor = if h.contains_key("monitor") {
+            Some(h["monitor"].as_str().unwrap().into())
+        } else {
+            None
+        };
+
         let image = if h.contains_key("image") {
             Some(h["image"].as_str().unwrap().into())
         } else if cprovider != CProvider::Proxy {
@@ -211,6 +218,7 @@ impl WDeployment {
             image,
             init_inside,
             terminate,
+            monitor,
             url,
 
             ssh_key: None,

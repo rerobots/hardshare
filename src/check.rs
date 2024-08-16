@@ -15,7 +15,7 @@
 use std::process::Command;
 
 use crate::mgmt::{self, CProvider, Config, WDeployment};
-use crate::{api, camera, control};
+use crate::{api, camera, control, monitor};
 
 
 #[derive(Debug)]
@@ -275,6 +275,8 @@ pub fn config(
             err, &local_config.wdeployments[wd_index].cprovider
         )));
     }
+
+    monitor::run_dry(local_config, wd_index)?;
 
     info!("simulating instance launch ...");
     let cname = "check";

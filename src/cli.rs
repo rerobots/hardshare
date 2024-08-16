@@ -23,7 +23,7 @@ use clap::{Arg, SubCommand};
 use crate::api::{CameraCrop, CameraDimensions};
 use crate::camera;
 use crate::mgmt::CProvider;
-use crate::{api, check, mgmt};
+use crate::{api, check, mgmt, monitor};
 
 
 pub struct CliError {
@@ -207,6 +207,9 @@ fn print_config_w<T: Write>(
                 for terminate_p in wd.terminate.iter() {
                     writeln!(f, "\t\t{}", terminate_p)?;
                 }
+            }
+            if let Some(m) = &wd.monitor {
+                writeln!(f, "\tmonitor: {}", m)?;
             }
         }
     }
@@ -587,6 +590,16 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     }
                 }
                 None => CliError::new("no matching program found", 1),
+            };
+        } else if let Some(program) = matches.value_of("monitor_prog") {
+            if program == "-" {
+                local_config.wdeployments[wd_index].monitor = None;
+            } else {
+                local_config.wdeployments[wd_index].monitor = Some(program.into());
+            }
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
             };
         } else {
             let errmessage = "Use `hardshare config` with a switch. To get a help message, enter\n\n    hardshare help config";
@@ -1063,6 +1076,24 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 }
 
 
+fn monitor_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
+    let local_config = match mgmt::get_local_config(false, false) {
+        Ok(lc) => lc,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
+        Ok(wi) => wi,
+        Err(err) => return CliError::new_std(err, 1),
+    };
+
+    match monitor::run(&local_config, wd_index) {
+        Ok(()) => Ok(()),
+        Err(err) => CliError::new_std(err, 1),
+    }
+}
+
+
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
         .max_term_width(80)
@@ -1149,6 +1180,10 @@ pub fn main() -> Result<(), CliError> {
                          .long("rm-init-inside")
                          .value_name("PROGRAM")
                          .help("remove program from list of commands to execute inside; for example, copy-and-paste value shown in `hardshare list` here"))
+                    .arg(Arg::with_name("monitor_prog")
+                        .long("monitor-prog")
+                        .value_name("PROGRAM")
+                        .help("declare program to run in a monitor cycle; use `-` to declare none"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
@@ -1331,6 +1366,8 @@ pub fn main() -> Result<(), CliError> {
         return reload_subcommand(&bindaddr);
     } else if let Some(matches) = matches.subcommand_matches("check") {
         return check_subcommand(matches);
+    } else if let Some(matches) = matches.subcommand_matches("monitor") {
+        return monitor_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("attach-camera") {
         return attach_camera_subcommand(matches);
     } else if let Some(matches) = matches.subcommand_matches("stop-cameras") {
