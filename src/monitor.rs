@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::thread::sleep;
 
 use crate::api;
 use crate::check::Error;
@@ -47,4 +48,21 @@ pub fn run_dry(local_config: &Config, wd_index: usize) -> Result<(), Box<dyn std
 
 pub fn run(local_config: &Config, wd_index: usize) -> Result<(), Box<dyn std::error::Error>> {
     run_opt(local_config, wd_index, true)
+}
+
+
+pub fn run_loop(
+    local_config: &Config,
+    wd_index: usize,
+    duration: std::time::Duration,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut result;
+    loop {
+        println!("{:?}", duration);
+        result = run(local_config, wd_index);
+        if result.is_err() {
+            return result;
+        }
+        sleep(duration);
+    }
 }

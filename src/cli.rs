@@ -1087,9 +1087,24 @@ fn monitor_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    match monitor::run(&local_config, wd_index) {
-        Ok(()) => Ok(()),
-        Err(err) => CliError::new_std(err, 1),
+    if matches.is_present("loop") {
+        let duration = match matches.value_of("loop").unwrap().parse::<u64>() {
+            Ok(d) => d,
+            Err(err) => return CliError::new(err, 1),
+        };
+        match monitor::run_loop(
+            &local_config,
+            wd_index,
+            std::time::Duration::from_secs(duration),
+        ) {
+            Ok(()) => Ok(()),
+            Err(err) => CliError::new_std(err, 1),
+        }
+    } else {
+        match monitor::run(&local_config, wd_index) {
+            Ok(()) => Ok(()),
+            Err(err) => CliError::new_std(err, 1),
+        }
     }
 }
 
@@ -1302,7 +1317,11 @@ pub fn main() -> Result<(), CliError> {
                     .about("Detect and handle errors in a deployment")
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
-                         .help("id of workspace deployment to monitor")))
+                         .help("id of workspace deployment to monitor"))
+                    .arg(Arg::with_name("loop")
+                        .long("loop")
+                        .value_name("DURATION")
+                        .help("Repeat monitor checks every DURATION seconds")))
         ;
 
     let matches = app.get_matches();
