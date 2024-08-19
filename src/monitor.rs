@@ -56,12 +56,8 @@ pub fn run_loop(
     wd_index: usize,
     duration: std::time::Duration,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut result;
     loop {
-        result = run(local_config, wd_index);
-        if result.is_err() {
-            return result;
-        }
+        run(local_config, wd_index)?;
         sleep(duration);
     }
 }
