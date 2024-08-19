@@ -58,7 +58,6 @@ pub fn run_loop(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut result;
     loop {
-        println!("{:?}", duration);
         result = run(local_config, wd_index);
         if result.is_err() {
             return result;
