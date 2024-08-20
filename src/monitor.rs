@@ -33,6 +33,8 @@ fn run_opt(
             if handle_errors {
                 let ac = api::HSAPIClient::new();
                 ac.toggle_lockout(&local_config.wdeployments[wd_index].id, true)?;
+                ac.send_alert(&local_config.wdeployments[wd_index].id,
+                    "hardshare monitor detected an error. The deployment has been locked to prevent new instances.")?;
             }
             return Ok(result?);
         }

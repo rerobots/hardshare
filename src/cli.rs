@@ -601,6 +601,17 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 Err(err) => CliError::new_std(err, 1),
                 Ok(()) => Ok(()),
             };
+        } else if let Some(raw_addr) = matches.value_of("hook_emails") {
+            let addr = if raw_addr == "-" {
+                vec![]
+            } else {
+                raw_addr.split(',').collect()
+            };
+            let ac = api::HSAPIClient::new();
+            return match ac.register_hook_emails(&local_config.wdeployments[wd_index].id, addr) {
+                Ok(()) => Ok(()),
+                Err(err) => CliError::new_std(err, 1),
+            };
         } else {
             let errmessage = "Use `hardshare config` with a switch. To get a help message, enter\n\n    hardshare help config";
             return CliError::new(errmessage, 1);
@@ -1199,6 +1210,10 @@ pub fn main() -> Result<(), CliError> {
                         .long("monitor-prog")
                         .value_name("PROGRAM")
                         .help("declare program to run in a monitor cycle; use `-` to declare none"))
+                    .arg(Arg::with_name("hook_emails")
+                        .long("hook-emails")
+                        .value_name("ADDRESSES")
+                        .help("specify email addresses to receive alerts; use `-` to indicate none"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))

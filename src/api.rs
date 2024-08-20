@@ -447,6 +447,39 @@ impl HSAPIClient {
     }
 
 
+    pub fn register_hook_emails(
+        &self,
+        wdid: &str,
+        addr: Vec<&str>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.create_client_generator()?;
+        let origin = self.origin.clone();
+        let wdid = wdid.to_string();
+        let addr: Vec<String> = addr.iter().map(|x| x.to_string()).collect();
+        let mut sys = System::new("wclient");
+        actix::SystemRunner::block_on(&mut sys, async move {
+            let mut body = HashMap::new();
+            body.insert("emails", addr);
+
+            let url = format!("{}/hardshare/hook/email/{}", origin, wdid);
+            let client = client();
+            let client_req = client.post(url);
+            let mut resp = client_req.send_json(&body).await?;
+            if resp.status() == 400 {
+                let payload: serde_json::Value =
+                    serde_json::from_slice(resp.body().await?.as_ref())?;
+                return error(payload["error_message"].as_str().unwrap());
+            } else if resp.status() == 404 {
+                return error("not found".to_string());
+            } else if resp.status() != 200 {
+                return error(format!("server indicated error: {}", resp.status()));
+            }
+
+            Ok(())
+        })
+    }
+
+
     pub fn dissolve_wdeployment(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let local_config = match &self.local_config {
             Some(local_config) => {

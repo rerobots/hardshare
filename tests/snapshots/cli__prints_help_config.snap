@@ -1,6 +1,6 @@
 ---
 source: tests/cli.rs
-assertion_line: 50
+assertion_line: 59
 expression: "String::from_utf8(output.stdout).unwrap()"
 ---
 hardshare-config 
@@ -31,6 +31,9 @@ OPTIONS:
         --declare <ID>
             declare that workspace deployment is hosted here. (This only works
             if it has been previously registered under the same user account.)
+        --hook-emails <ADDRESSES>
+            specify email addresses to receive alerts; use `-` to indicate none
+
         --monitor-prog <PROGRAM>
             declare program to run in a monitor cycle; use `-` to declare none
 
@@ -55,4 +58,3 @@ ARGS:
     <ID>    id of workspace deployment for configuration changes (can be
             unique prefix); this argument is not required if there is only 1
             workspace deployment
-
