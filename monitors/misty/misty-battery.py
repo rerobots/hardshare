@@ -2,6 +2,7 @@
 """
 Copyright (C) 2021 rerobots, Inc.
 """
+
 from datetime import datetime
 import os
 import sys
@@ -22,24 +23,28 @@ if __name__ == '__main__':
         try:
             res = requests.get('http://' + misty_ip_addr + '/api/battery', timeout=5)
             if not res.ok:
-                err_message = 'Received not OK response: {}'.format(res)
+                err_message = f'Received not OK response: {res}'
             else:
                 payload = res.json()
                 if payload['result']['chargePercent'] < battery_thr:
                     alt_title = battery_msg_title
-                    err_message = 'Misty battery level is {} (below threshold of {})'.format(payload['result']['chargePercent'], battery_thr)
+                    err_message = f"Misty battery level is {payload['result']['chargePercent']} (below threshold of {battery_thr})"
         except Exception as err:
-            err_message = 'Exception raised while trying to contact Misty: {}: {}'.format(type(err), err)
+            err_message = (
+                f'Exception raised while trying to contact Misty: {type(err)}: {err}'
+            )
 
         if err_message is None:
             break
 
         retry_allowance -= 1
         if retry_allowance >= 0:
-            print(f'Detected error, but there are {retry_allowance+1} retries remaining. Sleeping and checking again...')
+            print(
+                f'Detected error at {datetime.now()}, but there are {retry_allowance+1} retries remaining. Sleeping and checking again...'
+            )
             time.sleep(1)
         else:
-            print('failed to communicate with Misty at: {}'.format(datetime.now()))
+            print(f'failed to communicate with Misty at: {datetime.now()}')
             if alt_title:
                 title = alt_title
             else:
