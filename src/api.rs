@@ -19,13 +19,13 @@ use std::time::Duration;
 use actix::io::SinkWrite;
 use actix::prelude::*;
 use actix_codec::Framed;
+use actix_web::web::Bytes;
 use awc::{
     error::WsProtocolError,
     ws::{Codec, Frame, Message},
     BoxedSocket,
 };
 
-use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
 
 use nix::{sys::signal, unistd};
@@ -281,7 +281,7 @@ impl HSAPIClient {
 
         Ok(Box::new(move || {
             awc::Client::builder()
-                .connector(awc::Connector::new().ssl(connector).finish())
+                //.connector(awc::Connector::new().ssl(connector).finish())
                 .header("Authorization", format!("Bearer {}", api_token))
                 .finish()
         }))
@@ -294,8 +294,8 @@ impl HSAPIClient {
     ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let listurl_path = if include_dissolved {
                 "/hardshare/list?with_dissolved"
             } else {
@@ -325,8 +325,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             get_access_rules_a(&client(), &origin, &wdid).await
         })
     }
@@ -336,8 +336,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let client = client();
             let ruleset = get_access_rules_a(&client, &origin, &wdid).await?;
             for rule in ruleset.rules.iter() {
@@ -367,8 +367,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let to_user = to_user.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let mut body = HashMap::new();
             body.insert("cap", "CAP_INSTANTIATE");
             body.insert("user", to_user.as_str());
@@ -400,8 +400,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let client = client();
             let url = format!("{}/deployment/{}/lockout", origin, wdid);
             let resp = if make_locked {
@@ -423,8 +423,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let message = message.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let mut body = HashMap::new();
             body.insert("msg", message);
 
@@ -456,8 +456,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addr: Vec<String> = addr.iter().map(|x| x.to_string()).collect();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let mut body = HashMap::new();
             body.insert("emails", addr);
 
@@ -505,8 +505,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let url = format!("{}/hardshare/dis/{}", origin, wdid);
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let client = client();
 
             let resp = client.post(url).send().await?;
@@ -534,8 +534,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let url = format!("{}/deployment/{}", origin, wdid);
             let client = client();
             let mut resp = client.get(url).send().await?;
@@ -576,8 +576,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let url = format!("{}/deployment/{}", origin, wdid);
             let client = client();
             let mut resp = client.get(url).send().await?;
@@ -636,8 +636,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let url = format!("{}/deployment/{}", origin, wdid);
             let client = client();
             let mut resp = client.get(url).send().await?;
@@ -670,8 +670,8 @@ impl HSAPIClient {
         let origin = self.origin.clone();
         let wdid = wdid.to_string();
         let addon = addon.clone();
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let url = format!("{}/deployment/{}", origin, wdid);
             let client = client();
             let mut resp = client.get(url).send().await?;
@@ -749,8 +749,8 @@ impl HSAPIClient {
 
     pub fn stop(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{}/stop/{}", bindaddr, wdid);
-        let mut sys = System::new("dclient");
-        actix::SystemRunner::block_on(&mut sys, async {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async {
             awc::Client::new()
                 .post(url)
                 .send()
@@ -868,7 +868,7 @@ impl HSAPIClient {
     }
 
 
-    fn http_post_stop(
+    async fn http_post_stop(
         wdid: actix_web::web::Path<String>,
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
@@ -927,8 +927,8 @@ impl HSAPIClient {
 
         // Try to start via daemon, if exists
         let url = format!("http://{}/start/{}", bindaddr, wdid);
-        let mut sys = System::new("dclient");
-        let res = actix::SystemRunner::block_on(&mut sys, async {
+        let sys = System::new();
+        let res = actix::SystemRunner::block_on(&sys, async {
             awc::Client::new().post(url).send().await
         });
         match res {
@@ -948,10 +948,10 @@ impl HSAPIClient {
         let bindaddr: std::net::SocketAddr = bindaddr.parse()?;
         let wdid = String::from(wdid);
 
-        let sys = System::new("wsclient");
+        let sys = System::new();
         let (err_notify, err_rx) = mpsc::channel();
         let ac = Arc::new(Mutex::new(self.clone()));
-        Arbiter::spawn(async move {
+        sys.runtime().spawn(async move {
             let addr = match HSAPIClient::ad(&ac, wdid.clone()).await {
                 Ok(a) => a,
                 Err(err) => {
@@ -1022,8 +1022,8 @@ impl HSAPIClient {
         bindaddr: &str,
     ) -> Result<DaemonStatus, Box<dyn std::error::Error>> {
         let url = format!("http://{}/status", bindaddr);
-        let mut sys = System::new("dclient");
-        actix::SystemRunner::block_on(&mut sys, async {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async {
             let mut resp = awc::Client::new().get(url).send().await?;
             if resp.status() == 200 {
                 let r: DaemonStatus = serde_json::from_slice(resp.body().await?.as_ref())?;
@@ -1037,8 +1037,8 @@ impl HSAPIClient {
 
     pub fn req_reload_config(&self, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{}/reload", bindaddr);
-        let mut sys = System::new("dclient");
-        actix::SystemRunner::block_on(&mut sys, async {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async {
             let resp = awc::Client::new().post(url).send().await?;
             if resp.status() == 200 {
                 Ok(())
@@ -1066,10 +1066,10 @@ impl HSAPIClient {
         let connector = SslConnector::builder(SslMethod::tls())?.build();
         let authheader = format!("Bearer {}", self.cached_api_token.as_ref().unwrap());
 
-        let mut sys = System::new("wclient");
-        let res = actix::SystemRunner::block_on(&mut sys, async {
+        let sys = System::new();
+        let res = actix::SystemRunner::block_on(&sys, async {
             let client = awc::Client::builder()
-                .connector(awc::Connector::new().ssl(connector).finish())
+                // .connector(awc::Connector::new().ssl(connector).finish())
                 .header("Authorization", authheader)
                 .finish();
             let mut resp = client.post(url).send().await?;
@@ -1114,10 +1114,10 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let url = format!("{}/hardshare/list", origin);
-        let mut sys = System::new("wclient");
+        let sys = System::new();
 
         let wdid = wdid.to_string();
-        let res = actix::SystemRunner::block_on(&mut sys, async move {
+        let res = actix::SystemRunner::block_on(&sys, async move {
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -1183,8 +1183,8 @@ impl HSAPIClient {
             opts["crop"] = json!(crop);
         }
 
-        let mut sys = System::new("wclient");
-        let res = actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        let res = actix::SystemRunner::block_on(&sys, async move {
             let client = client();
             let url = format!("{}/hardshare/cam", origin);
             let client_req = client.post(url).timeout(td);
@@ -1217,7 +1217,7 @@ impl HSAPIClient {
             std::fs::remove_file(path)?;
             let client = self.create_client_generator()?;
             let origin = self.origin.clone();
-            actix::SystemRunner::block_on(&mut sys, async move {
+            actix::SystemRunner::block_on(&sys, async move {
                 let client = client();
                 let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
                 let resp = client.delete(url).send().await?;
@@ -1276,8 +1276,8 @@ impl HSAPIClient {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
         let url = format!("{}/hardshare/cam", origin);
-        let mut sys = System::new("wclient");
-        actix::SystemRunner::block_on(&mut sys, async move {
+        let sys = System::new();
+        actix::SystemRunner::block_on(&sys, async move {
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -1351,7 +1351,7 @@ async fn open_websocket(
         };
         let connector = ssl_builder.build();
         let client = awc::Client::builder()
-            .connector(awc::Connector::new().ssl(connector).finish())
+            // .connector(awc::Connector::new().ssl(connector).finish())
             .header("Authorization", authheader)
             .finish();
 
@@ -1427,7 +1427,7 @@ impl Handler<WSSend> for WSClient {
     type Result = ();
 
     fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
-        self.ws_sink.write(Message::Text(msg.0));
+        self.ws_sink.write(Message::Text(msg.0.into()));
     }
 }
 
@@ -1522,7 +1522,8 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
         let authheader = self.ws_auth.clone();
         let url = self.ws_url.clone();
         let main_actor_addr = self.main_actor_addr.clone();
-        Arbiter::spawn(async move {
+        let sys = System::new();
+        sys.runtime().spawn(async move {
             main_actor_addr.do_send(NewWS(None));
             let addr = open_websocket(&url, &authheader, &main_actor_addr, None)
                 .await

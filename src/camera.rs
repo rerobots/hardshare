@@ -18,6 +18,7 @@ use std::time::Duration;
 use actix::io::SinkWrite;
 use actix::prelude::*;
 use actix_codec::Framed;
+use actix_web::web::Bytes;
 use awc::{
     error::WsProtocolError,
     ws::{Codec, Frame, Message},
@@ -25,7 +26,6 @@ use awc::{
 };
 
 use base64::engine::{general_purpose as base64_engine, Engine as _};
-use bytes::Bytes;
 use futures::stream::{SplitSink, StreamExt};
 
 use openssl::ssl::{SslConnector, SslMethod};
@@ -58,9 +58,9 @@ pub fn stream_websocket(
     let dimensions = dimensions.as_ref().cloned();
     let authheader = format!("Bearer {}", api_token);
     let url = format!("{}/hardshare/cam/{}/upload", origin, hscamera_id);
-    let sys = System::new("wsclient");
+    let sys = System::new();
     let (err_notify, err_rx) = mpsc::channel();
-    Arbiter::spawn(async move {
+    sys.runtime().spawn(async move {
         let ssl_builder = match SslConnector::builder(SslMethod::tls()) {
             Ok(s) => s,
             Err(err) => {
@@ -73,7 +73,7 @@ pub fn stream_websocket(
         };
         let connector = ssl_builder.build();
         let client = awc::Client::builder()
-            .connector(awc::Connector::new().ssl(connector).finish())
+            // .connector(awc::Connector::new().ssl(connector).finish())
             .header("Authorization", authheader)
             .finish();
 
@@ -537,7 +537,7 @@ impl Handler<WSSend> for WSClient {
     type Result = ();
 
     fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
-        self.ws_sink.write(Message::Text(msg.0));
+        self.ws_sink.write(Message::Text(msg.0.into()));
         self.recent_txrx_instant = std::time::Instant::now();
     }
 }
