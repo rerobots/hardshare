@@ -28,8 +28,6 @@ use awc::{
 use base64::engine::{general_purpose as base64_engine, Engine as _};
 use futures::stream::{SplitSink, StreamExt};
 
-use openssl::ssl::{SslConnector, SslMethod};
-
 use crate::api::{self, CameraDimensions};
 use crate::check::Error as CheckError;
 
@@ -61,20 +59,8 @@ pub fn stream_websocket(
     let sys = System::new();
     let (err_notify, err_rx) = mpsc::channel();
     sys.runtime().spawn(async move {
-        let ssl_builder = match SslConnector::builder(SslMethod::tls()) {
-            Ok(s) => s,
-            Err(err) => {
-                err_notify
-                    .send(format!("failed to open WebSocket: {}", err))
-                    .unwrap();
-                System::current().stop_with_code(1);
-                return;
-            }
-        };
-        let connector = ssl_builder.build();
         let client = awc::Client::builder()
-            // .connector(awc::Connector::new().ssl(connector).finish())
-            .header("Authorization", authheader)
+            .add_default_header(("Authorization", authheader))
             .finish();
 
         debug!("opening camera websocket...");

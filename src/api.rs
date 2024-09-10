@@ -30,8 +30,6 @@ use futures::stream::{SplitSink, StreamExt};
 
 use nix::{sys::signal, unistd};
 
-use openssl::ssl::{SslConnector, SslMethod};
-
 extern crate serde;
 extern crate serde_json;
 use serde::{Deserialize, Serialize};
@@ -277,12 +275,9 @@ impl HSAPIClient {
             },
         };
 
-        let connector = SslConnector::builder(SslMethod::tls())?.build();
-
         Ok(Box::new(move || {
             awc::Client::builder()
-                //.connector(awc::Connector::new().ssl(connector).finish())
-                .header("Authorization", format!("Bearer {}", api_token))
+                .add_default_header(("Authorization", format!("Bearer {}", api_token)))
                 .finish()
         }))
     }
@@ -970,7 +965,7 @@ impl HSAPIClient {
             let mut manip = actix_web::HttpServer::new(move || {
                 let ac = Arc::clone(&ac);
                 actix_web::App::new()
-                    .data(ac)
+                    .app_data(ac)
                     .wrap(actix_web::middleware::Logger::default())
                     .route(
                         "/status",
@@ -1063,14 +1058,12 @@ impl HSAPIClient {
         };
 
         let url = format!("{}/hardshare/register", self.origin);
-        let connector = SslConnector::builder(SslMethod::tls())?.build();
         let authheader = format!("Bearer {}", self.cached_api_token.as_ref().unwrap());
 
         let sys = System::new();
         let res = actix::SystemRunner::block_on(&sys, async {
             let client = awc::Client::builder()
-                // .connector(awc::Connector::new().ssl(connector).finish())
-                .header("Authorization", authheader)
+                .add_default_header(("Authorization", authheader))
                 .finish();
             let mut resp = client.post(url).send().await?;
             if resp.status() == 200 {
@@ -1337,22 +1330,8 @@ async fn open_websocket(
     loop {
         let authheader_dup = String::from(authheader);
         let url_dup = String::from(url);
-        let ssl_builder = match SslConnector::builder(SslMethod::tls()) {
-            Ok(b) => b,
-            Err(err) => {
-                if timeout.is_some() && Some(now.elapsed()) > timeout {
-                    return Err(Box::new(err));
-                } else {
-                    warn!("failed to open WebSocket: {}", err);
-                    std::thread::sleep(sleep_time);
-                    continue;
-                }
-            }
-        };
-        let connector = ssl_builder.build();
         let client = awc::Client::builder()
-            // .connector(awc::Connector::new().ssl(connector).finish())
-            .header("Authorization", authheader)
+            .add_default_header(("Authorization", authheader))
             .finish();
 
         let (_, framed) = match client.ws(url).connect().await {
