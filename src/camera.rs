@@ -474,7 +474,13 @@ impl WSClient {
         ctx.run_later(Duration::new(60, 0), |act, ctx| {
             if act.recent_txrx_instant.elapsed() > Duration::new(45, 0) {
                 debug!("timeout waiting for server");
-                act.ws_sink.write(Message::Close(None));
+                match act.ws_sink.write(Message::Close(None)) {
+                    Ok(()) => (),
+                    Err(err) => error!(
+                        "caught while attempting to close camera WebSocket: {:?}",
+                        err
+                    ),
+                }
                 ctx.stop();
             } else {
                 act.check_receive_timeout(ctx);
@@ -499,7 +505,10 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             }
             Ok(Frame::Ping(_)) => {
                 debug!("received PING; sending PONG");
-                self.ws_sink.write(Message::Pong(Bytes::from_static(b"")));
+                match self.ws_sink.write(Message::Pong(Bytes::from_static(b""))) {
+                    Ok(()) => (),
+                    Err(err) => error!("caught while responding to WebSocket ping: {:?}", err),
+                }
             }
             Ok(_) => {
                 warn!("unrecognized WebSocket message: {:?}", msg);
@@ -523,7 +532,13 @@ impl Handler<WSSend> for WSClient {
     type Result = ();
 
     fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
-        self.ws_sink.write(Message::Text(msg.0.into()));
+        match self.ws_sink.write(Message::Text(msg.0.into())) {
+            Ok(()) => (),
+            Err(err) => error!(
+                "caught while attempting to send message via camera WebSocket: {:?}",
+                err
+            ),
+        }
         self.recent_txrx_instant = std::time::Instant::now();
     }
 }
