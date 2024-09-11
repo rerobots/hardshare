@@ -25,7 +25,6 @@ use crate::camera;
 use crate::mgmt::CProvider;
 use crate::{api, check, mgmt, monitor};
 
-
 pub struct CliError {
     pub msg: Option<String>,
     pub exitcode: i32,
@@ -91,14 +90,12 @@ impl CliError {
     }
 }
 
-
 #[derive(PartialEq, Debug)]
 enum PrintingFormat {
     Default,
     Yaml,
     Json,
 }
-
 
 fn confirm(prompt: &str) -> Result<(), CliError> {
     let mut confirmation = String::new();
@@ -119,7 +116,6 @@ fn confirm(prompt: &str) -> Result<(), CliError> {
     Ok(())
 }
 
-
 fn print_config(
     local: &mgmt::Config,
     remote: &Option<serde_json::Value>,
@@ -135,7 +131,6 @@ fn print_config(
     )?;
     Ok(())
 }
-
 
 fn print_config_w<T: Write>(
     f: &mut T,
@@ -296,7 +291,6 @@ fn print_config_w<T: Write>(
     Ok(())
 }
 
-
 fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Result<(), CliError> {
     let only_local_config = matches.is_present("onlylocalconfig");
     let include_dissolved = matches.is_present("includedissolved");
@@ -328,7 +322,6 @@ fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Resul
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     if let Some(new_token_path) = matches.value_of("new_api_token") {
@@ -621,7 +614,6 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     Ok(())
 }
 
-
 fn config_addon_subcommand(
     matches: &clap::ArgMatches,
     pformat: PrintingFormat,
@@ -671,7 +663,6 @@ fn config_addon_subcommand(
 
     Ok(())
 }
-
 
 fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
@@ -725,7 +716,6 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     Ok(())
 }
 
-
 fn ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
@@ -743,7 +733,6 @@ fn ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliEr
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn stop_ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
@@ -763,7 +752,6 @@ fn stop_ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), 
     }
 }
 
-
 fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let mut ac = api::HSAPIClient::new();
     let at_most_1 = !matches.is_present("permit_more");
@@ -775,7 +763,6 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let mut local_config = match mgmt::get_local_config(false, false) {
@@ -803,7 +790,6 @@ fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliE
     }
 }
 
-
 fn lock_wdeplyoment_subcommand(
     matches: &clap::ArgMatches,
     make_locked: bool,
@@ -825,7 +811,6 @@ fn lock_wdeplyoment_subcommand(
     }
 }
 
-
 fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.get_local_status(bindaddr) {
@@ -843,7 +828,6 @@ fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliE
     }
 }
 
-
 fn reload_subcommand(bindaddr: &str) -> Result<(), CliError> {
     let ac = api::HSAPIClient::new();
     match ac.req_reload_config(bindaddr) {
@@ -851,7 +835,6 @@ fn reload_subcommand(bindaddr: &str) -> Result<(), CliError> {
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
@@ -875,7 +858,6 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -954,7 +936,6 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
     }
 }
 
-
 fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let all = matches.is_present("all_cameras");
     let ac = api::HSAPIClient::new();
@@ -963,7 +944,6 @@ fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => CliError::new_std(err, 1),
     }
 }
-
 
 fn init_subcommand() -> Result<(), CliError> {
     if mgmt::get_local_config(false, false).is_ok() {
@@ -975,7 +955,6 @@ fn init_subcommand() -> Result<(), CliError> {
 
     Ok(())
 }
-
 
 fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let mut at_least_one_error = false;
@@ -1086,7 +1065,6 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     }
 }
 
-
 fn monitor_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let local_config = match mgmt::get_local_config(false, false) {
         Ok(lc) => lc,
@@ -1118,7 +1096,6 @@ fn monitor_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         }
     }
 }
-
 
 pub fn main() -> Result<(), CliError> {
     let app = clap::App::new("hardshare")
@@ -1413,7 +1390,6 @@ pub fn main() -> Result<(), CliError> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
@@ -1421,7 +1397,6 @@ mod tests {
     use super::print_config_w;
     use super::PrintingFormat;
     use crate::mgmt;
-
 
     #[test]
     fn list_config_json() {

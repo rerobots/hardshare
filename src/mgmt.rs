@@ -30,14 +30,12 @@ extern crate jwt;
 use jwt::algorithm::openssl::PKeyWithDigest;
 use jwt::VerifyWithKey;
 
-
 // TODO: this should eventually be placed in a public key store
 #[cfg(not(test))]
 const PUBLIC_KEY: &[u8] = include_bytes!("../keys/public.pem");
 
 #[cfg(test)]
 const PUBLIC_KEY: &[u8] = include_bytes!("../tests/keys/public.pem");
-
 
 struct MgmtError {
     msg: String,
@@ -61,7 +59,6 @@ fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
         msg: String::from(msg),
     }))
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -111,7 +108,6 @@ impl std::fmt::Display for CProvider {
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WDeployment {
@@ -226,7 +222,6 @@ impl WDeployment {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     version: u16,
@@ -262,7 +257,6 @@ impl Config {
     }
 }
 
-
 pub fn get_base_path() -> Option<std::path::PathBuf> {
     let home_dir = match home::home_dir() {
         Some(s) => s,
@@ -270,7 +264,6 @@ pub fn get_base_path() -> Option<std::path::PathBuf> {
     };
     Some(home_dir.join(".rerobots"))
 }
-
 
 type APITokensInfo = (HashMap<String, Vec<String>>, HashMap<String, String>);
 
@@ -333,7 +326,6 @@ fn list_local_api_tokens_bp(
     Ok((likely_tokens, errored_tokens))
 }
 
-
 pub fn get_local_config(
     create_if_empty: bool,
     collect_errors: bool,
@@ -390,7 +382,6 @@ pub fn get_local_config_bp(
     Ok(config)
 }
 
-
 pub fn append_urls(config: &mut Config) {
     let prefix = "https://rerobots.net/workspace/";
     for wd in config.wdeployments.iter_mut() {
@@ -399,7 +390,6 @@ pub fn append_urls(config: &mut Config) {
         }
     }
 }
-
 
 pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let rawtok = String::from(String::from_utf8(std::fs::read(path)?)?.trim());
@@ -446,7 +436,6 @@ pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::
     Ok(org)
 }
 
-
 pub fn add_ssh_path(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let target = std::path::Path::new(path).canonicalize()?;
     if !target.exists() {
@@ -469,7 +458,6 @@ pub fn add_ssh_path(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     };
     modify_local(&local_config)
 }
-
 
 pub fn find_id_prefix(
     config: &Config,
@@ -506,7 +494,6 @@ pub fn find_id_prefix(
     }
 }
 
-
 pub fn expand_id_prefixes(
     config: &Config,
     id_prefixes: &[&str],
@@ -523,7 +510,6 @@ pub fn expand_id_prefixes(
     Ok(expansion)
 }
 
-
 pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
     let base_path = get_base_path().unwrap();
     if !base_path.exists() {
@@ -537,7 +523,6 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
 pub fn get_username(token_path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let token = std::fs::read(token_path)?;
     let token = String::from_utf8(token)?.trim().to_string();
@@ -547,7 +532,6 @@ pub fn get_username(token_path: &str) -> Result<String, Box<dyn std::error::Erro
         None => Err("token user not identified".into()),
     }
 }
-
 
 fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, String> {
     let alg = PKeyWithDigest {
@@ -574,7 +558,6 @@ fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, S
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
@@ -585,13 +568,11 @@ mod tests {
     use super::list_local_api_tokens_bp;
     use super::Config;
 
-
     #[test]
     fn configuration_directory_suffix() {
         let base_path = super::get_base_path().unwrap();
         assert!(base_path.ends_with(".rerobots"));
     }
-
 
     #[test]
     fn find_id() {
@@ -635,14 +616,12 @@ mod tests {
         assert_eq!(wd_index, 1);
     }
 
-
     #[test]
     fn no_config() {
         let td = tempdir().unwrap();
         let base_path = td.path().join(".rerobots");
         assert!(get_local_config_bp(&base_path, false, false).is_err());
     }
-
 
     #[test]
     fn init_config() {
@@ -653,7 +632,6 @@ mod tests {
         assert_ne!(lconf.ssh_key.len(), 0);
     }
 
-
     #[test]
     fn no_saved_api_tokens() {
         let td = tempdir().unwrap();
@@ -662,7 +640,6 @@ mod tests {
         assert_eq!(likely_tokens.len(), 0);
         assert_eq!(errored_tokens.len(), 0);
     }
-
 
     #[test]
     fn detect_expired_token() {

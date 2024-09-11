@@ -10,9 +10,6 @@ jobs:
         runs-on: ubuntu-22.04
         steps:
             - uses: actions/checkout@v4
-            - run: |
-                rustup toolchain install nightly --profile minimal
-                rustup component add --toolchain nightly rustfmt
             - run: rustup toolchain install stable --profile minimal
             - uses: Swatinem/rust-cache@v2
             - name: Prepare to build
@@ -21,7 +18,7 @@ jobs:
                 touch keys/public.pem
             - name: Lint
               run: |
-                cargo +nightly fmt --check
+                cargo fmt --check
                 cargo check
                 cargo clippy --tests -- -D clippy::all
             - name: Run tests

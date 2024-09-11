@@ -17,7 +17,6 @@ use std::process::Command;
 use crate::mgmt::{self, CProvider, Config, WDeployment};
 use crate::{api, camera, control, monitor};
 
-
 #[derive(Debug)]
 pub struct Error {
     pub description: Option<String>,
@@ -48,7 +47,6 @@ impl Error {
     }
 }
 
-
 fn check_docker(rootless: bool) -> Result<(), String> {
     info!(
         "checking availability of docker{}",
@@ -67,7 +65,6 @@ fn check_docker(rootless: bool) -> Result<(), String> {
     Ok(())
 }
 
-
 fn check_podman() -> Result<(), String> {
     info!("checking availability of podman");
     let output = match Command::new("podman").arg("version").output() {
@@ -82,7 +79,6 @@ fn check_podman() -> Result<(), String> {
     }
     Ok(())
 }
-
 
 fn check_lxd() -> Result<(), String> {
     info!("checking availability of lxd");
@@ -101,7 +97,6 @@ fn check_lxd() -> Result<(), String> {
     Ok(())
 }
 
-
 fn check_cprovider(cp: &CProvider) -> Result<(), String> {
     match cp {
         CProvider::Podman => check_podman(),
@@ -112,7 +107,6 @@ fn check_cprovider(cp: &CProvider) -> Result<(), String> {
         CProvider::Proxy => Ok(()),
     }
 }
-
 
 fn check_deployment_in_remote(
     id: &str,
@@ -130,7 +124,6 @@ fn check_deployment_in_remote(
     }
     Ok(())
 }
-
 
 pub fn config(
     local_config: &Config,
@@ -318,7 +311,6 @@ pub fn config(
     }
 }
 
-
 pub fn all_configurations(
     local_config: &Config,
     check_camera: bool,
@@ -373,7 +365,6 @@ pub fn all_configurations(
         Ok(())
     }
 }
-
 
 pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::error::Error>> {
     let mut at_least_one_error = false;

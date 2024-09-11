@@ -31,7 +31,6 @@ use futures::stream::{SplitSink, StreamExt};
 use crate::api::{self, CameraDimensions};
 use crate::check::Error as CheckError;
 
-
 pub fn get_default_dev() -> String {
     #[cfg(target_os = "linux")]
     return "/dev/video0".into();
@@ -39,11 +38,9 @@ pub fn get_default_dev() -> String {
     return "0".into();
 }
 
-
 pub fn check_camera(camera_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     verify_capture_ability(camera_path, None)
 }
-
 
 pub fn stream_websocket(
     origin: &str,
@@ -95,14 +92,12 @@ pub fn stream_websocket(
     }
 }
 
-
 #[derive(PartialEq)]
 enum CaptureCommand {
     Start, // Read images from camera
     Stop,  // Do not read images from camera
     Quit,  // Return from (close) the thread
 }
-
 
 #[cfg(target_os = "macos")]
 fn verify_capture_ability(
@@ -159,7 +154,6 @@ fn verify_capture_ability(
 
     Ok(())
 }
-
 
 #[cfg(target_os = "macos")]
 fn video_capture(
@@ -269,7 +263,6 @@ fn video_capture(
     }
 }
 
-
 #[cfg(target_os = "linux")]
 fn verify_capture_ability(
     camera_path: &str,
@@ -328,7 +321,6 @@ fn verify_capture_ability(
 
     Ok(())
 }
-
 
 #[cfg(target_os = "linux")]
 fn video_capture(
@@ -445,7 +437,6 @@ fn video_capture(
         }
     }
 }
-
 
 struct WSClient {
     ws_sink: SinkWrite<Message, SplitSink<Framed<BoxedSocket, Codec>, Message>>,

@@ -5,7 +5,6 @@ use crate::api;
 use crate::check::Error;
 use crate::mgmt::Config;
 
-
 fn run_opt(
     local_config: &Config,
     wd_index: usize,
@@ -42,16 +41,13 @@ fn run_opt(
     Ok(())
 }
 
-
 pub fn run_dry(local_config: &Config, wd_index: usize) -> Result<(), Box<dyn std::error::Error>> {
     run_opt(local_config, wd_index, false)
 }
 
-
 pub fn run(local_config: &Config, wd_index: usize) -> Result<(), Box<dyn std::error::Error>> {
     run_opt(local_config, wd_index, true)
 }
-
 
 pub fn run_loop(
     local_config: &Config,

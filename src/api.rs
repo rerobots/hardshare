@@ -40,7 +40,6 @@ use crate::control::{CWorkerCommand, TunnelInfo};
 use crate::mgmt;
 use crate::mgmt::WDeployment;
 
-
 struct ClientError {
     msg: String,
 }
@@ -67,7 +66,6 @@ where
     }))
 }
 
-
 #[derive(Serialize, Deserialize)]
 pub struct AccessRule {
     capability: String,
@@ -91,7 +89,6 @@ impl std::fmt::Display for AccessRules {
         write!(f, "{}", serde_yaml::to_string(self).unwrap())
     }
 }
-
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum AddOn {
@@ -139,9 +136,7 @@ impl std::str::FromStr for CameraDimensions {
     }
 }
 
-
 pub type CameraCrop = HashMap<String, Vec<u16>>;
-
 
 #[derive(Clone)]
 pub struct HSAPIClient {
@@ -173,7 +168,6 @@ impl std::fmt::Display for DaemonStatus {
     }
 }
 
-
 async fn get_access_rules_a(
     client: &awc::Client,
     origin: &str,
@@ -194,7 +188,6 @@ async fn get_access_rules_a(
         ))
     }
 }
-
 
 impl HSAPIClient {
     pub fn new() -> HSAPIClient {
@@ -249,13 +242,11 @@ impl HSAPIClient {
         hsclient
     }
 
-
     fn reload_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let local_config = mgmt::get_local_config(false, false)?;
         self.local_config = Some(local_config);
         Ok(())
     }
-
 
     fn create_client_generator(
         &self,
@@ -281,7 +272,6 @@ impl HSAPIClient {
                 .finish()
         }))
     }
-
 
     pub fn get_remote_config(
         &self,
@@ -315,7 +305,6 @@ impl HSAPIClient {
         })
     }
 
-
     pub fn get_access_rules(&self, wdid: &str) -> Result<AccessRules, Box<dyn std::error::Error>> {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
@@ -325,7 +314,6 @@ impl HSAPIClient {
             get_access_rules_a(&client(), &origin, &wdid).await
         })
     }
-
 
     pub fn drop_access_rules(&self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let client = self.create_client_generator()?;
@@ -350,7 +338,6 @@ impl HSAPIClient {
             Ok(())
         })
     }
-
 
     pub fn add_access_rule(
         &self,
@@ -386,7 +373,6 @@ impl HSAPIClient {
         })
     }
 
-
     pub fn toggle_lockout(
         &self,
         wdid: &str,
@@ -411,7 +397,6 @@ impl HSAPIClient {
             Ok(())
         })
     }
-
 
     pub fn send_alert(&self, wdid: &str, message: &str) -> Result<(), Box<dyn std::error::Error>> {
         let client = self.create_client_generator()?;
@@ -440,7 +425,6 @@ impl HSAPIClient {
             Ok(())
         })
     }
-
 
     pub fn register_hook_emails(
         &self,
@@ -473,7 +457,6 @@ impl HSAPIClient {
             Ok(())
         })
     }
-
 
     pub fn dissolve_wdeployment(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {
         let local_config = match &self.local_config {
@@ -519,7 +502,6 @@ impl HSAPIClient {
         Ok(())
     }
 
-
     pub fn get_addon_config(
         &self,
         wdid: &str,
@@ -559,7 +541,6 @@ impl HSAPIClient {
             }
         })
     }
-
 
     pub fn remove_addon(
         &self,
@@ -626,7 +607,6 @@ impl HSAPIClient {
         })
     }
 
-
     fn is_locked_out(&self, wdid: &str) -> Result<bool, Box<dyn std::error::Error>> {
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
@@ -652,7 +632,6 @@ impl HSAPIClient {
             }
         })
     }
-
 
     fn upsert_addon(
         &self,
@@ -735,12 +714,10 @@ impl HSAPIClient {
         })
     }
 
-
     pub fn add_mistyproxy(&self, wdid: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mistyproxy_config = json!({ "ip": addr });
         self.upsert_addon(wdid, &AddOn::MistyProxy, Some(mistyproxy_config))
     }
-
 
     pub fn stop(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{}/stop/{}", bindaddr, wdid);
@@ -760,7 +737,6 @@ impl HSAPIClient {
                 })
         })
     }
-
 
     async fn ad(
         ac: &Arc<Mutex<HSAPIClient>>,
@@ -797,7 +773,6 @@ impl HSAPIClient {
         Ok(main_actor_addr)
     }
 
-
     async fn http_post_reload_config(
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
@@ -810,7 +785,6 @@ impl HSAPIClient {
             }
         }
     }
-
 
     async fn http_post_start(
         wdid: actix_web::web::Path<String>,
@@ -862,7 +836,6 @@ impl HSAPIClient {
         actix_web::HttpResponse::Ok().finish()
     }
 
-
     async fn http_post_stop(
         wdid: actix_web::web::Path<String>,
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
@@ -885,7 +858,6 @@ impl HSAPIClient {
         }
     }
 
-
     async fn http_get_status(
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
@@ -900,7 +872,6 @@ impl HSAPIClient {
         }
         actix_web::HttpResponse::Ok().json(daemon_status)
     }
-
 
     pub fn run(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         if self.cached_api_token.is_none() {
@@ -1011,7 +982,6 @@ impl HSAPIClient {
         }
     }
 
-
     pub fn get_local_status(
         &self,
         bindaddr: &str,
@@ -1029,7 +999,6 @@ impl HSAPIClient {
         })
     }
 
-
     pub fn req_reload_config(&self, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{}/reload", bindaddr);
         let sys = System::new();
@@ -1042,7 +1011,6 @@ impl HSAPIClient {
             }
         })
     }
-
 
     pub fn register_new(&mut self, at_most_1: bool) -> Result<String, Box<dyn std::error::Error>> {
         let local_config = match &mut self.local_config {
@@ -1158,7 +1126,6 @@ impl HSAPIClient {
         Ok(())
     }
 
-
     pub fn attach_camera(
         &self,
         camera_path: &str,
@@ -1227,7 +1194,6 @@ impl HSAPIClient {
 
         exit_result
     }
-
 
     pub fn stop_cameras(&self, all: bool) -> Result<(), Box<dyn std::error::Error>> {
         let base_path = mgmt::get_base_path().unwrap();
@@ -1316,7 +1282,6 @@ impl HSAPIClient {
     }
 }
 
-
 // Try at least once, independent of timeout
 async fn open_websocket(
     url: &str,
@@ -1362,7 +1327,6 @@ async fn open_websocket(
         }));
     }
 }
-
 
 pub struct WSClient {
     ws_url: String,
@@ -1528,7 +1492,6 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
 
 impl actix::io::WriteHandler<WsProtocolError> for WSClient {}
 
-
 pub struct MainActor {
     worker_req: mpsc::Sender<CWorkerCommand>,
     wsclient_addr: Option<Addr<WSClient>>,
@@ -1626,7 +1589,6 @@ impl Handler<ClientCommand> for MainActor {
     }
 }
 
-
 fn nonempty_intersection<T>(u: &[T], v: &[T]) -> bool
 where
     T: PartialEq,
@@ -1640,7 +1602,6 @@ where
     }
     false
 }
-
 
 #[cfg(test)]
 mod tests {

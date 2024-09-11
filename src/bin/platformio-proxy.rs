@@ -13,12 +13,10 @@ use std::process;
 
 use serde::{Deserialize, Serialize};
 
-
 enum Mode {
     Server,
     Client,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Build {
@@ -26,7 +24,6 @@ struct Build {
     blob: String,
     blob_path: String,
 }
-
 
 fn serv(addr: std::net::SocketAddr, build_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let blob = std::fs::read_to_string(build_file)?;
@@ -40,7 +37,6 @@ fn client(addr: std::net::SocketAddr) -> Result<(), Box<dyn std::error::Error>> 
     let b: Build = serde_json::from_slice(&raw_read)?;
     Ok(())
 }
-
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if env::args_os().len() != 3 && env::args_os().len() != 4 {

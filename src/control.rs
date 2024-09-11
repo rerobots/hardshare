@@ -30,7 +30,6 @@ use crate::api;
 use crate::check::Error;
 use crate::mgmt::{CProvider, WDeployment};
 
-
 #[derive(PartialEq, Debug, Clone)]
 enum InstanceStatus {
     Init,
@@ -52,15 +51,12 @@ impl std::fmt::Display for InstanceStatus {
     }
 }
 
-
 type Port = u32;
-
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ConnType {
     SshTun,
 }
-
 
 pub struct ContainerAddress {
     ip: String,
@@ -68,12 +64,10 @@ pub struct ContainerAddress {
     hostkey: String,
 }
 
-
 struct SshTunnel {
     proc: std::process::Child,
     container_addr: ContainerAddress,
 }
-
 
 #[derive(Clone)]
 pub struct CurrentInstance {
@@ -167,7 +161,6 @@ impl CurrentInstance {
         }
     }
 
-
     fn send_create_sshtun(&self, tunnelkey_public: &str) -> Result<String, String> {
         if let Some(main_actor_addr) = &self.main_actor_addr {
             let message_id = {
@@ -210,7 +203,6 @@ impl CurrentInstance {
             Err("called without WebSocket client".into())
         }
     }
-
 
     fn init(
         &mut self,
@@ -269,7 +261,6 @@ impl CurrentInstance {
         }
     }
 
-
     fn get_container_addr(
         cprovider: &CProvider,
         name: &str,
@@ -310,7 +301,6 @@ impl CurrentInstance {
         Err("address not found".into())
     }
 
-
     fn get_container_sshport(cprovider: &CProvider, name: &str) -> Result<Port, String> {
         let execname = cprovider.get_execname().unwrap();
         let mut run_command = Command::new(execname);
@@ -331,7 +321,6 @@ impl CurrentInstance {
             Err(err) => Err(format!("SSH port not found: {}", err)),
         }
     }
-
 
     fn get_container_hostkey(
         cprovider: &CProvider,
@@ -380,7 +369,6 @@ impl CurrentInstance {
         }
         Err("host key not found".into())
     }
-
 
     fn start_sshtun(
         &self,
@@ -450,7 +438,6 @@ impl CurrentInstance {
         });
         Ok(())
     }
-
 
     fn launch_sshtun(
         mut instance: CurrentInstance,
@@ -622,7 +609,6 @@ impl CurrentInstance {
         instance.clear_status();
         instance.send_destroy_done();
     }
-
 
     pub fn launch_container(
         wdeployment: &WDeployment,
@@ -800,7 +786,6 @@ impl CurrentInstance {
         Ok(ContainerAddress { ip, port, hostkey })
     }
 
-
     pub fn destroy_container(
         wdeployment: &WDeployment,
         name: &str,
@@ -844,7 +829,6 @@ impl CurrentInstance {
         Ok(())
     }
 } // impl CurrentInstance
-
 
 pub fn cworker(
     wsclient_req: mpsc::Receiver<CWorkerCommand>,
@@ -1000,7 +984,6 @@ pub fn cworker(
     }
 }
 
-
 #[derive(PartialEq, Debug, Clone)]
 enum CWorkerCommandType {
     InstanceLaunch,
@@ -1105,14 +1088,12 @@ pub enum CWorkerMessageType {
     WsSend,
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::sync::{atomic, Arc};
 
     use super::{ConnType, CurrentInstance};
     use crate::mgmt::WDeployment;
-
 
     fn create_example_wdeployment() -> WDeployment {
         serde_json::from_str(
@@ -1131,7 +1112,6 @@ mod tests {
         .unwrap()
     }
 
-
     fn create_example_proxy_wdeployment() -> WDeployment {
         serde_json::from_str(
             r#"
@@ -1147,7 +1127,6 @@ mod tests {
         )
         .unwrap()
     }
-
 
     #[test]
     fn cannot_init_when_busy() {
@@ -1173,7 +1152,6 @@ mod tests {
             panic!("{}", err);
         }
     }
-
 
     #[test]
     fn generated_local_name_random() {

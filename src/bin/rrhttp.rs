@@ -10,7 +10,6 @@ extern crate log;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Builder;
 
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 

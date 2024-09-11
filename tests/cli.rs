@@ -15,7 +15,6 @@
 use assert_cmd::Command;
 use tempfile::{tempdir, NamedTempFile};
 
-
 #[test]
 fn prints_version() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
@@ -24,7 +23,6 @@ fn prints_version() {
         .stdout(format!("{}\n", env!("CARGO_PKG_VERSION")))
         .success();
 }
-
 
 #[test]
 fn prints_help() {
@@ -48,7 +46,6 @@ fn prints_help() {
     assert.success();
     insta::assert_snapshot!("prints_help", String::from_utf8(output.stdout).unwrap());
 }
-
 
 #[test]
 fn prints_help_config() {
@@ -78,7 +75,6 @@ fn prints_help_config() {
         String::from_utf8(output.stdout).unwrap()
     );
 }
-
 
 #[test]
 fn prints_help_register() {
@@ -112,14 +108,12 @@ fn prints_help_register() {
     );
 }
 
-
 #[test]
 fn config_requires_arg() {
     let mut cmd = Command::cargo_bin("hardshare").unwrap();
     let assert = cmd.arg("config").assert();
     assert.failure().code(1);
 }
-
 
 #[test]
 fn add_token_does_not_exist() {
@@ -132,7 +126,6 @@ fn add_token_does_not_exist() {
         .assert();
     assert.failure().code(1);
 }
-
 
 #[test]
 fn list_config_does_not_exist() {
