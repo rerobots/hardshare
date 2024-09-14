@@ -36,7 +36,7 @@ serde_json = "1.0"
 serde_yaml = "0.8"
 tempfile = "3.1"
 
-tokio = { version = "1.40", features = ["net", "rt"] }
+tokio = { version = "1.40", features = ["net", "rt", "signal"] }
 
 [target.'cfg(target_os="linux")'.dependencies]
 v4l = { version = "0.14", features = ["v4l2"] }

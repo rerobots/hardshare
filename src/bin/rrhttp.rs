@@ -12,6 +12,7 @@ extern crate log;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Builder;
+use tokio::{signal, time};
 
 async fn x_to_y_nofilter(
     prefix: String,
@@ -107,21 +108,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         println!("{}", listener.local_addr()?);
 
-        loop {
-            let (ingress, _) = listener.accept().await?;
-            ingress.set_nodelay(true)?;
+        tokio::spawn(async move {
+            loop {
+                let (ingress, _) = match listener.accept().await {
+                    Ok(x) => x,
+                    Err(err) => {
+                        error!(
+                            "error on accept connection: {}; sleeping and looping...",
+                            err
+                        );
+                        time::sleep(std::time::Duration::from_millis(1000)).await;
+                        continue;
+                    }
+                };
+                match ingress.set_nodelay(true) {
+                    Ok(()) => (),
+                    Err(err) => {
+                        warn!("unable to set TCP NODELAY on ingress: {}", err)
+                    }
+                };
 
-            let egress = match TcpStream::connect(targetaddr.clone()).await {
-                Ok(c) => c,
-                Err(err) => {
-                    error!("unable to connect to target: {}", err);
-                    continue;
-                }
-            };
-            egress.set_nodelay(true)?;
+                let egress = match TcpStream::connect(targetaddr.clone()).await {
+                    Ok(c) => c,
+                    Err(err) => {
+                        error!("unable to connect to target: {}", err);
+                        continue;
+                    }
+                };
+                match egress.set_nodelay(true) {
+                    Ok(()) => (),
+                    Err(err) => {
+                        warn!("unable to set TCP NODELAY on egress: {}", err)
+                    }
+                };
 
-            tokio::spawn(main_per(ingress, egress));
-        }
+                tokio::spawn(main_per(ingress, egress));
+            }
+        });
+
+        signal::ctrl_c().await?;
 
         Ok(())
     })
