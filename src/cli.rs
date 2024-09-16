@@ -478,6 +478,34 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 Err(err) => CliError::new_std(err, 1),
                 Ok(()) => Ok(()),
             };
+        } else if let Some(new_command) = matches.value_of("cprovider_cmd") {
+            match local_config.wdeployments[wd_index].cprovider {
+                CProvider::Proxy => {
+                    let parts: Vec<&str> = new_command.split(' ').collect();
+                    match parts[0] {
+                        "rrhttp" => {
+                            if parts.len() != 2 {
+                                return CliError::new("Usage: rrhttp TARGET", 1);
+                            }
+                        }
+                        _ => return CliError::new("unknown proxy command", 1),
+                    };
+                    local_config.wdeployments[wd_index].cargs =
+                        parts.iter().map(|x| x.to_string()).collect();
+                }
+                _ => {
+                    let errmessage = format!(
+                        "cannot --assign-proxy-command for cprovider `{}`",
+                        local_config.wdeployments[wd_index].cprovider
+                    );
+                    return CliError::new(errmessage.as_str(), 1);
+                }
+            }
+
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
         } else if let Some(raw_device_path) = matches.value_of("raw_device_path") {
             let device_path = match std::path::Path::new(raw_device_path).canonicalize() {
                 Ok(p) => p,
@@ -1151,6 +1179,9 @@ pub fn main() -> Result<(), CliError> {
                          .long("assign-image")
                          .value_name("IMG")
                          .help("assign image for cprovider to use (advanced option)"))
+                    .arg(Arg::with_name("cprovider_cmd")
+                         .long("assign-proxy-command")
+                         .value_name("CMD"))
                     .arg(Arg::with_name("raw_device_path")
                          .long("add-raw-device")
                          .value_name("PATH")
