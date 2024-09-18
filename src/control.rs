@@ -162,7 +162,11 @@ impl CurrentInstance {
         }
     }
 
-    fn send_create_sshtun(&self, tunnelkey_public: &str) -> Result<String, String> {
+    fn send_create_sshtun(
+        &self,
+        tunnelkey_public: &str,
+        proxy_mode: bool,
+    ) -> Result<String, String> {
         if let Some(main_actor_addr) = &self.main_actor_addr {
             let message_id = {
                 let mut message_id: String;
@@ -191,6 +195,7 @@ impl CurrentInstance {
                                     "id": self.id.as_ref().clone(),
                                     "key": tunnelkey_public,
                                     "mi": message_id,
+                                    "proxy": proxy_mode,
                                 }))
                                 .unwrap(),
                             ),
@@ -414,7 +419,11 @@ impl CurrentInstance {
         let mut f = File::open(tunnelkey_public_path)?;
         let mut tunnelkey_public = String::new();
         f.read_to_string(&mut tunnelkey_public)?;
-        let message_id = self.send_create_sshtun(&tunnelkey_public)?;
+        let proxy_mode = match self.wdeployment.cprovider {
+            CProvider::Proxy => true,
+            _ => false,
+        };
+        let message_id = self.send_create_sshtun(&tunnelkey_public, proxy_mode)?;
         let st = std::time::Duration::from_secs(2);
         let mut tunnelinfo = None;
 
