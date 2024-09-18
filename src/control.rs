@@ -419,10 +419,7 @@ impl CurrentInstance {
         let mut f = File::open(tunnelkey_public_path)?;
         let mut tunnelkey_public = String::new();
         f.read_to_string(&mut tunnelkey_public)?;
-        let proxy_mode = match self.wdeployment.cprovider {
-            CProvider::Proxy => true,
-            _ => false,
-        };
+        let proxy_mode = self.wdeployment.cprovider == CProvider::Proxy;
         let message_id = self.send_create_sshtun(&tunnelkey_public, proxy_mode)?;
         let st = std::time::Duration::from_secs(2);
         let mut tunnelinfo = None;
