@@ -97,14 +97,23 @@ fn check_lxd() -> Result<(), String> {
     Ok(())
 }
 
-fn check_cprovider(cp: &CProvider) -> Result<(), String> {
-    match cp {
+pub fn check_proxy(wd: &WDeployment) -> Result<(), String> {
+    if wd.cargs.is_empty() {
+        return Err(
+            "Proxy is not configured. Try `hardshare config --assign-proxy-command`".into(),
+        );
+    }
+    Ok(())
+}
+
+fn check_cprovider(wd: &WDeployment) -> Result<(), String> {
+    match wd.cprovider {
         CProvider::Podman => check_podman(),
         CProvider::Docker | CProvider::DockerRootless => {
-            check_docker(*cp == CProvider::DockerRootless)
+            check_docker(wd.cprovider == CProvider::DockerRootless)
         }
         CProvider::Lxd => check_lxd(),
-        CProvider::Proxy => Ok(()),
+        CProvider::Proxy => check_proxy(wd),
     }
 }
 
@@ -262,7 +271,7 @@ pub fn config(
         }
     }
 
-    if let Err(err) = check_cprovider(&local_config.wdeployments[wd_index].cprovider) {
+    if let Err(err) = check_cprovider(&local_config.wdeployments[wd_index]) {
         return Err(Error::new(format!(
             "{}\nIs {} installed correctly?",
             err, &local_config.wdeployments[wd_index].cprovider
@@ -382,7 +391,7 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
         }
     }
 
-    if let Err(err) = check_cprovider(&wdeployment.cprovider) {
+    if let Err(err) = check_cprovider(&wdeployment) {
         return Err(Error::new(format!(
             "{}\nIs {} installed correctly?",
             err, &wdeployment.cprovider
