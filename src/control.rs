@@ -505,9 +505,9 @@ impl CurrentInstance {
         }
 
         let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
-        let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
 
         if let Some(repo_info) = repo_args {
+            let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
             let status = Command::new(&cprovider_execname)
                 .args([
                     "exec",
