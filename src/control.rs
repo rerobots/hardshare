@@ -619,6 +619,7 @@ impl CurrentInstance {
     fn stop_tunnel(&self) {
         let mut tunnel_ref = self.tunnel.lock().unwrap();
         if let Some(tunnel) = tunnel_ref.as_mut() {
+            debug!("killing ssh tunnel process: {:?}", tunnel.proc);
             if let Err(err) = tunnel.proc.kill() {
                 warn!("tunnel kill: : {}", err);
             }
@@ -635,6 +636,7 @@ impl CurrentInstance {
 
             if self.wdeployment.cprovider == CProvider::Proxy {
                 if let Some(subprocess) = tunnel.container_addr.subprocess.as_mut() {
+                    debug!("killing proxy process: {:?}", subprocess);
                     if let Err(err) = subprocess.kill() {
                         warn!("proxy kill: : {}", err);
                     }
