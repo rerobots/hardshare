@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::mgmt::{self, CProvider, Config, WDeployment};
 use crate::{api, camera, control, monitor};
@@ -102,6 +102,18 @@ pub fn check_proxy(wd: &WDeployment) -> Result<(), String> {
         return Err(
             "Proxy is not configured. Try `hardshare config --assign-proxy-command`".into(),
         );
+    }
+    let mut child = match Command::new(&wd.cargs[0])
+        .args(wd.cargs[1..].iter())
+        .stdout(Stdio::piped())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(err) => return Err(err.to_string()),
+    };
+    match child.kill() {
+        Ok(()) => (),
+        Err(err) => return Err(err.to_string()),
     }
     Ok(())
 }
