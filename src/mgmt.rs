@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::process::{Command, Stdio};
 
@@ -22,20 +22,7 @@ use serde::{Deserialize, Serialize};
 
 extern crate home;
 
-extern crate openssl;
-use openssl::hash::MessageDigest;
-use openssl::pkey::PKey;
-
-extern crate jwt;
-use jwt::algorithm::openssl::PKeyWithDigest;
-use jwt::VerifyWithKey;
-
-// TODO: this should eventually be placed in a public key store
-#[cfg(not(test))]
-const PUBLIC_KEY: &[u8] = include_bytes!("../keys/public.pem");
-
-#[cfg(test)]
-const PUBLIC_KEY: &[u8] = include_bytes!("../tests/keys/public.pem");
+use rerobots::client::TokenClaims;
 
 struct MgmtError {
     msg: String,
@@ -300,24 +287,28 @@ fn list_local_api_tokens_bp(
                 .unwrap()
                 .trim(),
         );
-        match get_jwt_claims(&rawtok) {
+        match TokenClaims::new(&rawtok) {
             Ok(claims) => {
-                let path = String::from(path.to_str().unwrap());
-                let org = if claims.contains_key("org") {
-                    claims["org"].as_str().unwrap()
+                if claims.is_expired() && collect_errors {
+                    errored_tokens
+                        .insert(String::from(path.to_str().unwrap()), "expired".to_string());
                 } else {
-                    "()"
-                };
-                if likely_tokens.contains_key(org) {
-                    let org_tokens = likely_tokens.get_mut(org).unwrap();
-                    org_tokens.push(path);
-                } else {
-                    likely_tokens.insert(org.into(), vec![path]);
+                    let path = String::from(path.to_str().unwrap());
+                    let org = match claims.organization {
+                        Some(o) => o,
+                        None => "()".into(),
+                    };
+                    if likely_tokens.contains_key(org.as_str()) {
+                        let org_tokens = likely_tokens.get_mut(org.as_str()).unwrap();
+                        org_tokens.push(path);
+                    } else {
+                        likely_tokens.insert(org, vec![path]);
+                    }
                 }
             }
             Err(err) => {
                 if collect_errors {
-                    errored_tokens.insert(String::from(path.to_str().unwrap()), err);
+                    errored_tokens.insert(String::from(path.to_str().unwrap()), err.to_string());
                 }
             }
         }
@@ -393,16 +384,14 @@ pub fn append_urls(config: &mut Config) {
 
 pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
     let rawtok = String::from(String::from_utf8(std::fs::read(path)?)?.trim());
-    let org;
-    match get_jwt_claims(&rawtok) {
+    let org = match TokenClaims::new(&rawtok) {
         Ok(claims) => {
-            if claims.contains_key("org") {
-                org = Some(String::from(claims["org"].as_str().unwrap()))
-            } else {
-                org = None
+            if claims.is_expired() {
+                return error("expired");
             }
+            claims.organization
         }
-        Err(err) => return error(err.as_str()),
+        Err(err) => return error(err),
     };
 
     let base_path = get_base_path().unwrap();
@@ -526,36 +515,8 @@ pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 pub fn get_username(token_path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let token = std::fs::read(token_path)?;
     let token = String::from_utf8(token)?.trim().to_string();
-    let claims = get_jwt_claims(&token)?;
-    match claims["sub"].as_str() {
-        Some(u) => Ok(u.into()),
-        None => Err("token user not identified".into()),
-    }
-}
-
-fn get_jwt_claims(rawtok: &str) -> Result<BTreeMap<String, serde_json::Value>, String> {
-    let alg = PKeyWithDigest {
-        digest: MessageDigest::sha256(),
-        key: PKey::public_key_from_pem(PUBLIC_KEY).unwrap(),
-    };
-    let now = std::time::SystemTime::now();
-    let utime = now.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-    let result: Result<BTreeMap<String, serde_json::Value>, jwt::error::Error> =
-        rawtok.verify_with_key(&alg);
-    match result {
-        Ok(claims) => {
-            let exp = claims["exp"].as_u64().unwrap();
-            if exp < utime {
-                Err("expired".into())
-            } else {
-                Ok(claims)
-            }
-        }
-        Err(err) => match err {
-            jwt::error::Error::InvalidSignature => Err("invalid signature".into()),
-            _ => Err(format!("error: {}", err)),
-        },
-    }
+    let claims = TokenClaims::new(&token)?;
+    Ok(claims.subject)
 }
 
 #[cfg(test)]
@@ -563,7 +524,6 @@ mod tests {
     use tempfile::tempdir;
 
     use super::find_id_prefix;
-    use super::get_jwt_claims;
     use super::get_local_config_bp;
     use super::list_local_api_tokens_bp;
     use super::Config;
@@ -639,17 +599,5 @@ mod tests {
         let (likely_tokens, errored_tokens) = list_local_api_tokens_bp(&base_path, false).unwrap();
         assert_eq!(likely_tokens.len(), 0);
         assert_eq!(errored_tokens.len(), 0);
-    }
-
-    #[test]
-    fn detect_expired_token() {
-        const EXPIRED_TOK: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJvcmciOiJTdGFnaW5nVXNlclRlYW0iLCJzdWIiOiJzdGFnaW5nX3VzZXIiLCJpc3MiOiJyZXJvYm90cy5uZXQiLCJhdWQiOiJyZXJvYm90cy5uZXQiLCJleHAiOjE2NTg4NjgwMzIsIm5iZiI6MTY1ODgzMjAzMn0.Wq8vZ6XYs-pSmszcchXJPm3PnNGHtyM9ZktbjqMXgXl_TEdDrOH7HBYlYhoyNoyNwK4RkEqBxJLybH2qUmiSL7ljGIpKMhvpg6Rdytlx3tD7g__EeGusGO-4KrvCBGojTtSH4tm8jYxRmZVJXAfyqYqh3ZBickXwG-kWxNlz-vT3oAmVn4oSr5H0cf4WPS95uDo0X0j2nYroHyhHEuBIh2wy-8bcvolMweyKaa4Vo6h-bU4hiqQ3RHXJM7achzw_DIi3_eMVfJzsT1i1TovbCTNicUzwXGJcZJPBsQgU1KhD463rsv8N-o8o0oF3qU61n7oDQJGW8mbtzyFKIopTYZ3njWYZpkELS3ElKHVT92iVbOVlgGaicxxxFeg2Zz7fp6fFQWCZBWuoVwCguyoVG91XnEmk1Dlw7o9Bxmrgpmyyavg2A066CgV4b3YbrJaiOj1p8vITh3cTV2ca4iS2tUegYA1lEyJnmDPu09bdLC-hDR1MTBusu_jMOT7G1L_2z1a-SulgQbUBONU1387jgU6lr-1IoEZfYNVsdXCunqG6tcJXp-RXGQpekwm4wClBXpXGcYslYaIsMNnZrS_te43TYijkXiwZmp4wIFhmm9CcZNJ9vWFlw2KY5p5ilP4uE81a5LcM5jin4FdC1DE3qfJvN7hvYid80JfelsbopNE";
-        assert_eq!(get_jwt_claims(EXPIRED_TOK), Err("expired".into()));
-        let mut tok = String::from(EXPIRED_TOK);
-        tok.push('F');
-        assert_eq!(
-            get_jwt_claims(tok.as_str()),
-            Err("invalid signature".into())
-        );
     }
 }
