@@ -390,16 +390,19 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             if local_config.wdeployments[wd_index].cprovider == selected_cprovider {
                 return Ok(());
             }
-            local_config.wdeployments[wd_index].cprovider = selected_cprovider;
 
-            if local_config.wdeployments[wd_index].cprovider == CProvider::Proxy {
+            if selected_cprovider == CProvider::Proxy {
                 local_config.wdeployments[wd_index].image = None;
             } else {
+                if local_config.wdeployments[wd_index].cprovider == CProvider::Proxy {
+                    local_config.wdeployments[wd_index].cargs = vec![];
+                }
                 let default_img = "rerobots/hs-generic";
                 if local_config.wdeployments[wd_index].image.is_none() {
                     local_config.wdeployments[wd_index].image = Some(default_img.into());
                 }
             }
+            local_config.wdeployments[wd_index].cprovider = selected_cprovider;
 
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
