@@ -758,8 +758,10 @@ fn ad_subcommand(matches: &clap::ArgMatches, bindaddr: &str) -> Result<(), CliEr
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    if let Err(err) = check::check_proxy(&local_config.wdeployments[wd_index]) {
-        return CliError::new(err, 1);
+    if local_config.wdeployments[wd_index].cprovider == CProvider::Proxy {
+        if let Err(err) = check::check_proxy(&local_config.wdeployments[wd_index]) {
+            return CliError::new(err, 1);
+        }
     }
 
     let ac = api::HSAPIClient::new();
