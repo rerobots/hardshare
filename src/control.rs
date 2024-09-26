@@ -659,13 +659,11 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        if instance.wdeployment.cprovider != CProvider::Proxy {
-            let name = instance.get_local_name().unwrap();
-            if let Err(err) = Self::destroy_container(&instance.wdeployment, &name) {
-                error!("Deployment fault! Caught from destroy_container(): {}", err);
-                instance.declare_status(InstanceStatus::Fault);
-                return;
-            }
+        let name = instance.get_local_name().unwrap();
+        if let Err(err) = Self::destroy_container(&instance.wdeployment, &name) {
+            error!("Deployment fault! Caught from destroy_container(): {}", err);
+            instance.declare_status(InstanceStatus::Fault);
+            return;
         }
 
         instance.clear_status();
