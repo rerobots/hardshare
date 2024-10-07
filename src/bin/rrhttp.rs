@@ -32,30 +32,40 @@ impl Request {
         let mut verb = None;
         let mut path = None;
         let mut protocol_match = false;
-        let mut first_line = true;
-        for line in String::from_utf8_lossy(blob).lines() {
-            for word in line.split_whitespace() {
-                if first_line {
-                    if verb.is_none() {
-                        if word == "GET" {
-                            verb = Some(HttpVerb::Get);
-                        } else if word == "POST" {
-                            verb = Some(HttpVerb::Post);
-                        } else {
-                            return Err(format!("unsupported verb {}", word).into());
-                        }
-                    } else if path.is_none() {
-                        path = Some(String::from(word));
-                    } else if protocol_match {
-                        return Err("too many words on first line".into());
-                    } else if word == "HTTP/1.1" {
-                        protocol_match = true;
-                    } else {
-                        return Err(format!("unexpected protocol specifier {}", word).into());
-                    }
+        let mut request_line_end = 0;
+        let mut body_start = 0;
+        for k in 1..(blob.len() - 3) {
+            if blob[k] == 0x0d && blob[k + 1] == 0x0a {
+                if request_line_end == 0 {
+                    request_line_end = k;
+                }
+                if blob[k + 2] == 0x0d && blob[k + 3] == 0x0a {
+                    body_start = k + 4;
+                    break;
                 }
             }
-            first_line = false;
+        }
+        if request_line_end == 0 || body_start == 0 {
+            return Err("request not well formed".into());
+        }
+        for word in String::from_utf8_lossy(&blob[..request_line_end]).split_whitespace() {
+            if verb.is_none() {
+                if word == "GET" {
+                    verb = Some(HttpVerb::Get);
+                } else if word == "POST" {
+                    verb = Some(HttpVerb::Post);
+                } else {
+                    return Err(format!("unsupported verb {}", word).into());
+                }
+            } else if path.is_none() {
+                path = Some(String::from(word));
+            } else if protocol_match {
+                return Err("too many words on first line".into());
+            } else if word == "HTTP/1.1" {
+                protocol_match = true;
+            } else {
+                return Err(format!("unexpected protocol specifier {}", word).into());
+            }
         }
         if verb.is_none() {
             return Err("no request verb".into());
@@ -66,10 +76,18 @@ impl Request {
         if !protocol_match {
             return Err("no valid protocol string".into());
         }
+        let body = if body_start < blob.len() {
+            match serde_json::from_str(&String::from_utf8_lossy(&blob[body_start..])) {
+                Ok(s) => Some(s),
+                Err(err) => return Err(format!("error parsing body as JSON: {}", err).into()),
+            }
+        } else {
+            None
+        };
         Ok(Request {
             verb: verb.unwrap(),
             path: path.unwrap(),
-            body: None,
+            body,
         })
     }
 }
@@ -131,13 +149,14 @@ async fn x_to_y_filter(
             return;
         }
         debug!("{}: read {} bytes", prefix, n);
-        let req = match Request::new(&buf[..]) {
+        let req = match Request::new(&buf[..n]) {
             Ok(r) => r,
             Err(err) => {
                 warn!("{}", err);
                 continue;
             }
         };
+        debug!("parsed request: {:?}", req);
         match y.write(&buf[..n]).await {
             Ok(n) => {
                 debug!("{}: wrote {} bytes", prefix, n);
