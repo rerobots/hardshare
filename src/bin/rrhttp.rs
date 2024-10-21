@@ -92,6 +92,27 @@ impl Request {
     }
 }
 
+enum ConfigMode {
+    DefaultBlock,
+    DefaultAllow,
+}
+
+struct Config {
+    mode: ConfigMode,
+    permitlist: Vec<Request>,
+}
+
+impl Config {
+    fn new() -> Self {
+        Config {
+            mode: ConfigMode::DefaultAllow,
+            permitlist: vec![],
+        }
+    }
+
+    fn new_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {}
+}
+
 async fn x_to_y_nofilter(
     prefix: String,
     mut x: tokio::net::tcp::OwnedReadHalf,
