@@ -201,7 +201,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let matches = clap::App::new("rrhttp")
-        // .max_term_width(80)
+        .max_term_width(80)
         .arg(
             Arg::with_name("TARGET")
                 .required(true)
@@ -209,9 +209,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .arg(
             Arg::with_name("config")
-            .long("config")
-            .value_name("FILE")
-            .help("configuration file")
+                .long("config")
+                .value_name("FILE")
+                .help("configuration file"),
         )
         .version(crate_version!())
         .get_matches();
