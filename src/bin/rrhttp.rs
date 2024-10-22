@@ -9,28 +9,43 @@ use clap::Arg;
 #[macro_use]
 extern crate log;
 
+extern crate serde;
+use serde::Deserialize;
+
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Builder;
 use tokio::{signal, time};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 enum HttpVerb {
+    #[serde(alias = "GET")]
     Get,
+
+    #[serde(alias = "POST")]
     Post,
+}
+
+impl std::fmt::Display for HttpVerb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Get => write!(f, "GET"),
+            Self::Post => write!(f, "POST"),
+        }
+    }
 }
 
 #[derive(Debug)]
 struct Request {
     verb: HttpVerb,
-    path: String,
+    uri: String,
     body: Option<serde_json::Value>,
 }
 
 impl Request {
     fn new(blob: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let mut verb = None;
-        let mut path = None;
+        let mut uri = None;
         let mut protocol_match = false;
         let mut request_line_end = 0;
         let mut body_start = 0;
@@ -57,8 +72,8 @@ impl Request {
                 } else {
                     return Err(format!("unsupported verb {}", word).into());
                 }
-            } else if path.is_none() {
-                path = Some(String::from(word));
+            } else if uri.is_none() {
+                uri = Some(String::from(word));
             } else if protocol_match {
                 return Err("too many words on first line".into());
             } else if word == "HTTP/1.1" {
@@ -70,8 +85,8 @@ impl Request {
         if verb.is_none() {
             return Err("no request verb".into());
         }
-        if path.is_none() {
-            return Err("no request path".into());
+        if uri.is_none() {
+            return Err("no request URI".into());
         }
         if !protocol_match {
             return Err("no valid protocol string".into());
@@ -86,31 +101,42 @@ impl Request {
         };
         Ok(Request {
             verb: verb.unwrap(),
-            path: path.unwrap(),
+            uri: uri.unwrap(),
             body,
         })
     }
 }
 
-enum ConfigMode {
-    DefaultBlock,
-    DefaultAllow,
+#[derive(Debug, Deserialize)]
+struct RequestRule {
+    verb: HttpVerb,
+    uri: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum ConfigMode {
+    Block,
+    Allow,
+}
+
+#[derive(Debug, Deserialize)]
 struct Config {
-    mode: ConfigMode,
-    permitlist: Vec<Request>,
+    default: ConfigMode,
+    rules: Vec<RequestRule>,
 }
 
 impl Config {
     fn new() -> Self {
         Config {
-            mode: ConfigMode::DefaultAllow,
-            permitlist: vec![],
+            default: ConfigMode::Allow,
+            rules: vec![],
         }
     }
 
-    fn new_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {}
+    fn new_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(serde_yaml::from_slice(&std::fs::read(path)?)?)
+    }
 }
 
 async fn x_to_y_nofilter(
@@ -236,6 +262,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .version(crate_version!())
         .get_matches();
+
+    let config = match matches.value_of("config") {
+        Some(path) => Config::new_from_file(path)?,
+        None => Config::new(),
+    };
 
     let targetaddr = String::from(matches.value_of("TARGET").unwrap());
 
