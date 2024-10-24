@@ -360,3 +360,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Config, ConfigMode, HttpVerb, Request};
+
+    #[test]
+    fn test_blockall() {
+        let mut config = Config::new();
+        config.default = ConfigMode::Block;
+        let mut req = Request {
+            verb: HttpVerb::Get,
+            uri: "/".into(),
+            body: None,
+        };
+        assert!(!config.is_valid(&req));
+    }
+}
