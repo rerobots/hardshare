@@ -140,19 +140,17 @@ impl Config {
     }
 
     fn is_valid(&self, req: &Request) -> bool {
-        let mut matched = false;
         for rule in self.rules.iter() {
             if req.verb == rule.verb && req.uri == rule.uri {
                 if self.default == ConfigMode::Allow {
                     return false;
                 } else {
-                    matched = true;
-                    break;
+                    // If default is ConfigMode::Block, then match => allow.
+                    return true;
                 }
             }
         }
-        (self.default == ConfigMode::Allow && !matched)
-            || (self.default == ConfigMode::Block && matched)
+        self.default == ConfigMode::Allow
     }
 }
 
