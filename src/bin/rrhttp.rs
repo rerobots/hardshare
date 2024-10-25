@@ -363,17 +363,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Config, ConfigMode, HttpVerb, Request};
+    use super::{Config, ConfigMode, HttpVerb, Request, RequestRule};
 
     #[test]
     fn test_blockall() {
         let mut config = Config::new();
-        config.default = ConfigMode::Block;
         let mut req = Request {
             verb: HttpVerb::Get,
             uri: "/".into(),
             body: None,
         };
+
+        // Default is allow all; confirm:
+        assert!(config.is_valid(&req));
+
+        config.default = ConfigMode::Block;
+        assert!(!config.is_valid(&req));
+        req.verb = HttpVerb::Post;
+        assert!(!config.is_valid(&req));
+    }
+
+    #[test]
+    fn test_simple_rules() {
+        let mut config = Config::new();
+        config.default = ConfigMode::Block;
+        config.rules.push(RequestRule {
+            verb: HttpVerb::Get,
+            uri: "/".into(),
+        });
+
+        let mut req = Request {
+            verb: HttpVerb::Get,
+            uri: "/".into(),
+            body: None,
+        };
+
+        assert!(config.is_valid(&req));
+
+        req.verb = HttpVerb::Post;
         assert!(!config.is_valid(&req));
     }
 }
