@@ -402,5 +402,10 @@ mod tests {
 
         req.verb = HttpVerb::Post;
         assert!(!config.is_valid(&req));
+
+        req.verb = HttpVerb::Get;
+        assert!(config.is_valid(&req));
+        req.uri = "/other".into();
+        assert!(!config.is_valid(&req));
     }
 }
