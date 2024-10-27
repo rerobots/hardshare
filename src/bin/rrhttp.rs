@@ -1,5 +1,6 @@
 // Copyright (C) 2024 rerobots, Inc.
 
+use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::Arc;
 
@@ -41,6 +42,7 @@ struct Request {
     verb: HttpVerb,
     uri: String,
     body: Option<serde_json::Value>,
+    query: Option<HashMap<String, Option<String>>>,
 }
 
 impl Request {
@@ -50,6 +52,7 @@ impl Request {
         let mut protocol_match = false;
         let mut request_line_end = 0;
         let mut body_start = 0;
+        let mut query = None;
         for k in 1..(blob.len() - 3) {
             if blob[k] == 0x0d && blob[k + 1] == 0x0a {
                 if request_line_end == 0 {
@@ -74,7 +77,17 @@ impl Request {
                     return Err(format!("unsupported verb {}", word).into());
                 }
             } else if uri.is_none() {
-                uri = Some(String::from(word));
+                match word.find('?') {
+                    Some(sep) => {
+                        let (path, qs) = word.split_at(sep);
+                        uri = Some(String::from(path));
+                        query = Some(Self::parse_query_string(&qs[1..]));
+                    }
+                    None => {
+                        uri = Some(String::from(word));
+                        query = None;
+                    }
+                }
             } else if protocol_match {
                 return Err("too many words on first line".into());
             } else if word == "HTTP/1.1" {
@@ -104,7 +117,24 @@ impl Request {
             verb: verb.unwrap(),
             uri: uri.unwrap(),
             body,
+            query,
         })
+    }
+
+    fn parse_query_string(qs: &str) -> HashMap<String, Option<String>> {
+        let mut query = HashMap::new();
+        for frag in qs.split('&') {
+            match frag.find('=') {
+                Some(sep) => {
+                    let (k, v) = frag.split_at(sep);
+                    query.insert(k.to_string(), Some(v[1..].to_string()));
+                }
+                None => {
+                    query.insert(frag.to_string(), None);
+                }
+            }
+        }
+        query
     }
 }
 
@@ -372,6 +402,7 @@ mod tests {
             verb: HttpVerb::Get,
             uri: "/".into(),
             body: None,
+            query: None,
         };
 
         // Default is allow all; confirm:
@@ -396,6 +427,7 @@ mod tests {
             verb: HttpVerb::Get,
             uri: "/".into(),
             body: None,
+            query: None,
         };
 
         assert!(config.is_valid(&req));
