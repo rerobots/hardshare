@@ -440,4 +440,16 @@ mod tests {
         req.uri = "/other".into();
         assert!(!config.is_valid(&req));
     }
+
+    #[test]
+    fn test_query_parsing() {
+        let get_example = "GET /api/cameras/rgb?Width=800&Height=600&Base64=true HTTP/1.1\r\nHost: 127.0.0.1:50352\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n";
+
+        let req = Request::new(get_example.as_ref()).unwrap();
+        assert_eq!(req.uri, "/api/cameras/rgb");
+        assert!(req.query.is_some());
+        let params = req.query.unwrap();
+        assert_eq!(params.len(), 3);
+        assert_eq!(params.get("Width").unwrap(), &Some("800".to_string()));
+    }
 }
