@@ -136,12 +136,129 @@ impl Request {
         }
         query
     }
+
+    pub fn satisfies(&self, rule: &RequestRule) -> bool {
+        if self.verb != rule.verb || self.uri != rule.uri {
+            return false;
+        }
+        if let Some(has_params) = rule.has_params {
+            if has_params != self.query.is_some() {
+                return false;
+            }
+        }
+        if let Some(has_body) = rule.has_body {
+            if has_body != self.body.is_some() {
+                return false;
+            }
+        }
+        match &rule.schema {
+            Some(schema) => {
+                if rule.verb == HttpVerb::Get {
+                    let query = match &self.query {
+                        Some(q) => q,
+                        None => return true,
+                    };
+                    for value_rule in schema {
+                        let query_value = match query.get(&value_rule.name) {
+                            Some(v_option) => match v_option {
+                                Some(v) => v,
+                                None => {
+                                    // TODO: is empty parameter equivalent to `true`?
+                                    return false;
+                                }
+                            },
+                            None => {
+                                if !value_rule.optional {
+                                    return false;
+                                }
+                                continue;
+                            }
+                        };
+                        match value_rule.value_type {
+                            ValueType::Bool => {
+                                if query_value != "true" && query_value != "false" {
+                                    return false;
+                                }
+                            }
+                            ValueType::Float => {
+                                let parsed_val = match query_value.parse::<f32>() {
+                                    Ok(v) => v,
+                                    Err(err) => {
+                                        warn!("caught while parsing query float value: {}", err);
+                                        return false;
+                                    }
+                                };
+                                if let Some(range) = value_rule.range {
+                                    if parsed_val < range.0.into() || parsed_val > range.1.into() {
+                                        return false;
+                                    }
+                                }
+                            }
+                            ValueType::Int => {
+                                let parsed_val = match query_value.parse::<i16>() {
+                                    Ok(v) => v,
+                                    Err(err) => {
+                                        warn!("caught while parsing query int value: {}", err);
+                                        return false;
+                                    }
+                                };
+                                if let Some(range) = value_rule.range {
+                                    if parsed_val < range.0 || parsed_val > range.1 {
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // POST
+                    let body = match &self.body {
+                        Some(b) => b,
+                        None => return true,
+                    };
+                    // TODO
+                }
+                true
+            }
+            None => true,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+enum ValueType {
+    Bool,
+    Float,
+    Int,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct ValueRule {
+    optional: bool,
+    name: String,
+
+    #[serde(rename = "type")]
+    value_type: ValueType,
+
+    range: Option<(i16, i16)>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct RequestRule {
     verb: HttpVerb,
     uri: String,
+
+    // If required to have some query parameters, then true (i.e., Some(true)).
+    // If required to not have any query parameters, then false.
+    // If may have query, then None.
+    has_params: Option<bool>,
+
+    // Same interpretation pattern as `has_params`
+    has_body: Option<bool>,
+
+    #[serde(default)]
+    schema: Option<Vec<ValueRule>>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -165,19 +282,31 @@ impl Config {
         }
     }
 
+    fn check_rule_spec(rule: &RequestRule) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(schema) = &rule.schema {
+            for value_rule in schema {
+                if let Some(range) = value_rule.range {
+                    if range.0 > range.1 {
+                        return Err(format!("range in configuration not valid: {:?}", range).into());
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn new_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(serde_yaml::from_slice(&std::fs::read(path)?)?)
+        let config: Config = serde_yaml::from_slice(&std::fs::read(path)?)?;
+        for rule in config.rules.iter() {
+            Self::check_rule_spec(rule)?;
+        }
+        Ok(config)
     }
 
     fn is_valid(&self, req: &Request) -> bool {
         for rule in self.rules.iter() {
             if req.verb == rule.verb && req.uri == rule.uri {
-                if self.default == ConfigMode::Allow {
-                    return false;
-                } else {
-                    // If default is ConfigMode::Block, then match => allow.
-                    return true;
-                }
+                return req.satisfies(rule);
             }
         }
         self.default == ConfigMode::Allow
@@ -336,6 +465,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(path) => Config::new_from_file(path)?,
         None => Config::new(),
     });
+    debug!("Using configuration: {:?}", config);
 
     let targetaddr = String::from(matches.value_of("TARGET").unwrap());
 
@@ -421,6 +551,9 @@ mod tests {
         config.rules.push(RequestRule {
             verb: HttpVerb::Get,
             uri: "/".into(),
+            has_params: None,
+            has_body: None,
+            schema: None,
         });
 
         let mut req = Request {
