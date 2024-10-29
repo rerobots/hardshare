@@ -216,7 +216,46 @@ impl Request {
                         Some(b) => b,
                         None => return true,
                     };
-                    // TODO
+                    for value_rule in schema {
+                        let body_value = match body.get(&value_rule.name) {
+                            Some(v) => v,
+                            None => {
+                                if !value_rule.optional {
+                                    return false;
+                                }
+                                continue;
+                            }
+                        };
+                        match value_rule.value_type {
+                            ValueType::Bool => {
+                                if body_value.is_boolean() {
+                                    return false;
+                                }
+                            }
+                            ValueType::Float => {
+                                let parsed_val = match body_value.as_f64() {
+                                    Some(v) => v,
+                                    None => return false,
+                                };
+                                if let Some(range) = value_rule.range {
+                                    if parsed_val < range.0.into() || parsed_val > range.1.into() {
+                                        return false;
+                                    }
+                                }
+                            }
+                            ValueType::Int => {
+                                let parsed_val = match body_value.as_i64() {
+                                    Some(v) => v,
+                                    None => return false,
+                                };
+                                if let Some(range) = value_rule.range {
+                                    if parsed_val < range.0.into() || parsed_val > range.1.into() {
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 true
             }
@@ -383,7 +422,7 @@ async fn filter_requests(
             Ok(r) => r,
             Err(err) => {
                 warn!("{}", err);
-                continue;
+                return;
             }
         };
         debug!("parsed request: {:?}", req);
