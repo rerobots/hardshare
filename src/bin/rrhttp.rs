@@ -11,6 +11,8 @@ use clap::Arg;
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate serde_json;
 extern crate serde;
 use serde::Deserialize;
 
@@ -562,6 +564,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
+    use tempfile::NamedTempFile;
+
     use super::{Config, ConfigMode, HttpVerb, Request, RequestRule};
 
     #[test]
@@ -610,6 +616,73 @@ mod tests {
         req.verb = HttpVerb::Get;
         assert!(config.is_valid(&req));
         req.uri = "/other".into();
+        assert!(!config.is_valid(&req));
+    }
+
+    #[test]
+    fn test_post_schema() {
+        let config_data = "---
+default: block
+rules:
+  - verb: POST
+    uri: /api/head
+    has_body: true
+    schema:
+      - name: Pitch
+        optional: false
+        type: float
+        range: [-40, 0]
+      - name: Roll
+        optional: false
+        type: float
+        range: [-15, 15]
+      - name: Yaw
+        optional: false
+        type: float
+        range: [-75, 75]
+      - name: Velocity
+        optional: false
+        type: int
+        range: [1, 75]
+";
+        let mut config_file = NamedTempFile::new().unwrap();
+        write!(config_file, "{}", config_data).unwrap();
+        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+
+        assert!(!config.is_valid(&Request {
+            verb: HttpVerb::Get,
+            uri: "/".into(),
+            body: None,
+            query: None,
+        }));
+
+        let mut req = Request {
+            verb: HttpVerb::Post,
+            uri: "/api/head".into(),
+            body: None,
+            query: None,
+        };
+        assert!(!config.is_valid(&req));
+
+        req.body = Some(json!({
+            "Pitch": 0,
+            "Roll": 0,
+            "Yaw": 0,
+            "Velocity": 75,
+        }));
+        assert!(config.is_valid(&req));
+
+        req.body = Some(json!({
+            "Velocity": 75,
+        }));
+        assert!(!config.is_valid(&req));
+
+        req.body = Some(json!({
+            "Pitch": "noise",
+            "Roll": 0,
+            "Yaw": 0,
+            "Velocity": 75,
+        }));
         assert!(!config.is_valid(&req));
     }
 
