@@ -564,6 +564,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::io::Write;
 
     use tempfile::NamedTempFile;
@@ -617,6 +618,51 @@ mod tests {
         assert!(config.is_valid(&req));
         req.uri = "/other".into();
         assert!(!config.is_valid(&req));
+    }
+
+    #[test]
+    fn test_get_schema() {
+        let config_data = "---
+default: block
+rules:
+  - verb: GET
+    uri: /api/cameras/rgb
+    schema:
+      - name: Base64
+        optional: true
+        type: bool
+      - name: Width
+        optional: true
+        type: int
+        range: [1, 800]
+      - name: Height
+        optional: true
+        type: int
+        range: [1, 600]
+        ";
+        let mut config_file = NamedTempFile::new().unwrap();
+        write!(config_file, "{}", config_data).unwrap();
+        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+
+        assert!(!config.is_valid(&Request {
+            verb: HttpVerb::Post,
+            uri: "/api/head".into(),
+            body: Some(json!({
+                "Pitch": 0,
+                "Roll": 0,
+                "Yaw": 0,
+                "Velocity": 75,
+            })),
+            query: None,
+        }));
+
+        let mut req = Request {
+            verb: HttpVerb::Get,
+            uri: "/api/cameras/rgb".into(),
+            body: None,
+            query: None,
+        };
+        assert!(config.is_valid(&req));
     }
 
     #[test]
