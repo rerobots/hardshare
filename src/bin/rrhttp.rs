@@ -663,6 +663,28 @@ rules:
             query: None,
         };
         assert!(config.is_valid(&req));
+
+        req.query = Some(HashMap::new());
+        if let Some(q) = &mut req.query {
+            q.insert("Base64".to_string(), Some("true".into()));
+        }
+        assert!(config.is_valid(&req));
+
+        if let Some(q) = &mut req.query {
+            q.insert("Width".to_string(), Some("800".into()));
+            q.insert("Height".to_string(), Some("600".into()));
+        }
+        assert!(config.is_valid(&req));
+
+        if let Some(q) = &mut req.query {
+            q.insert("Height".to_string(), Some("700".into()));
+        }
+        assert!(!config.is_valid(&req));
+
+        if let Some(q) = &mut req.query {
+            q.insert("Height".to_string(), Some("7.7".into()));
+        }
+        assert!(!config.is_valid(&req));
     }
 
     #[test]
