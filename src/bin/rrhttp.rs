@@ -298,15 +298,21 @@ struct RequestRule {
     // Same interpretation pattern as `has_params`
     has_body: Option<bool>,
 
+    // block => if query or body key is not explicitly in schema, then reject.
+    // allow (default) => query or body keys not in the schema are ignored.
+    #[serde(default)]
+    default: ConfigMode,
+
     #[serde(default)]
     schema: Option<Vec<ValueRule>>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 enum ConfigMode {
-    Block,
+    #[default]
     Allow,
+    Block,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -600,6 +606,7 @@ mod tests {
             has_params: None,
             has_body: None,
             schema: None,
+            default: ConfigMode::Allow,
         });
 
         let mut req = Request {
@@ -685,6 +692,16 @@ rules:
             q.insert("Height".to_string(), Some("7.7".into()));
         }
         assert!(!config.is_valid(&req));
+
+        // Default allow unknown query parts
+        if let Some(q) = &mut req.query {
+            // First, fix Height to be valid
+            q.insert("Height".to_string(), Some("600".into()));
+
+            // Then, add new one that is not explicitly in rule
+            q.insert("FileName".to_string(), Some("image1".into()));
+        }
+        assert!(config.is_valid(&req));
     }
 
     #[test]
