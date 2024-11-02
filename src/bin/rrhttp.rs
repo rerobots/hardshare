@@ -177,10 +177,40 @@ impl Request {
                                 }
                             },
                             None => {
-                                if !value_rule.optional {
-                                    return false;
+                                let mut this_match = None;
+                                if !value_rule.case_sensitive {
+                                    let normalized_name = value_rule.name.to_lowercase();
+                                    for (normalized_key, v_option) in query
+                                        .iter()
+                                        .map(|(k, v_option)| (k.to_lowercase(), v_option))
+                                    {
+                                        if normalized_key == normalized_name {
+                                            match v_option {
+                                                Some(v) => {
+                                                    if matched.contains(&&value_rule.name) {
+                                                        // Reject if there are duplicates
+                                                        return false;
+                                                    }
+                                                    this_match = Some(v);
+                                                    break;
+                                                }
+                                                None => {
+                                                    // TODO: is empty parameter equivalent to `true`?
+                                                    return false;
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                                continue;
+                                match this_match {
+                                    Some(v) => v,
+                                    None => {
+                                        if !value_rule.optional {
+                                            return false;
+                                        }
+                                        continue;
+                                    }
+                                }
                             }
                         };
                         matched.push(&value_rule.name);
@@ -238,10 +268,30 @@ impl Request {
                         let body_value = match body.get(&value_rule.name) {
                             Some(v) => v,
                             None => {
-                                if !value_rule.optional {
-                                    return false;
+                                let mut this_match = None;
+                                if !value_rule.case_sensitive {
+                                    let normalized_name = value_rule.name.to_lowercase();
+                                    for (normalized_key, v) in body
+                                        .as_object()
+                                        .unwrap()
+                                        .iter()
+                                        .map(|(k, v)| (k.to_lowercase(), v))
+                                    {
+                                        if normalized_key == normalized_name {
+                                            this_match = Some(v);
+                                            break;
+                                        }
+                                    }
                                 }
-                                continue;
+                                match this_match {
+                                    Some(v) => v,
+                                    None => {
+                                        if !value_rule.optional {
+                                            return false;
+                                        }
+                                        continue;
+                                    }
+                                }
                             }
                         };
                         matched.push(&value_rule.name);
@@ -303,12 +353,21 @@ struct ValueRule {
     #[serde(default)]
     optional: bool,
 
+    #[serde(default = "ValueRule::default_case_sensitive")]
+    case_sensitive: bool,
+
     name: String,
 
     #[serde(rename = "type")]
     value_type: ValueType,
 
     range: Option<(i16, i16)>,
+}
+
+impl ValueRule {
+    fn default_case_sensitive() -> bool {
+        true
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -651,6 +710,56 @@ mod tests {
         assert!(config.is_valid(&req));
         req.uri = "/other".into();
         assert!(!config.is_valid(&req));
+    }
+
+    #[test]
+    fn test_lettercase_sensitivity_query() {
+        let config_data = "---
+default: block
+rules:
+  - verb: GET
+    uri: /api/cameras/rgb
+    schema:
+      - name: Base64
+        case_sensitive: false
+        type: bool
+  - verb: POST
+    uri: /api/head
+    has_body: true
+    default: block
+    schema:
+      - name: Velocity
+        case_sensitive: false
+        type: int
+        range: [1, 75]
+";
+        let mut config_file = NamedTempFile::new().unwrap();
+        write!(config_file, "{}", config_data).unwrap();
+        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+
+        let mut req = Request {
+            verb: HttpVerb::Get,
+            uri: "/api/cameras/rgb".into(),
+            body: None,
+            query: Some(HashMap::new()),
+        };
+        if let Some(q) = &mut req.query {
+            q.insert("base64".to_string(), Some("true".into()));
+        }
+        assert!(config.is_valid(&req));
+
+        let mut req = Request {
+            verb: HttpVerb::Post,
+            uri: "/api/head".into(),
+            body: Some(json!({
+                "velocity": 75,
+            })),
+            query: None,
+        };
+        assert!(config.is_valid(&req));
+        req.body = Some(json!({
+            "Velocity": 75,
+        }));
     }
 
     #[test]
