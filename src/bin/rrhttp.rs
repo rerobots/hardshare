@@ -160,10 +160,17 @@ impl Request {
                         Some(q) => q,
                         None => return true,
                     };
+                    let mut matched = vec![];
                     for value_rule in schema {
                         let query_value = match query.get(&value_rule.name) {
                             Some(v_option) => match v_option {
-                                Some(v) => v,
+                                Some(v) => {
+                                    if matched.contains(&v) {
+                                        // Reject if there are duplicates
+                                        return false;
+                                    }
+                                    v
+                                }
                                 None => {
                                     // TODO: is empty parameter equivalent to `true`?
                                     return false;
@@ -176,6 +183,7 @@ impl Request {
                                 continue;
                             }
                         };
+                        matched.push(&value_rule.name);
                         match value_rule.value_type {
                             ValueType::Bool => {
                                 if query_value != "true" && query_value != "false" {
@@ -212,12 +220,20 @@ impl Request {
                             }
                         }
                     }
+                    if rule.default == ConfigMode::Block && matched.len() != query.len() {
+                        return false;
+                    }
                 } else {
                     // POST
                     let body = match &self.body {
                         Some(b) => b,
                         None => return true,
                     };
+                    if !body.is_object() {
+                        // Body must be JSON object {...}
+                        return false;
+                    }
+                    let mut matched = vec![];
                     for value_rule in schema {
                         let body_value = match body.get(&value_rule.name) {
                             Some(v) => v,
@@ -228,6 +244,7 @@ impl Request {
                                 continue;
                             }
                         };
+                        matched.push(&value_rule.name);
                         match value_rule.value_type {
                             ValueType::Bool => {
                                 if body_value.is_boolean() {
@@ -255,6 +272,13 @@ impl Request {
                                         return false;
                                     }
                                 }
+                            }
+                        }
+                    }
+                    if rule.default == ConfigMode::Block {
+                        if let Some(b) = body.as_object() {
+                            if matched.len() != b.len() {
+                                return false;
                             }
                         }
                     }
@@ -702,6 +726,13 @@ rules:
             q.insert("FileName".to_string(), Some("image1".into()));
         }
         assert!(config.is_valid(&req));
+
+        // Change to block (also known as reject) if unknown query part
+        let mut config = config.clone();
+        if let Some(rule) = &mut config.rules.first_mut() {
+            rule.default = ConfigMode::Block;
+        }
+        assert!(!config.is_valid(&req));
     }
 
     #[test]
@@ -712,6 +743,7 @@ rules:
   - verb: POST
     uri: /api/head
     has_body: true
+    default: block
     schema:
       - name: Pitch
         optional: false
@@ -767,6 +799,15 @@ rules:
             "Roll": 0,
             "Yaw": 0,
             "Velocity": 75,
+        }));
+        assert!(!config.is_valid(&req));
+
+        req.body = Some(json!({
+            "Pitch": 0,
+            "Roll": 0,
+            "Yaw": 0,
+            "Velocity": 75,
+            "Other": 0,
         }));
         assert!(!config.is_valid(&req));
     }
