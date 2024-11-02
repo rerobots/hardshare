@@ -300,7 +300,9 @@ enum ValueType {
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct ValueRule {
+    #[serde(default)]
     optional: bool,
+
     name: String,
 
     #[serde(rename = "type")]
@@ -746,19 +748,15 @@ rules:
     default: block
     schema:
       - name: Pitch
-        optional: false
         type: float
         range: [-40, 0]
       - name: Roll
-        optional: false
         type: float
         range: [-15, 15]
       - name: Yaw
-        optional: false
         type: float
         range: [-75, 75]
       - name: Velocity
-        optional: false
         type: int
         range: [1, 75]
 ";
