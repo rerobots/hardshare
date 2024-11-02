@@ -670,7 +670,7 @@ rules:
         optional: true
         type: int
         range: [1, 600]
-        ";
+";
         let mut config_file = NamedTempFile::new().unwrap();
         write!(config_file, "{}", config_data).unwrap();
         let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
