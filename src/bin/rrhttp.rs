@@ -760,6 +760,7 @@ rules:
         req.body = Some(json!({
             "Velocity": 75,
         }));
+        assert!(config.is_valid(&req));
     }
 
     #[test]
