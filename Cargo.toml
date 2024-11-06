@@ -22,6 +22,7 @@ actix-ws = "0.3"
 awc = { version = "3.5", features = ["rustls"] }
 base64 = "0.21"
 bytes = "0.5"
+chrono = "0.4.38"
 env_logger = "0.11.5"
 futures = "0.3"
 home = "0.5.3"
