@@ -18,6 +18,8 @@ use std::process::{Command, Stdio};
 
 use serde::Serialize;
 
+use chrono::{TimeZone, Utc};
+
 use clap::{Arg, SubCommand};
 
 use crate::api::{CameraCrop, CameraDimensions};
@@ -220,8 +222,15 @@ fn print_config_w<T: Write>(
         writeln!(f, "\t(none)")?;
     } else {
         if local.api_tokens.contains_key("()") {
+            let mut data_iter = local.api_tokens_data["()"].iter();
             for path in local.api_tokens["()"].iter() {
+                let data = data_iter.next().unwrap();
                 writeln!(f, "\t{}", path)?;
+                write!(f, "\t\texpiration: ")?;
+                match data.expiration {
+                    Some(exp) => writeln!(f, "{}", Utc.timestamp_opt(exp as i64, 0).unwrap())?,
+                    None => writeln!(f, "(none)")?,
+                };
             }
         }
         for (org, org_tokens) in local.api_tokens.iter() {
@@ -231,6 +240,7 @@ fn print_config_w<T: Write>(
             writeln!(f, "\t{}:", org)?;
             for path in org_tokens.iter() {
                 writeln!(f, "\t\t{}", path)?;
+                // TODO: include expiration date
             }
         }
     }

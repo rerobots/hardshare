@@ -220,7 +220,11 @@ pub struct Config {
     #[serde(default)]
     pub api_tokens: HashMap<String, Vec<String>>,
 
-    #[serde(default)]
+    // Order matches that of api_tokens field
+    #[serde(skip)]
+    pub api_tokens_data: HashMap<String, Vec<TokenClaims>>,
+
+    #[serde(skip)]
     pub err_api_tokens: Option<HashMap<String, String>>,
 
     #[serde(default)]
@@ -237,6 +241,7 @@ impl Config {
             wdeployments: vec![],
             ssh_key: "".to_string(),
             api_tokens: HashMap::new(),
+            api_tokens_data: HashMap::new(),
             err_api_tokens: None,
             default_org: None,
             known_orgs: vec![],
@@ -252,7 +257,11 @@ pub fn get_base_path() -> Option<std::path::PathBuf> {
     Some(home_dir.join(".rerobots"))
 }
 
-type APITokensInfo = (HashMap<String, Vec<String>>, HashMap<String, String>);
+type APITokensInfo = (
+    HashMap<String, Vec<String>>,
+    HashMap<String, Vec<TokenClaims>>,
+    HashMap<String, String>,
+);
 
 pub fn list_local_api_tokens(
     collect_errors: bool,
@@ -266,13 +275,14 @@ fn list_local_api_tokens_bp(
     collect_errors: bool,
 ) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
     let mut likely_tokens = HashMap::new();
+    let mut likely_tokens_data = HashMap::new();
     let mut errored_tokens = HashMap::new();
     if !base_path.exists() {
-        return Ok((likely_tokens, errored_tokens));
+        return Ok((likely_tokens, likely_tokens_data, errored_tokens));
     }
     let path = base_path.join("tokens");
     if !path.exists() {
-        return Ok((likely_tokens, errored_tokens));
+        return Ok((likely_tokens, likely_tokens_data, errored_tokens));
     }
 
     for entry in std::fs::read_dir(path)? {
@@ -295,14 +305,17 @@ fn list_local_api_tokens_bp(
                 } else {
                     let path = String::from(path.to_str().unwrap());
                     let org = match claims.organization {
-                        Some(o) => o,
+                        Some(ref o) => o.clone(),
                         None => "()".into(),
                     };
                     if likely_tokens.contains_key(org.as_str()) {
                         let org_tokens = likely_tokens.get_mut(org.as_str()).unwrap();
                         org_tokens.push(path);
+                        let org_tokens_data = likely_tokens_data.get_mut(org.as_str()).unwrap();
+                        org_tokens_data.push(claims);
                     } else {
-                        likely_tokens.insert(org, vec![path]);
+                        likely_tokens.insert(org.clone(), vec![path]);
+                        likely_tokens_data.insert(org, vec![claims]);
                     }
                 }
             }
@@ -314,7 +327,7 @@ fn list_local_api_tokens_bp(
         }
     }
 
-    Ok((likely_tokens, errored_tokens))
+    Ok((likely_tokens, likely_tokens_data, errored_tokens))
 }
 
 pub fn get_local_config(
@@ -367,8 +380,9 @@ pub fn get_local_config_bp(
     let mut config: Config = serde_json::from_str(config_raw.as_str())?;
     let res = list_local_api_tokens(collect_errors)?;
     config.api_tokens = res.0;
+    config.api_tokens_data = res.1;
     if collect_errors {
-        config.err_api_tokens = Some(res.1);
+        config.err_api_tokens = Some(res.2);
     }
     Ok(config)
 }
@@ -596,8 +610,10 @@ mod tests {
     fn no_saved_api_tokens() {
         let td = tempdir().unwrap();
         let base_path = td.path().join(".rerobots");
-        let (likely_tokens, errored_tokens) = list_local_api_tokens_bp(&base_path, false).unwrap();
+        let (likely_tokens, likely_tokens_data, errored_tokens) =
+            list_local_api_tokens_bp(&base_path, false).unwrap();
         assert_eq!(likely_tokens.len(), 0);
+        assert_eq!(likely_tokens_data.len(), 0);
         assert_eq!(errored_tokens.len(), 0);
     }
 }
