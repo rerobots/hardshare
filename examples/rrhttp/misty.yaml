@@ -1,0 +1,47 @@
+---
+default: block
+rules:
+  - verb: GET
+    uri: /api/cameras/rgb
+    schema:
+      - name: Base64
+        optional: true
+        type: bool
+      - name: Width
+        optional: true
+        type: int
+        range: [1, 800]
+      - name: Height
+        optional: true
+        type: int
+        range: [1, 600]
+  - verb: POST
+    uri: /api/head
+    has_body: true
+    schema:
+      - name: Pitch
+        type: float
+        range: [-40, 0]
+      - name: Roll
+        type: float
+        range: [-15, 15]
+      - name: Yaw
+        type: float
+        range: [-75, 75]
+      - name: Velocity
+        type: int
+        range: [1, 75]
+  - verb: POST
+    uri: /api/drive/time
+    has_body: true
+    default: block
+    schema:
+      - name: LinearVelocity
+        type: int
+        range: [-12, 12]
+      - name: AngularVelocity
+        type: float
+        range: [-10, 10]
+      - name: TimeMS
+        type: int
+        range: [1000, 5000]
