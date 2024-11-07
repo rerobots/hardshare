@@ -22,6 +22,8 @@ use chrono::{TimeZone, Utc};
 
 use clap::{Arg, SubCommand};
 
+use rerobots::client::TokenClaims;
+
 use crate::api::{CameraCrop, CameraDimensions};
 use crate::camera;
 use crate::mgmt::CProvider;
@@ -221,27 +223,37 @@ fn print_config_w<T: Write>(
     if local.api_tokens.is_empty() {
         writeln!(f, "\t(none)")?;
     } else {
-        if local.api_tokens.contains_key("()") {
-            let mut data_iter = local.api_tokens_data["()"].iter();
-            for path in local.api_tokens["()"].iter() {
+        let print_keys = |f: &mut T,
+                          indent_level: u8,
+                          paths: &Vec<String>,
+                          data: &Vec<TokenClaims>|
+         -> Result<(), Box<dyn std::error::Error>> {
+            let prefix = match indent_level {
+                0 => "",
+                _ => "\t",
+            };
+            let mut data_iter = data.iter();
+            for path in paths.iter() {
                 let data = data_iter.next().unwrap();
-                writeln!(f, "\t{}", path)?;
-                write!(f, "\t\texpiration: ")?;
+                writeln!(f, "{}\t{}", prefix, path)?;
+                write!(f, "{}\t\texpiration: ", prefix)?;
                 match data.expiration {
                     Some(exp) => writeln!(f, "{}", Utc.timestamp_opt(exp as i64, 0).unwrap())?,
                     None => writeln!(f, "(none)")?,
                 };
             }
+            Ok(())
+        };
+
+        if local.api_tokens.contains_key("()") {
+            print_keys(f, 0, &local.api_tokens["()"], &local.api_tokens_data["()"])?;
         }
         for (org, org_tokens) in local.api_tokens.iter() {
             if org == "()" {
                 continue;
             }
             writeln!(f, "\t{}:", org)?;
-            for path in org_tokens.iter() {
-                writeln!(f, "\t\t{}", path)?;
-                // TODO: include expiration date
-            }
+            print_keys(f, 1, org_tokens, &local.api_tokens_data[org])?;
         }
     }
     if let Some(err_tokens) = &local.err_api_tokens {
