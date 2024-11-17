@@ -27,6 +27,9 @@ README files in subdirectories that describe contents therein.
 Summary:
 
 * devices - code and configuration data for target hardware.
+* devices/sim - support for simulation.
+* examples - configurations of filters such as rrhttp.
+* monitors - programs for use with `hardshare monitor`.
 * src - main source code.
 
 
