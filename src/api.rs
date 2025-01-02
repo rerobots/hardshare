@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::process;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
@@ -27,8 +28,6 @@ use awc::{
 };
 
 use futures::stream::{SplitSink, StreamExt};
-
-use nix::{sys::signal, unistd};
 
 extern crate serde;
 extern crate serde_json;
@@ -1166,7 +1165,7 @@ impl HSAPIClient {
             std::fs::create_dir(&path)?
         }
         let path = path.join(format!("{}.pid", hscamera_id));
-        let pid = unistd::getpid();
+        let pid = process::id();
         std::fs::write(&path, pid.to_string())?;
 
         debug!("starting camera stream...");
