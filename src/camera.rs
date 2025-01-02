@@ -34,7 +34,7 @@ use crate::check::Error as CheckError;
 pub fn get_default_dev() -> String {
     #[cfg(target_os = "linux")]
     return "/dev/video0".into();
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     return "0".into();
 }
 
@@ -99,7 +99,7 @@ enum CaptureCommand {
     Quit,  // Return from (close) the thread
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn verify_capture_ability(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
@@ -155,7 +155,7 @@ fn verify_capture_ability(
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn video_capture(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
