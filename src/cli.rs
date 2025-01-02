@@ -920,7 +920,7 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
 fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-    return CliError::new("only Linux and Mac supported", 1);
+    return CliError::new("only Linux, Mac, and Windows supported", 1);
 
     if matches.values_of("id_prefix").is_some()
         && matches.values_of("attach_camera_crop_config").is_some()
