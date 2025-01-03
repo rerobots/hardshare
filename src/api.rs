@@ -1209,18 +1209,39 @@ impl HSAPIClient {
                 if entry.extension().unwrap() == "pid" {
                     let file_stem = entry.file_stem().unwrap();
                     stopped_via_pids.push(file_stem.to_string_lossy().to_string());
-                    let pid: i32 = String::from_utf8(std::fs::read(&entry).unwrap())
+                    let pid = String::from_utf8(std::fs::read(&entry).unwrap())
                         .unwrap()
                         .trim()
-                        .parse()?;
-                    if let Err(err) = signal::kill(unistd::Pid::from_raw(pid), signal::SIGTERM) {
-                        warn!(
-                            "failed to terminate local process {} for camera {}: {}",
-                            pid,
-                            stopped_via_pids.last().unwrap(),
-                            err
-                        );
+                        .to_string();
+
+                    #[cfg(target_os = "windows")]
+                    let kresult = process::Command::new("taskkill")
+                        .args(["/pid", &pid])
+                        .status();
+                    #[cfg(any(target_os = "linux", target_os = "macos"))]
+                    let kresult = process::Command::new("kill").arg(&pid).status();
+
+                    match kresult {
+                        Ok(r) => {
+                            if !r.success() {
+                                return error(format!(
+                                    "failed to terminate local process {} for camera {}: {}",
+                                    pid,
+                                    stopped_via_pids.last().unwrap(),
+                                    r
+                                ));
+                            }
+                        }
+                        Err(err) => {
+                            return error(format!(
+                                "failed to terminate local process {} for camera {}: {}",
+                                pid,
+                                stopped_via_pids.last().unwrap(),
+                                err
+                            ));
+                        }
                     }
+
                     std::fs::remove_file(entry)?;
                 }
             }
