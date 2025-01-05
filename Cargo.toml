@@ -40,7 +40,7 @@ tokio = { version = "1.40", features = ["net", "rt", "signal", "sync"] }
 [target.'cfg(target_os="linux")'.dependencies]
 v4l = { version = "0.14", features = ["v4l2"] }
 
-[target.'cfg(any(target_os="macos", target_os = "windows"))'.dependencies]
+[target.'cfg(target_os="macos")'.dependencies]
 openpnp_capture = "0.2.4"
 
 [dependencies.clap]

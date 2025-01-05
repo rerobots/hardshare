@@ -99,7 +99,7 @@ enum CaptureCommand {
     Quit,  // Return from (close) the thread
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(target_os = "macos")]
 fn verify_capture_ability(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
@@ -155,7 +155,7 @@ fn verify_capture_ability(
     Ok(())
 }
 
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[cfg(target_os = "macos")]
 fn video_capture(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
@@ -261,6 +261,23 @@ fn video_capture(
             std::thread::sleep(Duration::from_secs(2));
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn verify_capture_ability(
+    camera_path: &str,
+    dimensions: Option<CameraDimensions>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    return Err(CheckError::new("cameras not supported on Windows"));
+}
+
+#[cfg(target_os = "windows")]
+fn video_capture(
+    camera_path: &str,
+    dimensions: Option<CameraDimensions>,
+    wsclient_addr: Addr<WSClient>,
+    cap_command: mpsc::Receiver<CaptureCommand>,
+) {
 }
 
 #[cfg(target_os = "linux")]
