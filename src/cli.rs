@@ -1447,7 +1447,7 @@ pub fn main() -> Result<(), CliError> {
     } else if let Some(matches) = matches.subcommand_matches("stop-cameras") {
         return stop_cameras_subcommand(matches);
     } else {
-        println!("No command given. Try `hardshare -h`");
+        return CliError::new("No command given. Try `hardshare -h`", 1);
     }
 
     Ok(())
