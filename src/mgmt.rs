@@ -250,10 +250,7 @@ impl Config {
 }
 
 pub fn get_base_path() -> Option<std::path::PathBuf> {
-    let home_dir = match home::home_dir() {
-        Some(s) => s,
-        None => return None,
-    };
+    let home_dir = home::home_dir()?;
     Some(home_dir.join(".rerobots"))
 }
 
@@ -451,10 +448,7 @@ pub fn add_ssh_path(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     if !target_public.exists() {
         return error("public key file does not exist");
     }
-    let mut local_config = match get_local_config(false, false) {
-        Ok(lc) => lc,
-        Err(err) => return Err(err),
-    };
+    let mut local_config = get_local_config(false, false)?;
     local_config.ssh_key = match target.to_str() {
         Some(s) => s.into(),
         None => return error("path not given in UTF-8"),
