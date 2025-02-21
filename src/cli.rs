@@ -1119,7 +1119,15 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     Ok(())
                 }
             }
-            Err(err) => Err(err.into()),
+            Err(err) => {
+                if local_config.is_some() {
+                    let local_config = local_config.unwrap();
+                    if !local_config.wdeployments.is_empty() {
+                        println!("Note: Try `check` with a deployment ID or `--all` to check your deployments.\nNote: The following errors are from checking default settings.");
+                    }
+                }
+                Err(err.into())
+            }
         }
     }
 }
