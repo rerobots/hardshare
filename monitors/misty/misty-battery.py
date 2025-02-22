@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """
 Copyright (C) 2021 rerobots, Inc.
+
+Requires:
+- Requests, https://pypi.org/project/requests/ https://github.com/psf/requests
 """
 
 from datetime import datetime
