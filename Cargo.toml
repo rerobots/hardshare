@@ -33,6 +33,7 @@ rerobots = "0.12"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8"
+serialport = "4.7.0"
 tempfile = "3.1"
 
 tokio = { version = "1.40", features = ["net", "rt", "signal", "sync"] }
