@@ -24,7 +24,7 @@ jobs:
               run: |
                 sudo apt update
                 sudo apt install \
-                    libudev \
+                    libudev-dev \
             - name: Prepare to build
               run: |
                 mkdir keys
