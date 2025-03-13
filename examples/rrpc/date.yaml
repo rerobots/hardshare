@@ -1,0 +1,10 @@
+---
+rules:
+  - verb: GET
+    uri: /date
+    command:
+      - date
+  - verb: POST
+    uri: /echo
+    command:
+      - echo
