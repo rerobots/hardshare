@@ -344,7 +344,10 @@ mod tests {
             body: None,
         };
 
-        assert!(config.find_rule(&req).is_some());
+        let rule = config.find_rule(&req);
+        assert!(rule.is_some());
+        let result = rule.unwrap().run(&req);
+        assert!(result.is_ok());
 
         req.verb = HttpVerb::Post;
         assert_eq!(config.find_rule(&req), None);
