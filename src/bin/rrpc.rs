@@ -348,6 +348,8 @@ mod tests {
         assert!(rule.is_some());
         let result = rule.unwrap().run(&req);
         assert!(result.is_ok());
+        // "20" should appear in the year of any date string for next 74 years
+        assert!(result.unwrap().contains("20"));
 
         req.verb = HttpVerb::Post;
         assert_eq!(config.find_rule(&req), None);
