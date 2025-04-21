@@ -1153,7 +1153,16 @@ impl HSAPIClient {
                     serde_json::from_slice(resp.body().await?.as_ref())?;
                 Ok(payload["id"].as_str().unwrap().to_string())
             } else {
-                error(format!("server indicated error: {}", resp.status()))
+                let mut err = format!("server indicated error: status {}", resp.status());
+                if resp.headers().contains_key("content-length")
+                    && resp.headers().get("content-length").unwrap() != "0"
+                {
+                    err += &format!(
+                        "; body: {}",
+                        String::from_utf8_lossy(resp.body().await?.as_ref())
+                    );
+                }
+                error(err)
             }
         });
         let hscamera_id = res?;
