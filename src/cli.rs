@@ -1018,10 +1018,7 @@ fn init_subcommand() -> Result<(), CliError> {
 fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let mut at_least_one_error = false;
 
-    let local_config = match mgmt::get_local_config(false, true) {
-        Ok(lc) => Some(lc),
-        Err(_) => None,
-    };
+    let local_config = mgmt::get_local_config(false, true).ok();
 
     if let Some(config) = &local_config {
         if let Some(err_tokens) = &config.err_api_tokens {
