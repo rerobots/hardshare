@@ -1203,7 +1203,7 @@ impl HSAPIClient {
         exit_result
     }
 
-    pub fn stop_cameras(&self, all: bool) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn stop_cameras(&self, all: bool, force: bool) -> Result<(), Box<dyn std::error::Error>> {
         let base_path = mgmt::get_base_path().unwrap();
         let path = base_path.join("camera");
         let mut stopped_via_pids = Vec::new();
@@ -1233,21 +1233,31 @@ impl HSAPIClient {
                     match kresult {
                         Ok(r) => {
                             if !r.success() {
-                                return error(format!(
+                                let msg = format!(
                                     "failed to terminate local process {} for camera {}: {}",
                                     pid,
                                     stopped_via_pids.last().unwrap(),
                                     r
-                                ));
+                                );
+                                if !force {
+                                    return error(msg);
+                                } else {
+                                    warn!("{}", msg);
+                                }
                             }
                         }
                         Err(err) => {
-                            return error(format!(
+                            let msg = format!(
                                 "failed to terminate local process {} for camera {}: {}",
                                 pid,
                                 stopped_via_pids.last().unwrap(),
                                 err
-                            ));
+                            );
+                            if !force {
+                                return error(msg);
+                            } else {
+                                warn!("{}", msg);
+                            }
                         }
                     }
 

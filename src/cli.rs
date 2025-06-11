@@ -997,8 +997,9 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
 
 fn stop_cameras_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let all = matches.is_present("all_cameras");
+    let force = matches.is_present("force");
     let ac = api::HSAPIClient::new();
-    match ac.stop_cameras(all) {
+    match ac.stop_cameras(all, force) {
         Ok(()) => Ok(()),
         Err(err) => CliError::new_std(err, 1),
     }
@@ -1372,7 +1373,11 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("all_cameras")
                          .short("a")
                          .long("all")
-                         .help("Stop all attached cameras associated with this user account, whether or not started on this host")))
+                         .help("Stop all attached cameras associated with this user account, whether or not started on this host"))
+                    .arg(Arg::with_name("force")
+                         .short("f")
+                         .long("force")
+                         .help("Mark cameras as stopped on the server, whether or not the local process can be found")))
         .subcommand(SubCommand::with_name("monitor")
                     .about("Detect and handle errors in a deployment")
                     .arg(Arg::with_name("id_prefix")
