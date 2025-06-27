@@ -6,7 +6,7 @@ repository = "https://github.com/rerobots/hardshare"
 license = "Apache-2.0"
 version = "0.13.2-devel"
 authors = ["rerobots, Inc. <q@rerobots.net>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 include = [
     "/src",
