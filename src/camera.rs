@@ -292,8 +292,7 @@ fn verify_capture_ability(
         Ok(d) => d,
         Err(err) => {
             return Err(CheckError::new(format!(
-                "when opening camera device, caught {}",
-                err
+                "when opening camera device, caught {err}"
             )));
         }
     };
@@ -318,8 +317,7 @@ fn verify_capture_ability(
         }
         Err(err) => {
             return Err(CheckError::new(format!(
-                "failed to set camera format MJPG: {}",
-                err
+                "failed to set camera format MJPG: {err}"
             )));
         }
     };
@@ -330,7 +328,7 @@ fn verify_capture_ability(
             s
         }
         Err(err) => {
-            return Err(CheckError::new(format!("failed to open stream: {}", err)));
+            return Err(CheckError::new(format!("failed to open stream: {err}")));
         }
     };
 
