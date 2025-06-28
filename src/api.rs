@@ -116,9 +116,7 @@ impl std::str::FromStr for CameraDimensions {
         for x_raw in s.split(',') {
             let x: u32 = match x_raw.parse() {
                 Ok(x) => x,
-                Err(err) => {
-                    return Err(format!("failed to parse width, height parameter: {}", err))
-                }
+                Err(err) => return Err(format!("failed to parse width, height parameter: {err}")),
             };
             width_height.push(x);
         }
@@ -160,7 +158,7 @@ impl std::fmt::Display for DaemonStatus {
             writeln!(f, "\t(none)")?;
         } else {
             for wd in self.ad_deployments.iter() {
-                writeln!(f, "\t{}", wd)?;
+                writeln!(f, "\t{wd}")?;
             }
         }
         Ok(())
@@ -172,7 +170,7 @@ async fn get_access_rules_a(
     origin: &str,
     wdid: &str,
 ) -> Result<AccessRules, Box<dyn std::error::Error>> {
-    let url = format!("{}/deployment/{}/rules", origin, wdid);
+    let url = format!("{origin}/deployment/{wdid}/rules");
     let mut resp = client.get(url).send().await?;
     if resp.status() == 200 {
         let payload: AccessRules = serde_json::from_slice(resp.body().await?.as_ref())?;
@@ -256,7 +254,7 @@ impl HSAPIClient {
                 Some(local_config) => {
                     return match &local_config.default_org {
                         Some(default_org) => {
-                            error(format!("No valid API tokens found for org {}", default_org))
+                            error(format!("No valid API tokens found for org {default_org}"))
                         }
                         None => error("No valid API tokens found (no default org)"),
                     }
@@ -267,7 +265,7 @@ impl HSAPIClient {
 
         Ok(Box::new(move || {
             awc::Client::builder()
-                .add_default_header(("Authorization", format!("Bearer {}", api_token)))
+                .add_default_header(("Authorization", format!("Bearer {api_token}")))
                 .finish()
         }))
     }
@@ -285,7 +283,7 @@ impl HSAPIClient {
             } else {
                 "/hardshare/list"
             };
-            let url = format!("{}{}", origin, listurl_path);
+            let url = format!("{origin}{listurl_path}");
 
             let client = client();
             let mut resp = client.get(url).send().await?;
@@ -354,7 +352,7 @@ impl HSAPIClient {
             body.insert("cap", "CAP_INSTANTIATE");
             body.insert("user", to_user.as_str());
 
-            let url = format!("{}/deployment/{}/rule", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}/rule");
             let client = client();
             let client_req = client.post(url).timeout(td);
             let mut resp = client_req.send_json(&body).await?;
@@ -383,7 +381,7 @@ impl HSAPIClient {
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
             let client = client();
-            let url = format!("{}/deployment/{}/lockout", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}/lockout");
             let resp = if make_locked {
                 client.post(url).send().await?
             } else {
@@ -407,7 +405,7 @@ impl HSAPIClient {
             let mut body = HashMap::new();
             body.insert("msg", message);
 
-            let url = format!("{}/hardshare/alert/{}", origin, wdid);
+            let url = format!("{origin}/hardshare/alert/{wdid}");
             let client = client();
             let client_req = client.post(url);
             let mut resp = client_req.send_json(&body).await?;
@@ -439,7 +437,7 @@ impl HSAPIClient {
             let mut body = HashMap::new();
             body.insert("emails", addr);
 
-            let url = format!("{}/hardshare/hook/email/{}", origin, wdid);
+            let url = format!("{origin}/hardshare/hook/email/{wdid}");
             let client = client();
             let client_req = client.post(url);
             let mut resp = client_req.send_json(&body).await?;
@@ -481,7 +479,7 @@ impl HSAPIClient {
 
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
-        let url = format!("{}/hardshare/dis/{}", origin, wdid);
+        let url = format!("{origin}/hardshare/dis/{wdid}");
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
             let client = client();
@@ -512,7 +510,7 @@ impl HSAPIClient {
         let addon = addon.clone();
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
-            let url = format!("{}/deployment/{}", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}");
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -524,7 +522,7 @@ impl HSAPIClient {
                     .iter()
                     .any(|x| x.as_str().unwrap() == addon.to_string());
                 if !has_addon {
-                    error(format!("add-on {} is not enabled", addon))
+                    error(format!("add-on {addon} is not enabled"))
                 } else {
                     Ok(payload["addons_config"][addon.to_string()].take())
                 }
@@ -553,7 +551,7 @@ impl HSAPIClient {
         let addon = addon.clone();
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
-            let url = format!("{}/deployment/{}", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}");
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -576,7 +574,7 @@ impl HSAPIClient {
                             update_payload.insert("addons_config".into(), addons_config);
                         }
                         update_payload.insert("supported_addons".into(), supported_addons.into());
-                        let url = format!("{}/hardshare/wd/{}", origin, wdid);
+                        let url = format!("{origin}/hardshare/wd/{wdid}");
                         let resp = client
                             .post(url)
                             .timeout(td)
@@ -612,7 +610,7 @@ impl HSAPIClient {
         let wdid = wdid.to_string();
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
-            let url = format!("{}/deployment/{}", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}");
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -645,7 +643,7 @@ impl HSAPIClient {
         let addon = addon.clone();
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
-            let url = format!("{}/deployment/{}", origin, wdid);
+            let url = format!("{origin}/deployment/{wdid}");
             let client = client();
             let mut resp = client.get(url).send().await?;
             if resp.status() == 200 {
@@ -686,7 +684,7 @@ impl HSAPIClient {
                     }
                 }
 
-                let url = format!("{}/hardshare/wd/{}", origin, wdid);
+                let url = format!("{origin}/hardshare/wd/{wdid}");
                 let resp = client
                     .post(url)
                     .timeout(td)
@@ -719,7 +717,7 @@ impl HSAPIClient {
     }
 
     pub fn stop(&self, wdid: &str, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let url = format!("http://{}/stop/{}", bindaddr, wdid);
+        let url = format!("http://{bindaddr}/stop/{wdid}");
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async {
             awc::Client::new()
@@ -891,7 +889,7 @@ impl HSAPIClient {
         }
 
         // Try to start via daemon, if exists
-        let url = format!("http://{}/start/{}", bindaddr, wdid);
+        let url = format!("http://{bindaddr}/start/{wdid}");
         let sys = System::new();
         let res = actix::SystemRunner::block_on(&sys, async {
             awc::Client::new().post(url).send().await
@@ -920,7 +918,7 @@ impl HSAPIClient {
             let addr = match HSAPIClient::ad(&ac, wdid.clone()).await {
                 Ok(a) => a,
                 Err(err) => {
-                    err_notify.send(format!("{}", err)).unwrap();
+                    err_notify.send(format!("{err}")).unwrap();
                     System::current().stop_with_code(1);
                     return;
                 }
@@ -959,7 +957,7 @@ impl HSAPIClient {
                 Ok(s) => s,
                 Err(err) => {
                     err_notify
-                        .send(format!("failed to bind to {}; {}", bindaddr, err))
+                        .send(format!("failed to bind to {bindaddr}; {err}"))
                         .unwrap();
                     System::current().stop_with_code(1);
                     return;
@@ -969,7 +967,7 @@ impl HSAPIClient {
                 Ok(()) => (),
                 Err(err) => {
                     err_notify
-                        .send(format!("failed to start listener: {}", err))
+                        .send(format!("failed to start listener: {err}"))
                         .unwrap();
                     System::current().stop_with_code(1);
                 }
@@ -985,7 +983,7 @@ impl HSAPIClient {
         &self,
         bindaddr: &str,
     ) -> Result<DaemonStatus, Box<dyn std::error::Error>> {
-        let url = format!("http://{}/status", bindaddr);
+        let url = format!("http://{bindaddr}/status");
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async {
             let mut resp = awc::Client::new().get(url).send().await?;
@@ -999,7 +997,7 @@ impl HSAPIClient {
     }
 
     pub fn req_reload_config(&self, bindaddr: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let url = format!("http://{}/reload", bindaddr);
+        let url = format!("http://{bindaddr}/reload");
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async {
             let resp = awc::Client::new().post(url).send().await?;
@@ -1073,7 +1071,7 @@ impl HSAPIClient {
 
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
-        let url = format!("{}/hardshare/list", origin);
+        let url = format!("{origin}/hardshare/list");
         let sys = System::new();
 
         let wdid = wdid.to_string();
@@ -1145,7 +1143,7 @@ impl HSAPIClient {
         let sys = System::new();
         let res = actix::SystemRunner::block_on(&sys, async move {
             let client = client();
-            let url = format!("{}/hardshare/cam", origin);
+            let url = format!("{origin}/hardshare/cam");
             let client_req = client.post(url).timeout(td);
             let mut resp = client_req.send_json(&opts).await?;
             if resp.status() == 200 {
@@ -1173,7 +1171,7 @@ impl HSAPIClient {
         if !path.exists() {
             std::fs::create_dir(&path)?
         }
-        let path = path.join(format!("{}.pid", hscamera_id));
+        let path = path.join(format!("{hscamera_id}.pid"));
         let pid = process::id();
         std::fs::write(&path, pid.to_string())?;
 
@@ -1187,7 +1185,7 @@ impl HSAPIClient {
             let origin = self.origin.clone();
             actix::SystemRunner::block_on(&sys, async move {
                 let client = client();
-                let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
+                let url = format!("{origin}/hardshare/cam/{hscamera_id}");
                 let resp = client.delete(url).send().await?;
                 if resp.status() != 200 {
                     return error(format!(
@@ -1273,7 +1271,7 @@ impl HSAPIClient {
 
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
-        let url = format!("{}/hardshare/cam", origin);
+        let url = format!("{origin}/hardshare/cam");
         let sys = System::new();
         actix::SystemRunner::block_on(&sys, async move {
             let client = client();
@@ -1303,7 +1301,7 @@ impl HSAPIClient {
                         }
                     }
 
-                    let url = format!("{}/hardshare/cam/{}", origin, hscamera_id);
+                    let url = format!("{origin}/hardshare/cam/{hscamera_id}");
                     let resp = client.delete(url).send().await?;
                     if resp.status() != 200 {
                         return error(format!(
@@ -1653,7 +1651,7 @@ mod tests {
     #[test]
     fn list_no_rules() {
         let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
-        let path = format!("/deployment/{}/rules", wdid);
+        let path = format!("/deployment/{wdid}/rules");
         let _m = mock("GET", path.as_str())
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -1670,7 +1668,7 @@ mod tests {
     #[test]
     fn get_mistyproxy_config() {
         let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
-        let path = format!("/deployment/{}", wdid);
+        let path = format!("/deployment/{wdid}");
         let addr = "192.168.1.7";
         let payload = json!({
             "supported_addons": ["mistyproxy"],

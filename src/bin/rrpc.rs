@@ -71,7 +71,7 @@ impl Request {
                 } else if word == "POST" {
                     verb = Some(HttpVerb::Post);
                 } else {
-                    return Err(format!("unsupported verb {}", word).into());
+                    return Err(format!("unsupported verb {word}").into());
                 }
             } else if uri.is_none() {
                 match word.find('?') {
@@ -88,7 +88,7 @@ impl Request {
             } else if word == "HTTP/1.1" {
                 protocol_match = true;
             } else {
-                return Err(format!("unexpected protocol specifier {}", word).into());
+                return Err(format!("unexpected protocol specifier {word}").into());
             }
         }
         if verb.is_none() {
@@ -141,7 +141,7 @@ impl RequestRule {
         let output = match Command::new(&self.command[0]).args(args).output() {
             Ok(o) => o,
             Err(err) => {
-                return Err(format!("{}", err));
+                return Err(format!("{err}"));
             }
         };
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -187,7 +187,7 @@ fn wrap_output(out: &str) -> String {
 async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
     let ingress_peer_addr = ingress.peer_addr().unwrap();
     debug!("handling RPC at {}", ingress_peer_addr);
-    let prefix = format!("{}", ingress_peer_addr);
+    let prefix = format!("{ingress_peer_addr}");
 
     let req;
     let mut buf = [0; 1024];

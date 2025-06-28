@@ -76,7 +76,7 @@ impl Request {
                 } else if word == "POST" {
                     verb = Some(HttpVerb::Post);
                 } else {
-                    return Err(format!("unsupported verb {}", word).into());
+                    return Err(format!("unsupported verb {word}").into());
                 }
             } else if uri.is_none() {
                 match word.find('?') {
@@ -95,7 +95,7 @@ impl Request {
             } else if word == "HTTP/1.1" {
                 protocol_match = true;
             } else {
-                return Err(format!("unexpected protocol specifier {}", word).into());
+                return Err(format!("unexpected protocol specifier {word}").into());
             }
         }
         if verb.is_none() {
@@ -110,7 +110,7 @@ impl Request {
         let body = if body_start < blob.len() {
             match serde_json::from_str(&String::from_utf8_lossy(&blob[body_start..])) {
                 Ok(s) => Some(s),
-                Err(err) => return Err(format!("error parsing body as JSON: {}", err).into()),
+                Err(err) => return Err(format!("error parsing body as JSON: {err}").into()),
             }
         } else {
             None
@@ -419,7 +419,7 @@ impl Config {
             for value_rule in schema {
                 if let Some(range) = value_rule.range {
                     if range.0 > range.1 {
-                        return Err(format!("range in configuration not valid: {:?}", range).into());
+                        return Err(format!("range in configuration not valid: {range:?}").into());
                     }
                 }
             }
@@ -474,7 +474,7 @@ async fn filter_responses(
         debug!("{}: read {} bytes", prefix, n);
         let mut raw = String::new();
         for el in buf.iter().take(n - 1) {
-            match write!(&mut raw, "{:02X} ", el) {
+            match write!(&mut raw, "{el:02X} ") {
                 Ok(()) => (),
                 Err(err) => {
                     error!("{}: error on write: {}", prefix, err);
@@ -552,13 +552,13 @@ async fn main_per(config: Arc<Config>, ingress: TcpStream, egress: TcpStream) {
     let ingress_writer_task = tokio::spawn(writer_job(rx, ingress_write));
     let in_to_e = tokio::spawn(filter_requests(
         config,
-        format!("{} to {}", ingress_peer_addr, egress_peer_addr),
+        format!("{ingress_peer_addr} to {egress_peer_addr}"),
         ingress_read,
         egress_write,
         tx.clone(),
     ));
     let e_to_in = tokio::spawn(filter_responses(
-        format!("{} to {}", egress_peer_addr, ingress_peer_addr),
+        format!("{egress_peer_addr} to {ingress_peer_addr}"),
         egress_read,
         tx,
     ));
@@ -734,7 +734,7 @@ rules:
         range: [1, 75]
 ";
         let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{}", config_data).unwrap();
+        write!(config_file, "{config_data}").unwrap();
         let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
 
         let mut req = Request {
@@ -784,7 +784,7 @@ rules:
         range: [1, 600]
 ";
         let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{}", config_data).unwrap();
+        write!(config_file, "{config_data}").unwrap();
         let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
 
         assert!(!config.is_valid(&Request {
@@ -871,7 +871,7 @@ rules:
         range: [1, 75]
 ";
         let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{}", config_data).unwrap();
+        write!(config_file, "{config_data}").unwrap();
         let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
 
         assert!(!config.is_valid(&Request {

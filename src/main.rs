@@ -35,7 +35,7 @@ fn main() {
         Ok(_) => std::process::exit(0),
         Err(err) => {
             if err.msg.is_some() {
-                eprintln!("{}", err);
+                eprintln!("{err}");
             }
             std::process::exit(err.exitcode);
         }

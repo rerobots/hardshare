@@ -113,10 +113,10 @@ impl CurrentInstance {
         let message_id: String = res.message_id.clone().unwrap();
         let mut responses = self.responses.lock().unwrap();
         if !responses.contains_key(&message_id) {
-            return Err(format!("unknown message {}", message_id));
+            return Err(format!("unknown message {message_id}"));
         }
         if responses[&message_id].is_some() {
-            return Err(format!("already handled message {}", message_id));
+            return Err(format!("already handled message {message_id}"));
         }
         responses.insert(message_id, Some(res.clone()));
         Ok(())
@@ -184,7 +184,7 @@ impl CurrentInstance {
             match &*status {
                 Some(s) => {
                     if *s != InstanceStatus::Init && *s != InstanceStatus::Ready {
-                        Err(format!("called when instance status {}", s))
+                        Err(format!("called when instance status {s}"))
                     } else {
                         main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
@@ -281,14 +281,14 @@ impl CurrentInstance {
             let run_command = run_command.args(["inspect", name]);
             let command_result = match run_command.output() {
                 Ok(o) => o,
-                Err(err) => return Err(format!("{}", err)),
+                Err(err) => return Err(format!("{err}")),
             };
             if !command_result.status.success() {
-                return Err(format!("run command failed: {:?}", command_result));
+                return Err(format!("run command failed: {command_result:?}"));
             }
             let r: serde_json::Value = match serde_json::from_slice(&command_result.stdout) {
                 Ok(o) => o,
-                Err(err) => return Err(format!("{}", err)),
+                Err(err) => return Err(format!("{err}")),
             };
             match r[0]["NetworkSettings"]["IPAddress"].as_str() {
                 Some(addr) => {
@@ -313,10 +313,10 @@ impl CurrentInstance {
         let run_command = run_command.args(["port", name, "22"]);
         let command_result = match run_command.output() {
             Ok(o) => o,
-            Err(err) => return Err(format!("{}", err)),
+            Err(err) => return Err(format!("{err}")),
         };
         if !command_result.status.success() {
-            return Err(format!("run command failed: {:?}", command_result));
+            return Err(format!("run command failed: {command_result:?}"));
         }
 
         let s = String::from_utf8(command_result.stdout).unwrap();
@@ -324,7 +324,7 @@ impl CurrentInstance {
         let parts: Vec<&str> = s.split(':').collect();
         match Port::from_str(parts[1]) {
             Ok(port) => Ok(port),
-            Err(err) => Err(format!("SSH port not found: {}", err)),
+            Err(err) => Err(format!("SSH port not found: {err}")),
         }
     }
 
@@ -348,11 +348,11 @@ impl CurrentInstance {
                     if copy_result.success() {
                         let mut hostkey_file = match File::open(hostkey_filename) {
                             Ok(f) => f,
-                            Err(err) => return Err(format!("{}", err)),
+                            Err(err) => return Err(format!("{err}")),
                         };
                         let mut hostkey = String::new();
                         if let Err(err) = hostkey_file.read_to_string(&mut hostkey) {
-                            return Err(format!("{}", err));
+                            return Err(format!("{err}"));
                         }
                         drop(hostkey_file);
                         if let Err(err) = std::fs::remove_file(hostkey_filename) {
@@ -541,7 +541,7 @@ impl CurrentInstance {
                         &name,
                         "/bin/sh",
                         "-c",
-                        &format!("cd $HOME/m && {}", path),
+                        &format!("cd $HOME/m && {path}"),
                     ])
                     .status();
                 match status {
@@ -583,7 +583,7 @@ impl CurrentInstance {
                 }
                 if s == &InstanceStatus::Init || s == &InstanceStatus::InitFail {
                     warn!("received terminate request when {}", s);
-                    return Err(format!("cannot terminate when status is {}", s));
+                    return Err(format!("cannot terminate when status is {s}"));
                 }
                 *status = Some(InstanceStatus::Terminating);
             }
@@ -717,13 +717,12 @@ impl CurrentInstance {
             let command_result = match run_command.output() {
                 Ok(o) => o,
                 Err(err) => {
-                    return Err(Error::new(format!("{}", err)));
+                    return Err(Error::new(format!("{err}")));
                 }
             };
             if !command_result.status.success() {
                 return Err(Error::new(format!(
-                    "run command failed: {:?}",
-                    command_result
+                    "run command failed: {command_result:?}"
                 )));
             }
 
@@ -755,7 +754,7 @@ impl CurrentInstance {
                     return Err(Error::new(err));
                 }
             };
-            match write!(public_key_file, "{}", public_key) {
+            match write!(public_key_file, "{public_key}") {
                 Ok(()) => {
                     debug!(
                         "wrote public key file: {}",
@@ -777,8 +776,7 @@ impl CurrentInstance {
                 .unwrap();
             if !mkdir_result.success() {
                 return Err(Error::new(format!(
-                    "mkdir command failed: {:?}",
-                    mkdir_result
+                    "mkdir command failed: {mkdir_result:?}"
                 )));
             }
 
@@ -791,7 +789,7 @@ impl CurrentInstance {
                 .status()
                 .unwrap();
             if !cp_result.success() {
-                return Err(Error::new(format!("cp command failed: {:?}", cp_result)));
+                return Err(Error::new(format!("cp command failed: {cp_result:?}")));
             }
 
             let chown_result = Command::new(&cprovider_execname)
@@ -806,8 +804,7 @@ impl CurrentInstance {
                 .unwrap();
             if !chown_result.success() {
                 return Err(Error::new(format!(
-                    "chown command failed: {:?}",
-                    chown_result
+                    "chown command failed: {chown_result:?}"
                 )));
             }
 
@@ -825,14 +822,11 @@ impl CurrentInstance {
                 match status {
                     Ok(script_result) => {
                         if !script_result.success() {
-                            return Err(Error::new(format!(
-                                "`{script}` failed: {}",
-                                script_result
-                            )));
+                            return Err(Error::new(format!("`{script}` failed: {script_result}")));
                         }
                     }
                     Err(err) => {
-                        return Err(Error::new(format!("`{script}` failed: {}", err)));
+                        return Err(Error::new(format!("`{script}` failed: {err}")));
                     }
                 }
             }
@@ -845,7 +839,7 @@ impl CurrentInstance {
             hostkey = "".into();
             subprocess = Some(res.0);
         } else {
-            return Err(Error::new(format!("unknown cprovider: {}", cprovider)));
+            return Err(Error::new(format!("unknown cprovider: {cprovider}")));
         }
 
         Ok(ContainerAddress {
@@ -887,11 +881,11 @@ impl CurrentInstance {
             match Command::new("/bin/sh").args(["-c", script]).status() {
                 Ok(script_result) => {
                     if !script_result.success() {
-                        return Err(Error::new(format!("`{script}` failed: {}", script_result)));
+                        return Err(Error::new(format!("`{script}` failed: {script_result}")));
                     }
                 }
                 Err(err) => {
-                    return Err(Error::new(format!("`{script}` failed: {}", err)));
+                    return Err(Error::new(format!("`{script}` failed: {err}")));
                 }
             }
         }

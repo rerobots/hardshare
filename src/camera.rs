@@ -51,8 +51,8 @@ pub fn stream_websocket(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let camera_path = String::from(camera_path);
     let dimensions = dimensions.as_ref().cloned();
-    let authheader = format!("Bearer {}", api_token);
-    let url = format!("{}/hardshare/cam/{}/upload", origin, hscamera_id);
+    let authheader = format!("Bearer {api_token}");
+    let url = format!("{origin}/hardshare/cam/{hscamera_id}/upload");
     let sys = System::new();
     let (err_notify, err_rx) = mpsc::channel();
     sys.runtime().spawn(async move {
@@ -65,7 +65,7 @@ pub fn stream_websocket(
             Ok(c) => c,
             Err(err) => {
                 err_notify
-                    .send(format!("failed to open WebSocket: {}", err))
+                    .send(format!("failed to open WebSocket: {err}"))
                     .unwrap();
                 System::current().stop_with_code(1);
                 return;
@@ -110,8 +110,7 @@ fn verify_capture_ability(
         Ok(c) => c,
         Err(err) => {
             return Err(CheckError::new(format!(
-                "error parsing camera index: {}",
-                err
+                "error parsing camera index: {err}"
             )));
         }
     };
@@ -121,8 +120,7 @@ fn verify_capture_ability(
     debug!("opening camera {}", camera_index);
     if camera_index > devices.len() - 1 {
         return Err(CheckError::new(format!(
-            "camera index is out of range: {}",
-            camera_index
+            "camera index is out of range: {camera_index}"
         )));
     }
     let dev = match Device::new(devices[camera_index]) {

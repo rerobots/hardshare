@@ -7,7 +7,7 @@
 
 use std::env;
 use std::io::prelude::*;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process;
 
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if mode == "c" {
         Mode::Client
     } else {
-        println!("unknown mode: {:?}", mode);
+        println!("unknown mode: {mode:?}");
         process::exit(1);
     };
 

@@ -38,7 +38,7 @@ impl std::error::Error for CliError {}
 impl std::fmt::Display for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.msg {
-            Some(m) => write!(f, "{}", m),
+            Some(m) => write!(f, "{m}"),
             None => write!(f, ""),
         }
     }
@@ -47,7 +47,7 @@ impl std::fmt::Display for CliError {
 impl std::fmt::Debug for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.msg {
-            Some(m) => write!(f, "{}", m),
+            Some(m) => write!(f, "{m}"),
             None => write!(f, ""),
         }
     }
@@ -55,7 +55,7 @@ impl std::fmt::Debug for CliError {
 
 impl From<Box<dyn std::error::Error>> for CliError {
     fn from(value: Box<dyn std::error::Error>) -> Self {
-        let disp = format!("{}", value);
+        let disp = format!("{value}");
         let msg = if disp.is_empty() { None } else { Some(disp) };
         CliError { msg, exitcode: 1 }
     }
@@ -74,14 +74,14 @@ impl CliError {
 
     fn new_std(err: Box<dyn std::error::Error>, exitcode: i32) -> Result<(), CliError> {
         Err(CliError {
-            msg: Some(format!("{}", err)),
+            msg: Some(format!("{err}")),
             exitcode,
         })
     }
 
     fn new_stdio(err: std::io::Error, exitcode: i32) -> Result<(), CliError> {
         Err(CliError {
-            msg: Some(format!("{}", err)),
+            msg: Some(format!("{err}")),
             exitcode,
         })
     }
@@ -104,7 +104,7 @@ enum PrintingFormat {
 fn confirm(prompt: &str) -> Result<(), CliError> {
     let mut confirmation = String::new();
     loop {
-        print!("{}", prompt);
+        print!("{prompt}");
         std::io::stdout().flush().expect("failed to flush stdout");
         match std::io::stdin().read_line(&mut confirmation) {
             Ok(n) => n,
@@ -198,24 +198,24 @@ fn print_config_w<T: Write>(
             if !wd.init_inside.is_empty() {
                 writeln!(f, "\tinit inside:")?;
                 for init_inside_p in wd.init_inside.iter() {
-                    writeln!(f, "\t\t{}", init_inside_p)?;
+                    writeln!(f, "\t\t{init_inside_p}")?;
                 }
             }
             if !wd.terminate.is_empty() {
                 writeln!(f, "\tterminate:")?;
                 for terminate_p in wd.terminate.iter() {
-                    writeln!(f, "\t\t{}", terminate_p)?;
+                    writeln!(f, "\t\t{terminate_p}")?;
                 }
             }
             if let Some(m) = &wd.monitor {
-                writeln!(f, "\tmonitor: {}", m)?;
+                writeln!(f, "\tmonitor: {m}")?;
             }
         }
     }
 
     write!(f, "\ndefault org: ")?;
     match &local.default_org {
-        Some(dorg) => writeln!(f, "{}", dorg)?,
+        Some(dorg) => writeln!(f, "{dorg}")?,
         None => writeln!(f, "(none)")?,
     };
 
@@ -235,8 +235,8 @@ fn print_config_w<T: Write>(
             let mut data_iter = data.iter();
             for path in paths.iter() {
                 let data = data_iter.next().unwrap();
-                writeln!(f, "{}\t{}", prefix, path)?;
-                write!(f, "{}\t\texpiration: ", prefix)?;
+                writeln!(f, "{prefix}\t{path}")?;
+                write!(f, "{prefix}\t\texpiration: ")?;
                 match data.expiration {
                     Some(exp) => writeln!(f, "{}", Utc.timestamp_opt(exp as i64, 0).unwrap())?,
                     None => writeln!(f, "(none)")?,
@@ -252,7 +252,7 @@ fn print_config_w<T: Write>(
             if org == "()" {
                 continue;
             }
-            writeln!(f, "\t{}:", org)?;
+            writeln!(f, "\t{org}:")?;
             print_keys(f, 1, org_tokens, &local.api_tokens_data[org])?;
         }
     }
@@ -261,7 +261,7 @@ fn print_config_w<T: Write>(
             writeln!(f, "found possible API tokens with errors:")?;
         }
         for (err_token_path, err) in err_tokens {
-            writeln!(f, "\t {}: {}", err, err_token_path)?;
+            writeln!(f, "\t {err}: {err_token_path}")?;
         }
     }
 
@@ -298,13 +298,13 @@ fn print_config_w<T: Write>(
                 } else {
                     wd["origin"].as_str().unwrap()
                 };
-                writeln!(f, "\torigin (address) of registration: {}", origin)?;
+                writeln!(f, "\torigin (address) of registration: {origin}")?;
                 if !wd["dissolved"].is_null() {
                     writeln!(f, "\tdissolved: {}", wd["dissolved"].as_str().unwrap())?;
                 }
                 let locked_out = wd["lockout"].as_bool().unwrap();
                 if locked_out {
-                    writeln!(f, "\tlock-out: {}", locked_out)?;
+                    writeln!(f, "\tlock-out: {locked_out}")?;
                 }
             }
         }
@@ -331,8 +331,7 @@ fn list_subcommand(matches: &clap::ArgMatches, pformat: PrintingFormat) -> Resul
             Ok(rc) => rc,
             Err(err) => {
                 let err_message = format!(
-                    "{}\nTo get only the local configuration, do\n\n    hardshare list --local",
-                    err
+                    "{err}\nTo get only the local configuration, do\n\n    hardshare list --local"
                 );
                 return CliError::new(err_message.as_str(), 1);
             }
@@ -739,7 +738,7 @@ fn rules_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             ruleset.comment = Some("Access is denied unless a rule explicitly permits it.".into());
         }
 
-        println!("{}", ruleset);
+        println!("{ruleset}");
     } else if matches.is_present("drop_all_rules") {
         let ac = api::HSAPIClient::new();
         match ac.drop_access_rules(&local_config.wdeployments[wd_index].id) {
@@ -816,7 +815,7 @@ fn register_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     let at_most_1 = !matches.is_present("permit_more");
     match ac.register_new(at_most_1) {
         Ok(new_wdid) => {
-            println!("{}", new_wdid);
+            println!("{new_wdid}");
             Ok(())
         }
         Err(err) => CliError::new_std(err, 1),
@@ -835,7 +834,7 @@ fn declare_default_org_subcommand(matches: &clap::ArgMatches) -> Result<(), CliE
             } else {
                 let n = String::from(n);
                 if !local_config.known_orgs.contains(&n) {
-                    return CliError::new(format!("unknown organization \"{}\"", n).as_str(), 1);
+                    return CliError::new(format!("unknown organization \"{n}\"").as_str(), 1);
                 }
                 Some(n)
             }
@@ -879,11 +878,11 @@ fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliE
             } else if pformat == PrintingFormat::Yaml {
                 println!("{}", serde_yaml::to_string(&r).unwrap());
             } else {
-                println!("{}", r);
+                println!("{r}");
             }
             Ok(())
         }
-        Err(err) => CliError::new(format!("{}\nIs the local hardshare client active?", err), 1),
+        Err(err) => CliError::new(format!("{err}\nIs the local hardshare client active?"), 1),
     }
 }
 
@@ -973,7 +972,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
                     }
                     if !matched {
                         return CliError::new(
-                            format!("unknown ID in crop configuration: {}", crop_wd),
+                            format!("unknown ID in crop configuration: {crop_wd}"),
                             1,
                         );
                     }
@@ -982,7 +981,7 @@ fn attach_camera_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> 
                 Some(c)
             }
             Err(err) => {
-                return CliError::new(format!("failed to parse crop configuration: {}", err), 1)
+                return CliError::new(format!("failed to parse crop configuration: {err}"), 1)
             }
         },
         None => None,
@@ -1028,7 +1027,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 println!("found possible API tokens with errors:");
             }
             for (err_token_path, err) in err_tokens {
-                println!("\t {}: {}", err, err_token_path);
+                println!("\t {err}: {err_token_path}");
             }
             if !err_tokens.is_empty() {
                 println!("remove these with the following command:\n\n    hardshare config -p\n");
@@ -1047,9 +1046,9 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 let suffix = if config.default_org.is_none() {
                     "".into()
                 } else {
-                    format!(": {}", org_name)
+                    format!(": {org_name}")
                 };
-                println!("no valid API tokens for default org{}", suffix);
+                println!("no valid API tokens for default org{suffix}");
             }
         }
 
@@ -1407,10 +1406,7 @@ pub fn main() -> Result<(), CliError> {
             } else if given_pformat_lower == "yaml" {
                 PrintingFormat::Yaml
             } else {
-                return CliError::new(
-                    format!("unrecognized format: {}", given_pformat).as_str(),
-                    1,
-                );
+                return CliError::new(format!("unrecognized format: {given_pformat}").as_str(), 1);
             }
         }
         None => PrintingFormat::Default,

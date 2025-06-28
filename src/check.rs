@@ -27,7 +27,7 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.description {
-            Some(d) => write!(f, "{}", d),
+            Some(d) => write!(f, "{d}"),
             None => write!(f, ""),
         }
     }
@@ -54,7 +54,7 @@ fn check_docker(rootless: bool) -> Result<(), String> {
     );
     let output = match Command::new("docker").arg("version").output() {
         Ok(x) => x,
-        Err(err) => return Err(format!("error calling `docker version`: {}", err)),
+        Err(err) => return Err(format!("error calling `docker version`: {err}")),
     };
     if !output.status.success() {
         return Err(format!(
@@ -69,7 +69,7 @@ fn check_podman() -> Result<(), String> {
     info!("checking availability of podman");
     let output = match Command::new("podman").arg("version").output() {
         Ok(x) => x,
-        Err(err) => return Err(format!("error calling `podman version`: {}", err)),
+        Err(err) => return Err(format!("error calling `podman version`: {err}")),
     };
     if !output.status.success() {
         return Err(format!(
@@ -86,7 +86,7 @@ fn check_lxd() -> Result<(), String> {
     // whereas `lxc version` indicates success, only shows the fault in stdout
     let status = match Command::new("lxc").args(["list", "-c", "n"]).status() {
         Ok(s) => s,
-        Err(err) => return Err(format!("error calling `lxc list`: {}", err)),
+        Err(err) => return Err(format!("error calling `lxc list`: {err}")),
     };
     if !status.success() {
         return Err(format!(
@@ -157,8 +157,7 @@ pub fn config(
         Ok(wi) => wi,
         Err(_) => {
             return Err(Error::new(format!(
-                "given ID not found in local config: {}",
-                id
+                "given ID not found in local config: {id}"
             )))
         }
     };
@@ -175,7 +174,7 @@ pub fn config(
                 if fail_fast {
                     return Err(err);
                 }
-                println!("{}: {}", id, err);
+                println!("{id}: {err}");
             }
         }
         None => {
@@ -188,16 +187,16 @@ pub fn config(
                         if fail_fast {
                             return Err(err);
                         }
-                        println!("{}: {}", id, err);
+                        println!("{id}: {err}");
                     }
                 }
                 Err(err) => {
-                    let msg = format!("caught while checking registration on server: {}", err);
+                    let msg = format!("caught while checking registration on server: {err}");
                     if fail_fast {
                         return Err(Error::new(&msg));
                     }
                     at_least_one_error = true;
-                    println!("{}", msg);
+                    println!("{msg}");
                 }
             };
         }
@@ -205,12 +204,12 @@ pub fn config(
 
     if check_camera {
         if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
-            let msg = format!("caught while checking camera: {}", err);
+            let msg = format!("caught while checking camera: {err}");
             if fail_fast {
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
 
@@ -219,12 +218,12 @@ pub fn config(
         .contains_key(&local_config.wdeployments[wd_index].owner)
     {
         if local_config.api_tokens[&local_config.wdeployments[wd_index].owner].is_empty() {
-            let msg = format!("no valid API tokens for managing {}", id);
+            let msg = format!("no valid API tokens for managing {id}");
             if fail_fast {
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
         }
     } else {
         let default_org = match &local_config.default_org {
@@ -261,22 +260,19 @@ pub fn config(
                 }
             }
             if !at_least_one {
-                let msg = format!("no valid API tokens for managing {}", id);
+                let msg = format!("no valid API tokens for managing {id}");
                 if fail_fast {
                     return Err(Error::new(&msg));
                 }
                 at_least_one_error = true;
-                println!("{}", msg);
+                println!("{msg}");
             } else {
                 match org_with_match {
                     Some(o) => {
-                        println!("warning: valid API token for managing {} with organization {}, which is not default org", id, o);
+                        println!("warning: valid API token for managing {id} with organization {o}, which is not default org");
                     }
                     None => {
-                        println!(
-                            "warning: valid API token for managing {} not in default org",
-                            id
-                        );
+                        println!("warning: valid API token for managing {id} not in default org");
                     }
                 }
             }
@@ -299,7 +295,7 @@ pub fn config(
         cname,
         "checkkey",
     ) {
-        let mut msg = format!("caught while creating test container: {}", err);
+        let mut msg = format!("caught while creating test container: {err}");
         if fail_fast {
             if local_config.wdeployments[wd_index].cprovider != CProvider::Proxy {
                 msg += &format!(
@@ -310,19 +306,19 @@ pub fn config(
             return Err(Error::new(&msg));
         }
         at_least_one_error = true;
-        println!("{}", msg);
+        println!("{msg}");
     }
 
     info!("simulating instance terminate ...");
     if let Err(err) =
         control::CurrentInstance::destroy_container(&local_config.wdeployments[wd_index], cname)
     {
-        let msg = format!("caught while destroying test container: {}", err);
+        let msg = format!("caught while destroying test container: {err}");
         if fail_fast {
             return Err(Error::new(&msg));
         }
         at_least_one_error = true;
-        println!("{}", msg);
+        println!("{msg}");
     }
 
     if at_least_one_error {
@@ -343,24 +339,24 @@ pub fn all_configurations(
     let remote_config = match ac.get_remote_config(false) {
         Ok(rc) => Some(rc),
         Err(err) => {
-            let msg = format!("caught while checking registration on server: {}", err);
+            let msg = format!("caught while checking registration on server: {err}");
             if fail_fast {
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
             None
         }
     };
 
     if check_camera {
         if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
-            let msg = format!("caught while checking camera: {}", err);
+            let msg = format!("caught while checking camera: {err}");
             if fail_fast {
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
 
@@ -377,7 +373,7 @@ pub fn all_configurations(
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
     if at_least_one_error {
@@ -394,12 +390,12 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
 
     if check_camera {
         if let Err(err) = camera::check_camera(&camera::get_default_dev()) {
-            let msg = format!("caught while checking camera: {}", err);
+            let msg = format!("caught while checking camera: {err}");
             if fail_fast {
                 return Err(Error::new(&msg));
             }
             at_least_one_error = true;
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
 
@@ -413,22 +409,22 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
     info!("simulating instance launch ...");
     let cname = "check";
     if let Err(err) = control::CurrentInstance::launch_container(&wdeployment, cname, "checkkey") {
-        let msg = format!("caught while creating test container: {}", err);
+        let msg = format!("caught while creating test container: {err}");
         if fail_fast {
             return Err(Error::new(&msg));
         }
         at_least_one_error = true;
-        println!("{}", msg);
+        println!("{msg}");
     }
 
     info!("simulating instance terminate ...");
     if let Err(err) = control::CurrentInstance::destroy_container(&wdeployment, cname) {
-        let msg = format!("caught while destroying test container: {}", err);
+        let msg = format!("caught while destroying test container: {err}");
         if fail_fast {
             return Err(Error::new(&msg));
         }
         at_least_one_error = true;
-        println!("{}", msg);
+        println!("{msg}");
     }
 
     if at_least_one_error {
