@@ -283,7 +283,7 @@ fn verify_capture_ability(
     use v4l::video::Capture;
 
     let buffer_count = 4;
-    debug!("opening camera {}", camera_path);
+    debug!("opening camera {camera_path}");
     let dev = match v4l::Device::with_path(camera_path) {
         Ok(d) => d,
         Err(err) => {
@@ -308,7 +308,7 @@ fn verify_capture_ability(
                     );
                 }
             }
-            debug!("set format: {}", f);
+            debug!("set format: {f}");
             f
         }
         Err(err) => {
@@ -343,11 +343,11 @@ fn video_capture(
     use v4l::video::Capture;
 
     let buffer_count = 4;
-    debug!("opening camera {}", camera_path);
+    debug!("opening camera {camera_path}");
     let dev = match v4l::Device::with_path(camera_path) {
         Ok(d) => d,
         Err(err) => {
-            error!("when opening camera device, caught {}", err);
+            error!("when opening camera device, caught {err}");
             return;
         }
     };
@@ -367,11 +367,11 @@ fn video_capture(
                     );
                 }
             }
-            debug!("set format: {}", f);
+            debug!("set format: {f}");
             f
         }
         Err(err) => {
-            error!("failed to set camera format MJPG: {}", err);
+            error!("failed to set camera format MJPG: {err}");
             return;
         }
     };
@@ -393,7 +393,7 @@ fn video_capture(
                                 s
                             }
                             Err(err) => {
-                                error!("failed to open stream: {}", err);
+                                error!("failed to open stream: {err}");
                                 return;
                             }
                         };
@@ -409,7 +409,7 @@ fn video_capture(
             }
             Err(err) => {
                 if err != mpsc::TryRecvError::Empty {
-                    error!("caught: {}", err);
+                    error!("caught: {err}");
                     return;
                 }
             }
@@ -419,7 +419,7 @@ fn video_capture(
             let (buf, metadata) = match s.next() {
                 Ok(i) => i,
                 Err(err) => {
-                    error!("error reading camera stream: {}", err);
+                    error!("error reading camera stream: {err}");
                     return;
                 }
             };
@@ -436,7 +436,7 @@ fn video_capture(
             if let Err(err) =
                 wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
             {
-                error!("try_send failed; caught: {:?}", err);
+                error!("try_send failed; caught: {err:?}");
             }
             // TODO: This is too slow! The WebSocket connection is lost on
             // some machines when this sleep duration is too small. Why?
