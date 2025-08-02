@@ -777,7 +777,7 @@ impl HSAPIClient {
         match ac_inner.reload_config() {
             Ok(()) => actix_web::HttpResponse::Ok().finish(),
             Err(err) => {
-                error!("{}", err);
+                error!("{err}");
                 actix_web::HttpResponse::InternalServerError().finish()
             }
         }
@@ -818,7 +818,7 @@ impl HSAPIClient {
         let addr = match HSAPIClient::ad(&ac, wdid_expanded.clone()).await {
             Ok(a) => a,
             Err(err) => {
-                error!("{}", err);
+                error!("{err}");
                 return actix_web::HttpResponse::InternalServerError().finish();
             }
         };
@@ -878,7 +878,7 @@ impl HSAPIClient {
         match self.is_locked_out(wdid) {
             Ok(locked_out) => {
                 if locked_out {
-                    warn!("advertised deployment {} is locked out", wdid);
+                    warn!("advertised deployment {wdid} is locked out");
                     warn!("new instances will be rejected until unlock");
                 }
             }
@@ -897,13 +897,13 @@ impl HSAPIClient {
         match res {
             Ok(res) => {
                 if res.status() == 403 {
-                    warn!("ignoring because daemon already advertising {}", wdid);
+                    warn!("ignoring because daemon already advertising {wdid}");
                 } else {
                     info!("started via existing daemon");
                 }
                 return Ok(());
             }
-            Err(err) => info!("no existing daemon: {}", err),
+            Err(err) => info!("no existing daemon: {err}"),
         };
 
         // Else, start new daemon
@@ -1164,7 +1164,7 @@ impl HSAPIClient {
             }
         });
         let hscamera_id = res?;
-        debug!("registered new hscamera: {}", hscamera_id);
+        debug!("registered new hscamera: {hscamera_id}");
 
         let base_path = mgmt::get_base_path().unwrap();
         let path = base_path.join("camera");
@@ -1240,7 +1240,7 @@ impl HSAPIClient {
                                 if !force {
                                     return error(msg);
                                 } else {
-                                    warn!("{}", msg);
+                                    warn!("{msg}");
                                 }
                             }
                         }
@@ -1254,7 +1254,7 @@ impl HSAPIClient {
                             if !force {
                                 return error(msg);
                             } else {
-                                warn!("{}", msg);
+                                warn!("{msg}");
                             }
                         }
                     }
@@ -1281,9 +1281,9 @@ impl HSAPIClient {
                     serde_json::from_slice(resp.body().await?.as_ref())?;
 
                 let hscameras = payload.as_object().unwrap();
-                debug!("{:?}", hscameras);
+                debug!("{hscameras:?}");
                 for (hscamera_id, assoc) in hscameras.iter() {
-                    debug!("{:?}: {:?}", hscamera_id, assoc);
+                    debug!("{hscamera_id:?}: {assoc:?}");
                     if !all {
                         if !stopped_via_pids.iter().any(|x| x == hscamera_id) {
                             continue;
@@ -1342,7 +1342,7 @@ async fn open_websocket(
                 if timeout.is_some() && Some(now.elapsed()) > timeout {
                     return Err(Box::new(err));
                 } else {
-                    warn!("failed to open WebSocket: {}", err);
+                    warn!("failed to open WebSocket: {err}");
                     std::thread::sleep(sleep_time);
                     continue;
                 }
@@ -1396,7 +1396,7 @@ impl WSClient {
                 debug!("timeout waiting for server");
                 match act.ws_sink.write(Message::Close(None)) {
                     Ok(()) => (),
-                    Err(err) => error!("caught while attempting to close WebSocket: {:?}", err),
+                    Err(err) => error!("caught while attempting to close WebSocket: {err:?}"),
                 };
                 ctx.stop();
             } else {
@@ -1412,10 +1412,7 @@ impl Handler<WSSend> for WSClient {
     fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
         match self.ws_sink.write(Message::Text(msg.0.into())) {
             Ok(()) => (),
-            Err(err) => error!(
-                "caught while attempting to send message via WebSocket: {:?}",
-                err
-            ),
+            Err(err) => error!("caught while attempting to send message via WebSocket: {err:?}"),
         }
     }
 }
@@ -1428,7 +1425,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             let payload: serde_json::Value = match serde_json::from_slice(txt.as_ref()) {
                 Ok(p) => p,
                 Err(err) => {
-                    error!("failed to parse {:?}: {}", txt, err);
+                    error!("failed to parse {txt:?}: {err}");
                     return;
                 }
             };
@@ -1442,10 +1439,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 }
             };
             if message_ver != 0 {
-                error!(
-                    "received message of unknown format version: {}",
-                    message_ver
-                );
+                error!("received message of unknown format version: {message_ver}");
                 return;
             }
 
@@ -1477,11 +1471,11 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 "CREATE_SSHTUN_DONE" => {
                     let tunnelinfo: TunnelInfo = match serde_json::from_slice(txt.as_ref()) {
                         Ok(x) => {
-                            debug!("received tunnel info: {:?}", x);
+                            debug!("received tunnel info: {x:?}");
                             x
                         }
                         Err(err) => {
-                            error!("failed to parse tunnel info from {:?}: {}", txt, err);
+                            error!("failed to parse tunnel info from {txt:?}: {err}");
                             return;
                         }
                     };
@@ -1492,7 +1486,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     )
                 }
                 _ => {
-                    error!("unknown command: {}", cmd);
+                    error!("unknown command: {cmd}");
                     return;
                 }
             };
@@ -1501,10 +1495,10 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
             debug!("received PING; sending PONG");
             match self.ws_sink.write(Message::Pong(Bytes::from_static(b""))) {
                 Ok(()) => (),
-                Err(err) => error!("caught while responding to WebSocket ping: {:?}", err),
+                Err(err) => error!("caught while responding to WebSocket ping: {err:?}"),
             }
         } else {
-            warn!("unrecognized WebSocket message: {:?}", msg);
+            warn!("unrecognized WebSocket message: {msg:?}");
         }
     }
 
@@ -1600,7 +1594,7 @@ impl Handler<ClientWorkerMessage> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: ClientWorkerMessage, _ctx: &mut Context<Self>) {
-        debug!("received client worker message: {:?}", msg);
+        debug!("received client worker message: {msg:?}");
         match msg.mtype {
             control::CWorkerMessageType::WsSend => match &self.wsclient_addr {
                 Some(wa) => {

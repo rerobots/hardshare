@@ -164,7 +164,7 @@ pub fn config(
 
     let mut at_least_one_error = false;
 
-    info!("checking configuration of {} ...", id);
+    info!("checking configuration of {id} ...");
 
     match remote_config {
         Some(rc) => {

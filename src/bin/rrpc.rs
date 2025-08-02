@@ -186,7 +186,7 @@ fn wrap_output(out: &str) -> String {
 
 async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
     let ingress_peer_addr = ingress.peer_addr().unwrap();
-    debug!("handling RPC at {}", ingress_peer_addr);
+    debug!("handling RPC at {ingress_peer_addr}");
     let prefix = format!("{ingress_peer_addr}");
 
     let req;
@@ -196,18 +196,18 @@ async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
     loop {
         let n = ingress.read(&mut buf).await.unwrap();
         if n == 0 {
-            warn!("{}: read 0 bytes; exiting...", prefix);
+            warn!("{prefix}: read 0 bytes; exiting...");
             return;
         }
-        debug!("{}: read {} bytes", prefix, n);
+        debug!("{prefix}: read {n} bytes");
         match Request::new(&buf[..n]) {
             Ok(r) => {
-                debug!("parsed request: {:?}", r);
+                debug!("parsed request: {r:?}");
                 req = r;
                 break;
             }
             Err(err) => {
-                warn!("{}", err);
+                warn!("{err}");
             }
         };
     }
@@ -218,10 +218,10 @@ async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
             warn!("Request does not satisfy specification. Rejecting.");
             match ingress.write(forbidden_response).await {
                 Ok(n) => {
-                    debug!("wrote {} bytes to ingress", n);
+                    debug!("wrote {n} bytes to ingress");
                 }
                 Err(err) => {
-                    error!("while writing to ingress, error: {}", err);
+                    error!("while writing to ingress, error: {err}");
                     return;
                 }
             }
@@ -232,20 +232,20 @@ async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
     match rule.run(&req) {
         Ok(out) => match ingress.write(wrap_output(&out).as_bytes()).await {
             Ok(n) => {
-                debug!("wrote {} bytes to ingress", n);
+                debug!("wrote {n} bytes to ingress");
             }
             Err(err) => {
-                error!("while writing to ingress, error: {}", err);
+                error!("while writing to ingress, error: {err}");
             }
         },
         Err(err) => {
-            warn!("Procedure failed: {}", err);
+            warn!("Procedure failed: {err}");
             match ingress.write(forbidden_response).await {
                 Ok(n) => {
-                    debug!("wrote {} bytes to ingress", n);
+                    debug!("wrote {n} bytes to ingress");
                 }
                 Err(err) => {
-                    error!("while writing to ingress, error: {}", err);
+                    error!("while writing to ingress, error: {err}");
                 }
             }
         }
@@ -270,7 +270,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(path) => Config::new_from_file(path)?,
         None => Config::new(),
     });
-    debug!("Using configuration: {:?}", config);
+    debug!("Using configuration: {config:?}");
 
     let rt = Builder::new_current_thread()
         .enable_io()
@@ -285,10 +285,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let (ingress, _) = match listener.accept().await {
                     Ok(x) => x,
                     Err(err) => {
-                        error!(
-                            "error on accept connection: {}; sleeping and looping...",
-                            err
-                        );
+                        error!("error on accept connection: {err}; sleeping and looping...");
                         time::sleep(std::time::Duration::from_millis(1000)).await;
                         continue;
                     }
@@ -296,7 +293,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match ingress.set_nodelay(true) {
                     Ok(()) => (),
                     Err(err) => {
-                        warn!("unable to set TCP NODELAY on ingress: {}", err)
+                        warn!("unable to set TCP NODELAY on ingress: {err}")
                     }
                 };
 

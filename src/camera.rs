@@ -117,7 +117,7 @@ fn verify_capture_ability(
     debug!("enumerating camera devices");
     let devices = Device::enumerate();
 
-    debug!("opening camera {}", camera_index);
+    debug!("opening camera {camera_index}");
     if camera_index > devices.len() - 1 {
         return Err(CheckError::new(format!(
             "camera index is out of range: {camera_index}"
@@ -144,10 +144,7 @@ fn verify_capture_ability(
     };
     if stream.format().width != width || stream.format().height != height {
         (width, height) = (stream.format().width, stream.format().height);
-        warn!(
-            "requested format not feasible; falling back to ({}, {})",
-            width, height
-        );
+        warn!("requested format not feasible; falling back to ({width}, {height})");
     }
 
     Ok(())
@@ -167,14 +164,14 @@ fn video_capture(
     let camera_index: usize = match camera_path.parse() {
         Ok(c) => c,
         Err(err) => {
-            error!("error parsing camera index: {}", err);
+            error!("error parsing camera index: {err}");
             return;
         }
     };
     debug!("enumerating camera devices");
     let devices = Device::enumerate();
 
-    debug!("opening camera {}", camera_index);
+    debug!("opening camera {camera_index}");
     let dev = match Device::new(devices[camera_index]) {
         Some(d) => d,
         None => {
@@ -209,8 +206,7 @@ fn video_capture(
                             buf_capacity = (width as usize) * (height as usize) * 3;
                             format = Format::default().width(width).height(height);
                             warn!(
-                                "requested format not feasible; falling back to ({}, {})",
-                                width, height
+                                "requested format not feasible; falling back to ({width}, {height})"
                             );
                         }
 
@@ -226,7 +222,7 @@ fn video_capture(
             }
             Err(err) => {
                 if err != mpsc::TryRecvError::Empty {
-                    error!("caught: {}", err);
+                    error!("caught: {err}");
                     return;
                 }
             }
@@ -236,7 +232,7 @@ fn video_capture(
             s.advance();
             let mut data = vec![0; buf_capacity];
             if let Err(err) = s.read(&mut data) {
-                error!("error reading camera stream: {}", err);
+                error!("error reading camera stream: {err}");
                 return;
             }
 
@@ -250,7 +246,7 @@ fn video_capture(
                     if let Err(err) = wsclient_addr
                         .try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
                     {
-                        error!("try_send failed; caught: {:?}", err);
+                        error!("try_send failed; caught: {err:?}");
                     }
                 }
                 None => warn!("failed to decode camera image"),
@@ -480,10 +476,9 @@ impl WSClient {
                 debug!("timeout waiting for server");
                 match act.ws_sink.write(Message::Close(None)) {
                     Ok(()) => (),
-                    Err(err) => error!(
-                        "caught while attempting to close camera WebSocket: {:?}",
-                        err
-                    ),
+                    Err(err) => {
+                        error!("caught while attempting to close camera WebSocket: {err:?}")
+                    }
                 }
                 ctx.stop();
             } else {
@@ -504,21 +499,21 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 } else if txt == "STOP" {
                     self.capture.send(CaptureCommand::Stop).unwrap();
                 } else {
-                    warn!("unrecognized WebSocket message: {:?}", txt);
+                    warn!("unrecognized WebSocket message: {txt:?}");
                 }
             }
             Ok(Frame::Ping(_)) => {
                 debug!("received PING; sending PONG");
                 match self.ws_sink.write(Message::Pong(Bytes::from_static(b""))) {
                     Ok(()) => (),
-                    Err(err) => error!("caught while responding to WebSocket ping: {:?}", err),
+                    Err(err) => error!("caught while responding to WebSocket ping: {err:?}"),
                 }
             }
             Ok(_) => {
-                warn!("unrecognized WebSocket message: {:?}", msg);
+                warn!("unrecognized WebSocket message: {msg:?}");
             }
             Err(err) => {
-                error!("caught {:?}", err);
+                error!("caught {err:?}");
                 ctx.stop();
             }
         }
@@ -538,10 +533,9 @@ impl Handler<WSSend> for WSClient {
     fn handle(&mut self, msg: WSSend, _ctx: &mut Context<Self>) {
         match self.ws_sink.write(Message::Text(msg.0.into())) {
             Ok(()) => (),
-            Err(err) => error!(
-                "caught while attempting to send message via camera WebSocket: {:?}",
-                err
-            ),
+            Err(err) => {
+                error!("caught while attempting to send message via camera WebSocket: {err:?}")
+            }
         }
         self.recent_txrx_instant = std::time::Instant::now();
     }

@@ -224,7 +224,7 @@ impl Request {
                                 let parsed_val = match query_value.parse::<f32>() {
                                     Ok(v) => v,
                                     Err(err) => {
-                                        warn!("caught while parsing query float value: {}", err);
+                                        warn!("caught while parsing query float value: {err}");
                                         return false;
                                     }
                                 };
@@ -238,7 +238,7 @@ impl Request {
                                 let parsed_val = match query_value.parse::<i16>() {
                                     Ok(v) => v,
                                     Err(err) => {
-                                        warn!("caught while parsing query int value: {}", err);
+                                        warn!("caught while parsing query int value: {err}");
                                         return false;
                                     }
                                 };
@@ -449,10 +449,10 @@ async fn writer_job(mut rx: mpsc::Receiver<Vec<u8>>, mut sink: tokio::net::tcp::
     while let Some(blob) = rx.recv().await {
         match sink.write(&blob).await {
             Ok(n) => {
-                debug!("wrote {} bytes to ingress", n);
+                debug!("wrote {n} bytes to ingress");
             }
             Err(err) => {
-                error!("while writing to ingress, error: {}", err);
+                error!("while writing to ingress, error: {err}");
                 return;
             }
         }
@@ -468,16 +468,16 @@ async fn filter_responses(
     loop {
         let n = x.read(&mut buf).await.unwrap();
         if n == 0 {
-            warn!("{}: read 0 bytes; exiting...", prefix);
+            warn!("{prefix}: read 0 bytes; exiting...");
             return;
         }
-        debug!("{}: read {} bytes", prefix, n);
+        debug!("{prefix}: read {n} bytes");
         let mut raw = String::new();
         for el in buf.iter().take(n - 1) {
             match write!(&mut raw, "{el:02X} ") {
                 Ok(()) => (),
                 Err(err) => {
-                    error!("{}: error on write: {}", prefix, err);
+                    error!("{prefix}: error on write: {err}");
                     return;
                 }
             }
@@ -485,11 +485,11 @@ async fn filter_responses(
         match write!(&mut raw, "{:02X}", buf[n - 1]) {
             Ok(()) => (),
             Err(err) => {
-                error!("{}: error on write: {}", prefix, err);
+                error!("{prefix}: error on write: {err}");
                 return;
             }
         }
-        debug!("{}: raw: {}", prefix, raw);
+        debug!("{prefix}: raw: {raw}");
 
         ingress_writer.send(buf[..n].to_vec()).await.unwrap();
     }
@@ -507,18 +507,18 @@ async fn filter_requests(
     loop {
         let n = x.read(&mut buf).await.unwrap();
         if n == 0 {
-            warn!("{}: read 0 bytes; exiting...", prefix);
+            warn!("{prefix}: read 0 bytes; exiting...");
             return;
         }
-        debug!("{}: read {} bytes", prefix, n);
+        debug!("{prefix}: read {n} bytes");
         let req = match Request::new(&buf[..n]) {
             Ok(r) => r,
             Err(err) => {
-                warn!("{}", err);
+                warn!("{err}");
                 return;
             }
         };
-        debug!("parsed request: {:?}", req);
+        debug!("parsed request: {req:?}");
         if !config.is_valid(&req) {
             warn!("Request does not satisfy specification. Rejecting.");
             ingress_writer
@@ -529,10 +529,10 @@ async fn filter_requests(
         }
         match y.write(&buf[..n]).await {
             Ok(n) => {
-                debug!("{}: wrote {} bytes", prefix, n);
+                debug!("{prefix}: wrote {n} bytes");
             }
             Err(err) => {
-                error!("{}: error on write: {}", prefix, err);
+                error!("{prefix}: error on write: {err}");
                 return;
             }
         }
@@ -542,10 +542,7 @@ async fn filter_requests(
 async fn main_per(config: Arc<Config>, ingress: TcpStream, egress: TcpStream) {
     let ingress_peer_addr = ingress.peer_addr().unwrap();
     let egress_peer_addr = egress.peer_addr().unwrap();
-    debug!(
-        "started filtering {} to {}",
-        ingress_peer_addr, egress_peer_addr
-    );
+    debug!("started filtering {ingress_peer_addr} to {egress_peer_addr}");
     let (ingress_read, ingress_write) = ingress.into_split();
     let (egress_read, egress_write) = egress.into_split();
     let (tx, rx) = mpsc::channel(100);
@@ -563,13 +560,13 @@ async fn main_per(config: Arc<Config>, ingress: TcpStream, egress: TcpStream) {
         tx,
     ));
     if let Err(err) = in_to_e.await {
-        error!("{:?}", err);
+        error!("{err:?}");
     }
     if let Err(err) = e_to_in.await {
-        error!("{:?}", err);
+        error!("{err:?}");
     }
     if let Err(err) = ingress_writer_task.await {
-        error!("{:?}", err)
+        error!("{err:?}")
     }
     debug!("done");
 }
@@ -597,7 +594,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(path) => Config::new_from_file(path)?,
         None => Config::new(),
     });
-    debug!("Using configuration: {:?}", config);
+    debug!("Using configuration: {config:?}");
 
     let targetaddr = String::from(matches.value_of("TARGET").unwrap());
 
@@ -614,10 +611,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let (ingress, _) = match listener.accept().await {
                     Ok(x) => x,
                     Err(err) => {
-                        error!(
-                            "error on accept connection: {}; sleeping and looping...",
-                            err
-                        );
+                        error!("error on accept connection: {err}; sleeping and looping...");
                         time::sleep(std::time::Duration::from_millis(1000)).await;
                         continue;
                     }
@@ -625,21 +619,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match ingress.set_nodelay(true) {
                     Ok(()) => (),
                     Err(err) => {
-                        warn!("unable to set TCP NODELAY on ingress: {}", err)
+                        warn!("unable to set TCP NODELAY on ingress: {err}")
                     }
                 };
 
                 let egress = match TcpStream::connect(targetaddr.clone()).await {
                     Ok(c) => c,
                     Err(err) => {
-                        error!("unable to connect to target: {}", err);
+                        error!("unable to connect to target: {err}");
                         continue;
                     }
                 };
                 match egress.set_nodelay(true) {
                     Ok(()) => (),
                     Err(err) => {
-                        warn!("unable to set TCP NODELAY on egress: {}", err)
+                        warn!("unable to set TCP NODELAY on egress: {err}")
                     }
                 };
 

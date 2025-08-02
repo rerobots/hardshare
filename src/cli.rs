@@ -435,13 +435,13 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     let argv = vec!["podman", "image", "exists", new_image];
                     let mut prog = Command::new(argv[0]);
 
-                    debug!("exec: {:?}", argv);
+                    debug!("exec: {argv:?}");
                     let status = prog.args(&argv[1..]).status();
                     let status = match status {
                         Ok(s) => s,
                         Err(err) => return CliError::new_stdio(err, 1),
                     };
-                    debug!("exit status: {:?}", status);
+                    debug!("exit status: {status:?}");
 
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
@@ -451,7 +451,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     let argv = vec!["docker", "image", "inspect", new_image];
                     let mut prog = Command::new(argv[0]);
 
-                    debug!("exec: {:?}", argv);
+                    debug!("exec: {argv:?}");
                     let status = prog
                         .args(&argv[1..])
                         .stdout(Stdio::null())
@@ -461,7 +461,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         Ok(s) => s,
                         Err(err) => return CliError::new_stdio(err, 1),
                     };
-                    debug!("exit status: {:?}", status);
+                    debug!("exit status: {status:?}");
 
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);
@@ -471,7 +471,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                     let argv = vec!["lxc", "image", "show", new_image];
                     let mut prog = Command::new(argv[0]);
 
-                    debug!("exec: {:?}", argv);
+                    debug!("exec: {argv:?}");
                     let status = prog
                         .args(&argv[1..])
                         .stdout(Stdio::null())
@@ -481,7 +481,7 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         Ok(s) => s,
                         Err(err) => return CliError::new_stdio(err, 1),
                     };
-                    debug!("exit status: {:?}", status);
+                    debug!("exit status: {status:?}");
 
                     if !status.success() {
                         return CliError::new("given image name is not recognized by cprovider", 1);

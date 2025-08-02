@@ -356,10 +356,7 @@ impl CurrentInstance {
                         }
                         drop(hostkey_file);
                         if let Err(err) = std::fs::remove_file(hostkey_filename) {
-                            error!(
-                                "Failed to remove file {}; caught: {}",
-                                hostkey_filename, err
-                            );
+                            error!("Failed to remove file {hostkey_filename}; caught: {err}");
                         }
                         return Ok(hostkey);
                     } else {
@@ -468,7 +465,7 @@ impl CurrentInstance {
                 addr = tunnelinfo.ipv4
             ),
         ];
-        info!("tunnel process args: {:?}", tunnel_process_args);
+        info!("tunnel process args: {tunnel_process_args:?}");
         let tunnel_process = Command::new("ssh").args(tunnel_process_args).spawn()?;
 
         let mut tunnel = self.tunnel.lock().unwrap();
@@ -491,7 +488,7 @@ impl CurrentInstance {
         {
             Ok(ca) => ca,
             Err(err) => {
-                error!("{}", err);
+                error!("{err}");
                 instance.declare_status(InstanceStatus::InitFail);
                 instance.send_status();
                 return;
@@ -520,14 +517,14 @@ impl CurrentInstance {
             match status {
                 Ok(clone_result) => {
                     if !clone_result.success() {
-                        error!("clone of {:?} failed: {}", repo_info, clone_result);
+                        error!("clone of {repo_info:?} failed: {clone_result}");
                         instance.declare_status(InstanceStatus::InitFail);
                         instance.send_status();
                         return;
                     }
                 }
                 Err(err) => {
-                    error!("clone of {:?} failed: {}", repo_info, err);
+                    error!("clone of {repo_info:?} failed: {err}");
                     instance.declare_status(InstanceStatus::InitFail);
                     instance.send_status();
                     return;
@@ -547,14 +544,14 @@ impl CurrentInstance {
                 match status {
                     Ok(exec_result) => {
                         if !exec_result.success() {
-                            error!("exec of {} failed: {}", path, exec_result);
+                            error!("exec of {path} failed: {exec_result}");
                             instance.declare_status(InstanceStatus::InitFail);
                             instance.send_status();
                             return;
                         }
                     }
                     Err(err) => {
-                        error!("exec of {} failed: {}", path, err);
+                        error!("exec of {path} failed: {err}");
                         instance.declare_status(InstanceStatus::InitFail);
                         instance.send_status();
                         return;
@@ -564,7 +561,7 @@ impl CurrentInstance {
         }
 
         if let Err(err) = instance.start_sshtun(container_addr, &tunnelkey_path, 30) {
-            error!("{}", err);
+            error!("{err}");
             instance.declare_status(InstanceStatus::InitFail);
             instance.send_status();
             return;
@@ -582,7 +579,7 @@ impl CurrentInstance {
                     return Ok(());
                 }
                 if s == &InstanceStatus::Init || s == &InstanceStatus::InitFail {
-                    warn!("received terminate request when {}", s);
+                    warn!("received terminate request when {s}");
                     return Err(format!("cannot terminate when status is {s}"));
                 }
                 *status = Some(InstanceStatus::Terminating);
@@ -621,7 +618,7 @@ impl CurrentInstance {
         if let Some(tunnel) = tunnel_ref.as_mut() {
             debug!("killing ssh tunnel process: {:?}", tunnel.proc);
             if let Err(err) = tunnel.proc.kill() {
-                warn!("tunnel kill: : {}", err);
+                warn!("tunnel kill: : {err}");
             }
             match tunnel.proc.wait() {
                 Ok(s) => {
@@ -630,15 +627,15 @@ impl CurrentInstance {
                     }
                 }
                 Err(err) => {
-                    error!("{}", err);
+                    error!("{err}");
                 }
             }
 
             if self.wdeployment.cprovider == CProvider::Proxy {
                 if let Some(subprocess) = tunnel.container_addr.subprocess.as_mut() {
-                    debug!("killing proxy process: {:?}", subprocess);
+                    debug!("killing proxy process: {subprocess:?}");
                     if let Err(err) = subprocess.kill() {
-                        warn!("proxy kill: : {}", err);
+                        warn!("proxy kill: : {err}");
                     }
                     match subprocess.wait() {
                         Ok(s) => {
@@ -647,7 +644,7 @@ impl CurrentInstance {
                             }
                         }
                         Err(err) => {
-                            error!("{}", err);
+                            error!("{err}");
                         }
                     }
                 }
@@ -661,7 +658,7 @@ impl CurrentInstance {
 
         let name = instance.get_local_name().unwrap();
         if let Err(err) = Self::destroy_container(&instance.wdeployment, &name) {
-            error!("Deployment fault! Caught from destroy_container(): {}", err);
+            error!("Deployment fault! Caught from destroy_container(): {err}");
             instance.declare_status(InstanceStatus::Fault);
             return;
         }
@@ -906,7 +903,7 @@ pub fn cworker(
             Ok(m) => m,
             Err(_) => return,
         };
-        debug!("cworker rx: {:?}", req);
+        debug!("cworker rx: {req:?}");
 
         match req.command {
             CWorkerCommandType::InstanceLaunch => {
@@ -955,7 +952,7 @@ pub fn cworker(
                         // Already terminating; ACK but no action
                         warn!("destroy request received when already terminating");
                     } else if status != InstanceStatus::Ready {
-                        warn!("destroy request received when status is {}", status);
+                        warn!("destroy request received when status is {status}");
                         main_actor_addr.do_send(api::ClientWorkerMessage {
                             mtype: CWorkerMessageType::WsSend,
                             body: Some(
@@ -1038,7 +1035,7 @@ pub fn cworker(
             CWorkerCommandType::CreateSshTunDone => {
                 if current_instance.exists() {
                     if let Err(err) = current_instance.handle_response(&req) {
-                        error!("command CREATE_SSHTUN_DONE: {}", err);
+                        error!("command CREATE_SSHTUN_DONE: {err}");
                     }
                 } else {
                     error!("CREATE_SSHTUN_DONE received when there is no active instance");

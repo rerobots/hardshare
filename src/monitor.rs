@@ -15,7 +15,7 @@ fn run_opt(
             Ok(result) => {
                 if !result.success() {
                     let msg = format!("monitor: `{prog}` failed: {result}");
-                    warn!("{}", msg);
+                    warn!("{msg}");
                     Err(Error::new(msg))
                 } else {
                     Ok(())
@@ -23,7 +23,7 @@ fn run_opt(
             }
             Err(err) => {
                 let msg = format!("monitor: `{prog}` failed: {err}");
-                warn!("{}", msg);
+                warn!("{msg}");
                 Err(Error::new(msg))
             }
         };
