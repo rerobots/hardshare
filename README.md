@@ -48,7 +48,7 @@ To perform tests,
 To check code style,
 
     cargo fmt -- --check
-    cargo clippy --tests -- -D clippy::all
+    cargo clippy --no-deps --all-targets -- -D clippy::all
 
 To build for release on x86-64 Linux,
 

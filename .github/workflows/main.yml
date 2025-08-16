@@ -34,7 +34,7 @@ jobs:
               run: |
                 cargo fmt --check
                 cargo check
-                cargo clippy --tests -- -D clippy::all
+                cargo clippy --no-deps --all-targets -- -D clippy::all
             - name: Run tests
               run: |
                 cargo test
