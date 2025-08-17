@@ -1117,8 +1117,7 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 }
             }
             Err(err) => {
-                if local_config.is_some() {
-                    let local_config = local_config.unwrap();
+                if let Some(local_config) = local_config {
                     if !local_config.wdeployments.is_empty() {
                         println!("Note: Try `check` with a deployment ID or `--all` to check your deployments.\nNote: The following errors are from checking default settings.");
                     }
