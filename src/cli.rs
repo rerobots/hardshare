@@ -1339,7 +1339,7 @@ pub fn main() -> Result<(), CliError> {
                     .about("Attach camera stream to workspace deployments")
                     .arg(Arg::with_name("camera_path")
                          .value_name("PATH")
-                         .help("on Linux, default is /dev/video0"))
+                         .help("platform dependent: numbers 0, 1, ..., or files like /dev/video0"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .multiple(true)

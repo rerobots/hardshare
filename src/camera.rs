@@ -99,7 +99,7 @@ enum CaptureCommand {
     Quit,  // Return from (close) the thread
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn verify_capture_ability(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
@@ -150,7 +150,7 @@ fn verify_capture_ability(
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn video_capture(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
@@ -272,179 +272,6 @@ fn video_capture(
     wsclient_addr: Addr<WSClient>,
     cap_command: mpsc::Receiver<CaptureCommand>,
 ) {
-}
-
-#[cfg(target_os = "linux")]
-fn verify_capture_ability(
-    camera_path: &str,
-    dimensions: Option<CameraDimensions>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use v4l::prelude::*;
-    use v4l::video::Capture;
-
-    let buffer_count = 4;
-    debug!("opening camera {camera_path}");
-    let dev = match v4l::Device::with_path(camera_path) {
-        Ok(d) => d,
-        Err(err) => {
-            return Err(CheckError::new(format!(
-                "when opening camera device, caught {err}"
-            )));
-        }
-    };
-    let mut format = dev.format().unwrap();
-    format.fourcc = v4l::FourCC::new(b"MJPG");
-    if let Some(d) = &dimensions {
-        format.width = d.width;
-        format.height = d.height;
-    }
-    match dev.set_format(&format) {
-        Ok(f) => {
-            if let Some(d) = dimensions {
-                if f.width != d.width || f.height != d.height {
-                    warn!(
-                        "requested size not feasible; falling back to ({}, {})",
-                        f.width, f.height
-                    );
-                }
-            }
-            debug!("set format: {f}");
-            f
-        }
-        Err(err) => {
-            return Err(CheckError::new(format!(
-                "failed to set camera format MJPG: {err}"
-            )));
-        }
-    };
-
-    match MmapStream::with_buffers(&dev, v4l::buffer::Type::VideoCapture, buffer_count) {
-        Ok(s) => {
-            debug!("MmapStream, video capture");
-            s
-        }
-        Err(err) => {
-            return Err(CheckError::new(format!("failed to open stream: {err}")));
-        }
-    };
-
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn video_capture(
-    camera_path: &str,
-    dimensions: Option<CameraDimensions>,
-    wsclient_addr: Addr<WSClient>,
-    cap_command: mpsc::Receiver<CaptureCommand>,
-) {
-    use v4l::io::traits::CaptureStream;
-    use v4l::prelude::*;
-    use v4l::video::Capture;
-
-    let buffer_count = 4;
-    debug!("opening camera {camera_path}");
-    let dev = match v4l::Device::with_path(camera_path) {
-        Ok(d) => d,
-        Err(err) => {
-            error!("when opening camera device, caught {err}");
-            return;
-        }
-    };
-    let mut format = dev.format().unwrap();
-    format.fourcc = v4l::FourCC::new(b"MJPG");
-    if let Some(d) = &dimensions {
-        format.width = d.width;
-        format.height = d.height;
-    }
-    match dev.set_format(&format) {
-        Ok(f) => {
-            if let Some(d) = dimensions {
-                if f.width != d.width || f.height != d.height {
-                    warn!(
-                        "requested size not feasible; falling back to ({}, {})",
-                        f.width, f.height
-                    );
-                }
-            }
-            debug!("set format: {f}");
-            f
-        }
-        Err(err) => {
-            error!("failed to set camera format MJPG: {err}");
-            return;
-        }
-    };
-    let mut stream = None;
-
-    loop {
-        match cap_command.try_recv() {
-            Ok(m) => {
-                if m == CaptureCommand::Start {
-                    debug!("received start request");
-                    if stream.is_none() {
-                        let s = match MmapStream::with_buffers(
-                            &dev,
-                            v4l::buffer::Type::VideoCapture,
-                            buffer_count,
-                        ) {
-                            Ok(s) => {
-                                debug!("MmapStream, video capture");
-                                s
-                            }
-                            Err(err) => {
-                                error!("failed to open stream: {err}");
-                                return;
-                            }
-                        };
-                        stream = Some(s);
-                    }
-                } else if m == CaptureCommand::Stop {
-                    debug!("received stop request");
-                    stream = None;
-                } else {
-                    // CaptureCommand::Quit
-                    return;
-                }
-            }
-            Err(err) => {
-                if err != mpsc::TryRecvError::Empty {
-                    error!("caught: {err}");
-                    return;
-                }
-            }
-        }
-
-        if let Some(s) = &mut stream {
-            let (buf, metadata) = match s.next() {
-                Ok(i) => i,
-                Err(err) => {
-                    error!("error reading camera stream: {err}");
-                    return;
-                }
-            };
-            debug!(
-                "metadata: bytesused {}, sequence {}, flags {}, length {}",
-                metadata.bytesused,
-                metadata.sequence,
-                metadata.flags,
-                buf.len()
-            );
-            let data = buf.to_vec();
-            let b64data = base64_engine::STANDARD.encode(data);
-            debug!("sending frame");
-            if let Err(err) =
-                wsclient_addr.try_send(WSSend("data:image/jpeg;base64,".to_string() + &b64data))
-            {
-                error!("try_send failed; caught: {err:?}");
-            }
-            // TODO: This is too slow! The WebSocket connection is lost on
-            // some machines when this sleep duration is too small. Why?
-            std::thread::sleep(Duration::from_millis(200));
-        } else {
-            std::thread::sleep(Duration::from_secs(2));
-        }
-    }
 }
 
 struct WSClient {
