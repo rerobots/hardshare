@@ -143,9 +143,6 @@ pub struct HSAPIClient {
     wdid_tab: Option<HashMap<String, Addr<MainActor>>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RemoteConfig {}
-
 #[derive(Serialize, Deserialize)]
 pub struct DaemonStatus {
     ad_deployments: Vec<String>,
