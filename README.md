@@ -57,6 +57,10 @@ To build for release on x86-64 Linux,
 Current [CI report](https://github.com/rerobots/hardshare/actions/workflows/main.yml):
 ![build status from GitHub Actions](https://github.com/rerobots/hardshare/actions/workflows/main.yml/badge.svg)
 
+To build with versions of CMake 4.1.1 or newer, first
+
+    export CMAKE_POLICY_VERSION_MINIMUM=3.5
+
 
 Participating
 -------------
