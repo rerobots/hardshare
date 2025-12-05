@@ -134,7 +134,11 @@ fn check_deployment_in_remote(
     remote_config: &serde_json::Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut found = false;
-    for wd in remote_config["wdeployments"].as_array().unwrap().iter() {
+    for wd in remote_config["wdeployments"]
+        .as_array()
+        .expect("wdeployments is an array")
+        .iter()
+    {
         if wd["id"] == id {
             found = true;
             break;
