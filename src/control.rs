@@ -319,7 +319,7 @@ impl CurrentInstance {
             return Err(format!("run command failed: {command_result:?}"));
         }
 
-        let s = String::from_utf8(command_result.stdout).unwrap();
+        let s = String::from_utf8(command_result.stdout).expect("valid UTF-8 encoding");
         let s = s.trim();
         let parts: Vec<&str> = s.split(':').collect();
         match Port::from_str(parts[1]) {
