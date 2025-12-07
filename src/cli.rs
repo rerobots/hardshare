@@ -1468,7 +1468,7 @@ mod tests {
 
     #[test]
     fn list_config_json() {
-        let td = tempdir().unwrap();
+        let td = tempdir().expect("temporary directory should be created");
         let base_path = td.path().join(".rerobots");
         let lconf = mgmt::get_local_config_bp(&base_path, true, false).unwrap();
 
