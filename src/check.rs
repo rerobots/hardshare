@@ -136,7 +136,7 @@ fn check_deployment_in_remote(
     let mut found = false;
     for wd in remote_config["wdeployments"]
         .as_array()
-        .expect("wdeployments is an array")
+        .expect("wdeployments should be an array")
         .iter()
     {
         if wd["id"] == id {
