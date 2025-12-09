@@ -85,7 +85,11 @@ pub struct AccessRules {
 
 impl std::fmt::Display for AccessRules {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", serde_yaml::to_string(self).unwrap())
+        write!(
+            f,
+            "{}",
+            serde_yaml::to_string(self).expect("AccessRule can be serialized to YAML")
+        )
     }
 }
 
@@ -174,7 +178,11 @@ async fn get_access_rules_a(
         Ok(payload)
     } else if resp.status() == 400 {
         let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
-        error(payload["error_message"].as_str().unwrap())
+        error(
+            payload["error_message"]
+                .as_str()
+                .expect("Error message from api.rerobots.net should be a string"),
+        )
     } else {
         error(format!(
             "error contacting core API server: {}",
@@ -289,7 +297,9 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(payload["error_message"].as_str().unwrap()))
+                error(String::from(payload["error_message"].as_str().expect(
+                    "Error message from api.rerobots.net should be a string",
+                )))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
