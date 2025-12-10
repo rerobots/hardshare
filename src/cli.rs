@@ -146,10 +146,10 @@ fn print_config_w<T: Write>(
     if pformat != PrintingFormat::Default {
         fn serializer<T: Serialize>(x: &T, pformat: PrintingFormat) -> String {
             if pformat == PrintingFormat::Json {
-                serde_json::to_string(x).unwrap()
+                serde_json::to_string(x).expect("Configuration can be serialized to JSON")
             } else {
                 // if pformat == PrintingFormat::Yaml
-                serde_yaml::to_string(x).unwrap()
+                serde_yaml::to_string(x).expect("Configuration can be serialized to YAML")
             }
         }
 
@@ -699,9 +699,17 @@ fn config_addon_subcommand(
             Err(err) => return CliError::new_std(err, 1),
         };
         if pformat == PrintingFormat::Json {
-            println!("{}", serde_json::to_string(&addon_config).unwrap())
+            println!(
+                "{}",
+                serde_json::to_string(&addon_config)
+                    .expect("Configuration can be serialized to JSON")
+            )
         } else {
-            println!("{}", serde_yaml::to_string(&addon_config).unwrap())
+            println!(
+                "{}",
+                serde_yaml::to_string(&addon_config)
+                    .expect("Configuration can be serialized to YAML")
+            )
         }
     } else if addon == api::AddOn::MistyProxy {
         if matches.is_present("ipv4") {
@@ -874,9 +882,15 @@ fn status_subcommand(bindaddr: &str, pformat: PrintingFormat) -> Result<(), CliE
     match ac.get_local_status(bindaddr) {
         Ok(r) => {
             if pformat == PrintingFormat::Json {
-                println!("{}", serde_json::to_string(&r).unwrap());
+                println!(
+                    "{}",
+                    serde_json::to_string(&r).expect("Status can be serialized to JSON")
+                );
             } else if pformat == PrintingFormat::Yaml {
-                println!("{}", serde_yaml::to_string(&r).unwrap());
+                println!(
+                    "{}",
+                    serde_yaml::to_string(&r).expect("Status can be serialized to YAML")
+                );
             } else {
                 println!("{r}");
             }
