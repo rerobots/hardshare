@@ -176,7 +176,7 @@ fn print_config_w<T: Write>(
                 f,
                 "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
                 wd.id,
-                wd.url.clone().unwrap(),
+                wd.url.clone().expect("Deployment should have associated URL"),
                 wd.owner,
                 wd.cprovider,
                 wd.cargs.join(", "),
