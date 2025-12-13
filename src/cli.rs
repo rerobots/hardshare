@@ -176,7 +176,9 @@ fn print_config_w<T: Write>(
                 f,
                 "{}\n\turl: {}\n\towner: {}\n\tcprovider: {}\n\tcargs: {}",
                 wd.id,
-                wd.url.clone().expect("Deployment should have associated URL"),
+                wd.url
+                    .clone()
+                    .expect("Deployment should have associated URL"),
                 wd.owner,
                 wd.cprovider,
                 wd.cargs.join(", "),
@@ -266,7 +268,9 @@ fn print_config_w<T: Write>(
     }
 
     if let Some(remote_config) = remote {
-        let rc_wds = &remote_config["wdeployments"].as_array().unwrap();
+        let rc_wds = &remote_config["wdeployments"]
+            .as_array()
+            .expect("Configuration: wdeployments should be an array");
         if rc_wds.is_empty() {
             writeln!(
                 f,
@@ -285,24 +289,49 @@ fn print_config_w<T: Write>(
                 )?;
             }
             for wd in rc_wds.iter() {
-                if !show_all_remote && !local_ids.contains(&wd["id"].as_str().unwrap()) {
+                let id = wd["id"]
+                    .as_str()
+                    .expect("Configuration: id should be a string");
+                if !show_all_remote && !local_ids.contains(&id) {
                     continue;
                 }
-                writeln!(f, "{}", wd["id"].as_str().unwrap())?;
-                writeln!(f, "\tcreated: {}", wd["date_created"].as_str().unwrap())?;
+                writeln!(f, "{}", id)?;
+                writeln!(
+                    f,
+                    "\tcreated: {}",
+                    wd["date_created"]
+                        .as_str()
+                        .expect("Configuration: date_created should be a string")
+                )?;
                 if !wd["desc"].is_null() {
-                    writeln!(f, "\tdesc: {}", wd["desc"].as_str().unwrap())?;
+                    writeln!(
+                        f,
+                        "\tdesc: {}",
+                        wd["desc"]
+                            .as_str()
+                            .expect("Configuration: desc should be a string")
+                    )?;
                 }
                 let origin = if wd["origin"].is_null() {
                     "(unknown)"
                 } else {
-                    wd["origin"].as_str().unwrap()
+                    wd["origin"]
+                        .as_str()
+                        .expect("Configuration: origin should be a string")
                 };
                 writeln!(f, "\torigin (address) of registration: {origin}")?;
                 if !wd["dissolved"].is_null() {
-                    writeln!(f, "\tdissolved: {}", wd["dissolved"].as_str().unwrap())?;
+                    writeln!(
+                        f,
+                        "\tdissolved: {}",
+                        wd["dissolved"]
+                            .as_str()
+                            .expect("Configuration: dissolved should be a string")
+                    )?;
                 }
-                let locked_out = wd["lockout"].as_bool().unwrap();
+                let locked_out = wd["lockout"]
+                    .as_bool()
+                    .expect("Configuration: lockout should be a bool");
                 if locked_out {
                     writeln!(f, "\tlock-out: {locked_out}")?;
                 }
