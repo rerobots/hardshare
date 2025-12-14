@@ -26,7 +26,7 @@ use rerobots::client::TokenClaims;
 
 use crate::api::{CameraCrop, CameraDimensions};
 use crate::camera;
-use crate::mgmt::CProvider;
+use crate::mgmt::{error as mgmt_error, CProvider};
 use crate::{api, check, mgmt, monitor};
 
 pub struct CliError {
@@ -236,11 +236,23 @@ fn print_config_w<T: Write>(
             };
             let mut data_iter = data.iter();
             for path in paths.iter() {
-                let data = data_iter.next().unwrap();
+                let data = data_iter
+                    .next()
+                    .expect("Each token should have associated claims");
                 writeln!(f, "{prefix}\t{path}")?;
                 write!(f, "{prefix}\t\texpiration: ")?;
                 match data.expiration {
-                    Some(exp) => writeln!(f, "{}", Utc.timestamp_opt(exp as i64, 0).unwrap())?,
+                    Some(exp) => {
+                        let timestamp = match Utc.timestamp_opt(exp as i64, 0).single() {
+                            None => {
+                                return mgmt_error(
+                                    "unable to parse expiration (in seconds) as timestamp",
+                                );
+                            }
+                            Some(ts) => ts,
+                        };
+                        writeln!(f, "{timestamp}")?
+                    }
                     None => writeln!(f, "(none)")?,
                 };
             }
@@ -567,7 +579,9 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             if !device_path.exists() {
                 return CliError::new("device does not exist", 1);
             }
-            let device_path = device_path.to_str().unwrap();
+            let device_path = device_path
+                .to_str()
+                .expect("Device path should be valid unicode");
             if local_config.wdeployments[wd_index].cprovider == CProvider::Docker
                 || local_config.wdeployments[wd_index].cprovider == CProvider::Podman
             {
@@ -597,7 +611,9 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                         Ok(p) => p,
                         Err(err) => return CliError::new_stdio(err, 1),
                     };
-                    let device_path_c = device_path_c.to_str().unwrap();
+                    let device_path_c = device_path_c
+                        .to_str()
+                        .expect("Device path should be valid unicode");
                     carg = format!("--device={device_path_c}:{device_path_c}");
                     if !local_config.wdeployments[wd_index].cargs.contains(&carg) {
                         return CliError::new("device not previously added", 1);

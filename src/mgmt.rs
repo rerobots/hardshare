@@ -41,7 +41,7 @@ impl std::fmt::Debug for MgmtError {
     }
 }
 
-fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
+pub fn error<T>(msg: &str) -> Result<T, Box<dyn std::error::Error>> {
     Err(Box::new(MgmtError {
         msg: String::from(msg),
     }))
