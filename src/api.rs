@@ -235,8 +235,12 @@ impl HSAPIClient {
             if local_config.api_tokens.contains_key(org_name)
                 && !local_config.api_tokens[org_name].is_empty()
             {
-                let raw_tok = std::fs::read(&local_config.api_tokens[org_name][0]).unwrap();
-                let tok = String::from_utf8(raw_tok).unwrap().trim().to_string();
+                let raw_tok = std::fs::read(&local_config.api_tokens[org_name][0])
+                    .expect("Token file should be readable");
+                let tok = String::from_utf8(raw_tok)
+                    .expect("Token data should be valid UTF-8")
+                    .trim()
+                    .to_string();
                 hsclient.cached_api_token = Some(tok);
             }
         }
