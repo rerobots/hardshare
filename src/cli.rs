@@ -606,24 +606,35 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 || local_config.wdeployments[wd_index].cprovider == CProvider::Podman
             {
                 let mut carg = format!("--device={device_path}:{device_path}");
-                if !local_config.wdeployments[wd_index].cargs.contains(&carg) {
-                    let device_path_c = match std::path::Path::new(device_path).canonicalize() {
-                        Ok(p) => p,
-                        Err(err) => return CliError::new_stdio(err, 1),
-                    };
-                    let device_path_c = device_path_c
-                        .to_str()
-                        .expect("Device path should be valid unicode");
-                    carg = format!("--device={device_path_c}:{device_path_c}");
-                    if !local_config.wdeployments[wd_index].cargs.contains(&carg) {
-                        return CliError::new("device not previously added", 1);
-                    }
-                }
-                let index = local_config.wdeployments[wd_index]
+
+                let index = match local_config.wdeployments[wd_index]
                     .cargs
                     .iter()
                     .position(|x| x == &carg)
-                    .unwrap();
+                {
+                    None => {
+                        let device_path_c = match std::path::Path::new(device_path).canonicalize() {
+                            Ok(p) => p,
+                            Err(err) => return CliError::new_stdio(err, 1),
+                        };
+                        let device_path_c = device_path_c
+                            .to_str()
+                            .expect("Device path should be valid unicode");
+                        carg = format!("--device={device_path_c}:{device_path_c}");
+
+                        match local_config.wdeployments[wd_index]
+                            .cargs
+                            .iter()
+                            .position(|x| x == &carg)
+                        {
+                            None => {
+                                return CliError::new("device not previously added", 1);
+                            }
+                            Some(i) => i,
+                        }
+                    }
+                    Some(i) => i,
+                };
                 local_config.wdeployments[wd_index].cargs.remove(index);
             } else {
                 return CliError::new("adding/removing devices not supported by this cprovider", 1);
