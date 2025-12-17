@@ -166,6 +166,13 @@ impl std::fmt::Display for DaemonStatus {
     }
 }
 
+fn parse_error_message(payload: serde_json::Value) -> String {
+    payload["error_message"]
+        .as_str()
+        .expect("Error message from api.rerobots.net should be a string")
+        .to_string()
+}
+
 async fn get_access_rules_a(
     client: &awc::Client,
     origin: &str,
@@ -178,11 +185,7 @@ async fn get_access_rules_a(
         Ok(payload)
     } else if resp.status() == 400 {
         let payload: serde_json::Value = serde_json::from_slice(resp.body().await?.as_ref())?;
-        error(
-            payload["error_message"]
-                .as_str()
-                .expect("Error message from api.rerobots.net should be a string"),
-        )
+        error(parse_error_message(payload))
     } else {
         error(format!(
             "error contacting core API server: {}",
@@ -370,7 +373,11 @@ impl HSAPIClient {
             if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(payload["error_message"].as_str().unwrap());
+                return error(
+                    payload["error_message"]
+                        .as_str()
+                        .expect("Error message from api.rerobots.net should be a string"),
+                );
             } else if resp.status() == 404 {
                 return error("not found".to_string());
             } else if resp.status() != 200 {
