@@ -304,9 +304,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(payload["error_message"].as_str().expect(
-                    "Error message from api.rerobots.net should be a string",
-                )))
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -373,11 +371,7 @@ impl HSAPIClient {
             if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(
-                    payload["error_message"]
-                        .as_str()
-                        .expect("Error message from api.rerobots.net should be a string"),
-                );
+                return error(parse_error_message(payload));
             } else if resp.status() == 404 {
                 return error("not found".to_string());
             } else if resp.status() != 200 {
@@ -430,7 +424,7 @@ impl HSAPIClient {
             if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(payload["error_message"].as_str().unwrap());
+                return error(parse_error_message(payload));
             } else if resp.status() == 404 {
                 return error("not found".to_string());
             } else if resp.status() != 200 {
@@ -462,7 +456,7 @@ impl HSAPIClient {
             if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                return error(payload["error_message"].as_str().unwrap());
+                return error(parse_error_message(payload));
             } else if resp.status() == 404 {
                 return error("not found".to_string());
             } else if resp.status() != 200 {
@@ -547,7 +541,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(payload["error_message"].as_str().unwrap())
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -612,7 +606,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(payload["error_message"].as_str().unwrap())
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -638,7 +632,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(payload["error_message"].as_str().unwrap())
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -719,7 +713,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(payload["error_message"].as_str().unwrap())
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -1059,7 +1053,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(payload["error_message"].as_str().unwrap()))
+                error(String::from(parse_error_message(payload)))
             } else {
                 error(format!("server indicated error: {}", resp.status()))
             }
@@ -1114,7 +1108,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(payload["error_message"].as_str().unwrap()))
+                error(String::from(parse_error_message(payload)))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
