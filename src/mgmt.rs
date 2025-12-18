@@ -127,7 +127,12 @@ impl WDeployment {
 
     pub fn from_json(h: &HashMap<String, serde_json::Value>) -> Self {
         let cprovider: CProvider = if h.contains_key("cprovider") {
-            CProvider::try_from(h["cprovider"].as_str().unwrap()).unwrap()
+            CProvider::try_from(
+                h["cprovider"]
+                    .as_str()
+                    .expect("cprovider in config file should be string"),
+            )
+            .expect("cprovider should be one of lxd, podman, ...")
         } else {
             CProvider::Docker
         };
@@ -135,16 +140,22 @@ impl WDeployment {
         let cargs: Vec<String> = if h.contains_key("cargs") {
             h["cargs"]
                 .as_array()
-                .unwrap()
+                .expect("cargs in config file should be array")
                 .iter()
-                .map(|a| a.as_str().unwrap().to_string())
+                .map(|a| {
+                    a.as_str()
+                        .expect("In config file, elements of cargs should be strings")
+                        .to_string()
+                })
                 .collect()
         } else {
             vec![]
         };
 
         let container_name = if h.contains_key("container_name") {
-            h["container_name"].as_str().unwrap()
+            h["container_name"]
+                .as_str()
+                .expect("In config file, container_name should be string")
         } else {
             "rrc"
         }
@@ -153,9 +164,13 @@ impl WDeployment {
         let init_inside: Vec<String> = if h.contains_key("init_inside") {
             h["init_inside"]
                 .as_array()
-                .unwrap()
+                .expect("In config file, init_inside should be array")
                 .iter()
-                .map(|a| a.as_str().unwrap().to_string())
+                .map(|a| {
+                    a.as_str()
+                        .expect("In config file, elements of init_inside should be strings")
+                        .to_string()
+                })
                 .collect()
         } else {
             vec![]
@@ -164,22 +179,36 @@ impl WDeployment {
         let terminate: Vec<String> = if h.contains_key("terminate") {
             h["terminate"]
                 .as_array()
-                .unwrap()
+                .expect("In config file, terminate should be array")
                 .iter()
-                .map(|a| a.as_str().unwrap().to_string())
+                .map(|a| {
+                    a.as_str()
+                        .expect("In config file, elements of terminate should be strings")
+                        .to_string()
+                })
                 .collect()
         } else {
             vec![]
         };
 
         let monitor = if h.contains_key("monitor") {
-            Some(h["monitor"].as_str().unwrap().into())
+            Some(
+                h["monitor"]
+                    .as_str()
+                    .expect("In config file, monitor should be string")
+                    .into(),
+            )
         } else {
             None
         };
 
         let image = if h.contains_key("image") {
-            Some(h["image"].as_str().unwrap().into())
+            Some(
+                h["image"]
+                    .as_str()
+                    .expect("In config file, image should be string")
+                    .into(),
+            )
         } else if cprovider != CProvider::Proxy {
             Some("rerobots/hs-generic".into())
         } else {
@@ -187,14 +216,25 @@ impl WDeployment {
         };
 
         let url: Option<String> = if h.contains_key("url") {
-            Some(h["url"].as_str().unwrap().into())
+            Some(
+                h["url"]
+                    .as_str()
+                    .expect("In config file, url should be string")
+                    .into(),
+            )
         } else {
             None
         };
 
         WDeployment {
-            id: h["id"].as_str().unwrap().into(),
-            owner: h["owner"].as_str().unwrap().into(),
+            id: h["id"]
+                .as_str()
+                .expect("In config file, id should be string")
+                .into(),
+            owner: h["owner"]
+                .as_str()
+                .expect("In config file, owner should be string")
+                .into(),
             cprovider,
             cargs,
             container_name,
