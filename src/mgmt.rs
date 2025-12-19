@@ -289,9 +289,9 @@ impl Config {
     }
 }
 
-pub fn get_base_path() -> Option<std::path::PathBuf> {
-    let home_dir = home::home_dir()?;
-    Some(home_dir.join(".rerobots"))
+pub fn get_base_path() -> std::path::PathBuf {
+    let home_dir = home::home_dir().expect("Home directory should be defined");
+    home_dir.join(".rerobots")
 }
 
 type APITokensInfo = (
@@ -303,7 +303,7 @@ type APITokensInfo = (
 pub fn list_local_api_tokens(
     collect_errors: bool,
 ) -> Result<APITokensInfo, Box<dyn std::error::Error>> {
-    let base_path = get_base_path().unwrap();
+    let base_path = get_base_path();
     list_local_api_tokens_bp(&base_path, collect_errors)
 }
 
@@ -371,7 +371,7 @@ pub fn get_local_config(
     create_if_empty: bool,
     collect_errors: bool,
 ) -> Result<Config, Box<dyn std::error::Error>> {
-    let base_path = get_base_path().unwrap();
+    let base_path = get_base_path();
     get_local_config_bp(&base_path, create_if_empty, collect_errors)
 }
 
@@ -445,7 +445,7 @@ pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::
         Err(err) => return error(err),
     };
 
-    let base_path = get_base_path().unwrap();
+    let base_path = get_base_path();
     let tokens_dir = base_path.join("tokens");
     if !tokens_dir.exists() {
         std::fs::create_dir(&tokens_dir)?
@@ -548,7 +548,7 @@ pub fn expand_id_prefixes(
 }
 
 pub fn modify_local(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
-    let base_path = get_base_path().unwrap();
+    let base_path = get_base_path();
     if !base_path.exists() {
         return error("no configuration data found");
     }
@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn configuration_directory_suffix() {
-        let base_path = super::get_base_path().unwrap();
+        let base_path = super::get_base_path();
         assert!(base_path.ends_with(".rerobots"));
     }
 

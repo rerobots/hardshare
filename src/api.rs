@@ -1178,7 +1178,7 @@ impl HSAPIClient {
         let hscamera_id = res?;
         debug!("registered new hscamera: {hscamera_id}");
 
-        let base_path = mgmt::get_base_path().unwrap();
+        let base_path = mgmt::get_base_path();
         let path = base_path.join("camera");
         if !path.exists() {
             std::fs::create_dir(&path)?
@@ -1214,7 +1214,7 @@ impl HSAPIClient {
     }
 
     pub fn stop_cameras(&self, all: bool, force: bool) -> Result<(), Box<dyn std::error::Error>> {
-        let base_path = mgmt::get_base_path().unwrap();
+        let base_path = mgmt::get_base_path();
         let path = base_path.join("camera");
         let mut stopped_via_pids = Vec::new();
         if path.exists() {
