@@ -1131,10 +1131,12 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
     }
 
     if matches.value_of("id_prefix").is_some() {
-        if local_config.is_none() {
-            return CliError::new("given ID when local configuration is undefined", 1);
-        }
-        let local_config = local_config.unwrap();
+        let local_config = match local_config {
+            Some(lc) => lc,
+            None => {
+                return CliError::new("given ID when local configuration is undefined", 1);
+            }
+        };
 
         let wd_index = match mgmt::find_id_prefix(&local_config, matches.value_of("id_prefix")) {
             Ok(wi) => wi,
@@ -1158,10 +1160,12 @@ fn check_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             Err(err) => Err(err.into()),
         }
     } else if matches.is_present("all") {
-        if local_config.is_none() {
-            return CliError::new("local configuration is undefined", 1);
-        }
-        let local_config = local_config.unwrap();
+        let local_config = match local_config {
+            Some(lc) => lc,
+            None => {
+                return CliError::new("local configuration is undefined", 1);
+            }
+        };
 
         match check::all_configurations(
             &local_config,
@@ -1212,24 +1216,25 @@ fn monitor_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
         Err(err) => return CliError::new_std(err, 1),
     };
 
-    if matches.is_present("loop") {
-        let duration = match matches.value_of("loop").unwrap().parse::<u64>() {
-            Ok(d) => d,
-            Err(err) => return CliError::new(err, 1),
-        };
-        match monitor::run_loop(
-            &local_config,
-            wd_index,
-            std::time::Duration::from_secs(duration),
-        ) {
+    match matches.value_of("loop") {
+        Some(looptime) => {
+            let duration = match looptime.parse::<u64>() {
+                Ok(d) => d,
+                Err(err) => return CliError::new(err, 1),
+            };
+            match monitor::run_loop(
+                &local_config,
+                wd_index,
+                std::time::Duration::from_secs(duration),
+            ) {
+                Ok(()) => Ok(()),
+                Err(err) => CliError::new_std(err, 1),
+            }
+        }
+        None => match monitor::run(&local_config, wd_index) {
             Ok(()) => Ok(()),
             Err(err) => CliError::new_std(err, 1),
-        }
-    } else {
-        match monitor::run(&local_config, wd_index) {
-            Ok(()) => Ok(()),
-            Err(err) => CliError::new_std(err, 1),
-        }
+        },
     }
 }
 
@@ -1484,7 +1489,12 @@ pub fn main() -> Result<(), CliError> {
         None => PrintingFormat::Default,
     };
 
-    let bindaddr = format!("127.0.0.1:{}", matches.value_of("daemonport").unwrap());
+    let bindaddr = format!(
+        "127.0.0.1:{}",
+        matches
+            .value_of("daemonport")
+            .expect("daeamonport should have a default value")
+    );
 
     if matches.is_present("version") || matches.subcommand_matches("version").is_some() {
         println!(crate_version!());
@@ -1543,10 +1553,12 @@ mod tests {
     fn list_config_json() {
         let td = tempdir().expect("temporary directory should be created");
         let base_path = td.path().join(".rerobots");
-        let lconf = mgmt::get_local_config_bp(&base_path, true, false).unwrap();
+        let lconf = mgmt::get_local_config_bp(&base_path, true, false)
+            .expect(&format!("Local config can be defined at {td:?}"));
 
         let mut buf: Vec<u8> = vec![];
-        print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json, true).unwrap();
+        print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json, true)
+            .expect("Config can be serialized to JSON");
         let buf_parsing_result: Result<serde_json::Value, serde_json::Error> =
             serde_json::from_slice(&buf);
         assert!(buf_parsing_result.is_ok());

@@ -330,35 +330,41 @@ fn list_local_api_tokens_bp(
         }
         let path = entry.path();
         let rawtok = String::from(
-            String::from_utf8(std::fs::read(&path).unwrap())
-                .unwrap()
+            String::from_utf8(std::fs::read(&path).expect("Token file should be readable"))
+                .expect("Token data should be valid UTF-8")
                 .trim(),
         );
+        let path = path
+            .to_str()
+            .expect("Token path should be valid unicode")
+            .to_string();
         match TokenClaims::new(&rawtok) {
             Ok(claims) => {
                 if claims.is_expired() && collect_errors {
-                    errored_tokens
-                        .insert(String::from(path.to_str().unwrap()), "expired".to_string());
+                    errored_tokens.insert(path, "expired".to_string());
                 } else {
-                    let path = String::from(path.to_str().unwrap());
                     let org = match claims.organization {
                         Some(ref o) => o.clone(),
                         None => "()".into(),
                     };
-                    if likely_tokens.contains_key(org.as_str()) {
-                        let org_tokens = likely_tokens.get_mut(org.as_str()).unwrap();
-                        org_tokens.push(path);
-                        let org_tokens_data = likely_tokens_data.get_mut(org.as_str()).unwrap();
-                        org_tokens_data.push(claims);
-                    } else {
-                        likely_tokens.insert(org.clone(), vec![path]);
-                        likely_tokens_data.insert(org, vec![claims]);
+                    match likely_tokens.get_mut(org.as_str()) {
+                        Some(org_tokens) => {
+                            org_tokens.push(path);
+                            let org_tokens_data = likely_tokens_data
+                                .get_mut(org.as_str())
+                                .expect("Each org should have associated claims");
+                            org_tokens_data.push(claims);
+                        }
+                        None => {
+                            likely_tokens.insert(org.clone(), vec![path]);
+                            likely_tokens_data.insert(org, vec![claims]);
+                        }
                     }
                 }
             }
             Err(err) => {
                 if collect_errors {
-                    errored_tokens.insert(String::from(path.to_str().unwrap()), err.to_string());
+                    errored_tokens.insert(path, err.to_string());
                 }
             }
         }
@@ -407,7 +413,10 @@ pub fn get_local_config_bp(
             if !exitcode.success() {
                 return error("failed to create SSH keys");
             }
-            init.ssh_key = String::from(sshpath.to_str().unwrap());
+            init.ssh_key = sshpath
+                .to_str()
+                .expect("SSH key path should be valid unicode")
+                .to_string();
             std::fs::write(&path, serde_json::to_string(&init)?)?;
         } else {
             return error("no configuration data found");
@@ -450,18 +459,32 @@ pub fn add_token_file(path: &str) -> Result<Option<String>, Box<dyn std::error::
     if !tokens_dir.exists() {
         std::fs::create_dir(&tokens_dir)?
     }
-    let from_filename = std::path::Path::new(path).file_name().unwrap();
+    let from_filename = std::path::Path::new(path)
+        .file_name()
+        .expect("Given token path should be regular file");
     let mut target_path = tokens_dir.join(from_filename);
     if target_path.exists() {
         let utime = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs();
-        let candidate = format!("{}-{}", target_path.to_str().unwrap(), utime);
+        let candidate = format!(
+            "{}-{}",
+            target_path
+                .to_str()
+                .expect("New token path should be valid unicode"),
+            utime
+        );
         target_path = std::path::PathBuf::from(candidate);
     }
     if target_path.exists() {
         for counter in 0.. {
-            let candidate = format!("{}-{}", target_path.to_str().unwrap(), counter);
+            let candidate = format!(
+                "{}-{}",
+                target_path
+                    .to_str()
+                    .expect("New token path should be valid unicode"),
+                counter
+            );
             let candidate = std::path::PathBuf::from(candidate);
             if !candidate.exists() {
                 target_path = candidate;
@@ -576,6 +599,8 @@ mod tests {
     use super::list_local_api_tokens_bp;
     use super::Config;
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     #[test]
     fn configuration_directory_suffix() {
         let base_path = super::get_base_path();
@@ -583,7 +608,7 @@ mod tests {
     }
 
     #[test]
-    fn find_id() {
+    fn find_id() -> TestResult {
         let local_config = Config::new();
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
 
@@ -615,39 +640,43 @@ mod tests {
                 ],
                 "ssh_key": "/home/scott/.rerobots/ssh/tun"
             }"#,
-        )
-        .unwrap();
+        )?;
         assert!(find_id_prefix(&local_config, Some("a")).is_err());
-        let wd_index = find_id_prefix(&local_config, Some("2")).unwrap();
+        let wd_index = find_id_prefix(&local_config, Some("2"))?;
         assert_eq!(wd_index, 0);
-        let wd_index = find_id_prefix(&local_config, Some("6")).unwrap();
+        let wd_index = find_id_prefix(&local_config, Some("6"))?;
         assert_eq!(wd_index, 1);
+
+        Ok(())
     }
 
     #[test]
-    fn no_config() {
-        let td = tempdir().unwrap();
+    fn no_config() -> TestResult {
+        let td = tempdir()?;
         let base_path = td.path().join(".rerobots");
         assert!(get_local_config_bp(&base_path, false, false).is_err());
+        Ok(())
     }
 
     #[test]
-    fn init_config() {
-        let td = tempdir().unwrap();
+    fn init_config() -> TestResult {
+        let td = tempdir()?;
         let base_path = td.path().join(".rerobots");
-        let lconf = get_local_config_bp(&base_path, true, false).unwrap();
+        let lconf = get_local_config_bp(&base_path, true, false)?;
         assert_eq!(lconf.wdeployments.len(), 0);
         assert_ne!(lconf.ssh_key.len(), 0);
+        Ok(())
     }
 
     #[test]
-    fn no_saved_api_tokens() {
-        let td = tempdir().unwrap();
+    fn no_saved_api_tokens() -> TestResult {
+        let td = tempdir()?;
         let base_path = td.path().join(".rerobots");
         let (likely_tokens, likely_tokens_data, errored_tokens) =
-            list_local_api_tokens_bp(&base_path, false).unwrap();
+            list_local_api_tokens_bp(&base_path, false)?;
         assert_eq!(likely_tokens.len(), 0);
         assert_eq!(likely_tokens_data.len(), 0);
         assert_eq!(errored_tokens.len(), 0);
+        Ok(())
     }
 }
