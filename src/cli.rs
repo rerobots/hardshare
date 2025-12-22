@@ -768,12 +768,15 @@ fn config_addon_subcommand(
             )
         }
     } else if addon == api::AddOn::MistyProxy {
-        if matches.is_present("ipv4") {
-            if let Err(err) = ac.add_mistyproxy(wdid, matches.value_of("ipv4").unwrap()) {
-                return CliError::new_std(err, 1);
+        match matches.value_of("ipv4") {
+            Some(addr) => {
+                if let Err(err) = ac.add_mistyproxy(wdid, addr) {
+                    return CliError::new_std(err, 1);
+                }
             }
-        } else {
-            return CliError::new("No command. Try `hardshare help config-addon`", 1);
+            None => {
+                return CliError::new("No command. Try `hardshare help config-addon`", 1);
+            }
         }
     }
 
