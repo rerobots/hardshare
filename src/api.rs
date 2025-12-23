@@ -487,7 +487,12 @@ impl HSAPIClient {
                 break;
             }
         }
-        let wd_index = wd_index.unwrap();
+        let wd_index = match wd_index {
+            Some(i) => i,
+            None => {
+                return error(format!("unknown deployment: {wdid}"));
+            }
+        };
 
         let client = self.create_client_generator()?;
         let origin = self.origin.clone();
