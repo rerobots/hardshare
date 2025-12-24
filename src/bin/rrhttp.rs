@@ -98,12 +98,18 @@ impl Request {
                 return Err(format!("unexpected protocol specifier {word}").into());
             }
         }
-        if verb.is_none() {
-            return Err("no request verb".into());
-        }
-        if uri.is_none() {
-            return Err("no request URI".into());
-        }
+        let verb = match verb {
+            Some(v) => v,
+            None => {
+                return Err("no request verb".into());
+            }
+        };
+        let uri = match uri {
+            Some(u) => u,
+            None => {
+                return Err("no request URI".into());
+            }
+        };
         if !protocol_match {
             return Err("no valid protocol string".into());
         }
@@ -116,8 +122,8 @@ impl Request {
             None
         };
         Ok(Request {
-            verb: verb.unwrap(),
-            uri: uri.unwrap(),
+            verb,
+            uri,
             body,
             query,
         })
@@ -273,7 +279,7 @@ impl Request {
                                     let normalized_name = value_rule.name.to_lowercase();
                                     for (normalized_key, v) in body
                                         .as_object()
-                                        .unwrap()
+                                        .expect("schema element should be a map (object)")
                                         .iter()
                                         .map(|(k, v)| (k.to_lowercase(), v))
                                     {
@@ -466,7 +472,13 @@ async fn filter_responses(
 ) {
     let mut buf = [0; 1024];
     loop {
-        let n = x.read(&mut buf).await.unwrap();
+        let n = match x.read(&mut buf).await {
+            Ok(s) => s,
+            Err(err) => {
+                error!("{prefix}: error on read: {err}");
+                return;
+            }
+        };
         if n == 0 {
             warn!("{prefix}: read 0 bytes; exiting...");
             return;
@@ -491,7 +503,13 @@ async fn filter_responses(
         }
         debug!("{prefix}: raw: {raw}");
 
-        ingress_writer.send(buf[..n].to_vec()).await.unwrap();
+        match ingress_writer.send(buf[..n].to_vec()).await {
+            Ok(()) => (),
+            Err(err) => {
+                error!("{prefix}: error on send: {err}");
+                return;
+            }
+        }
     }
 }
 
@@ -505,7 +523,13 @@ async fn filter_requests(
     let mut buf = [0; 1024];
     let forbidden_response = "HTTP/1.1 403 Forbidden\r\n\r\n".as_bytes();
     loop {
-        let n = x.read(&mut buf).await.unwrap();
+        let n = match x.read(&mut buf).await {
+            Ok(s) => s,
+            Err(err) => {
+                error!("{prefix}: error on read: {err}");
+                return;
+            }
+        };
         if n == 0 {
             warn!("{prefix}: read 0 bytes; exiting...");
             return;
@@ -521,10 +545,9 @@ async fn filter_requests(
         debug!("parsed request: {req:?}");
         if !config.is_valid(&req) {
             warn!("Request does not satisfy specification. Rejecting.");
-            ingress_writer
-                .send(forbidden_response.to_vec())
-                .await
-                .unwrap();
+            if let Err(err) = ingress_writer.send(forbidden_response.to_vec()).await {
+                error!("{prefix}: error on send: {err}");
+            }
             return;
         }
         match y.write(&buf[..n]).await {
@@ -540,8 +563,12 @@ async fn filter_requests(
 }
 
 async fn main_per(config: Arc<Config>, ingress: TcpStream, egress: TcpStream) {
-    let ingress_peer_addr = ingress.peer_addr().unwrap();
-    let egress_peer_addr = egress.peer_addr().unwrap();
+    let ingress_peer_addr = ingress
+        .peer_addr()
+        .expect("Ingress address should be valid IPv4 or IPv6 socket address");
+    let egress_peer_addr = egress
+        .peer_addr()
+        .expect("Egress address should be valid IPv4 or IPv6 socket address");
     debug!("started filtering {ingress_peer_addr} to {egress_peer_addr}");
     let (ingress_read, ingress_write) = ingress.into_split();
     let (egress_read, egress_write) = egress.into_split();
@@ -596,7 +623,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     debug!("Using configuration: {config:?}");
 
-    let targetaddr = String::from(matches.value_of("TARGET").unwrap());
+    let targetaddr = String::from(
+        matches
+            .value_of("TARGET")
+            .expect("TARGET argument must be given"),
+    );
 
     let rt = Builder::new_current_thread()
         .enable_io()
@@ -656,6 +687,8 @@ mod tests {
 
     use super::{Config, ConfigMode, HttpVerb, Request, RequestRule};
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     #[test]
     fn test_blockall() {
         let mut config = Config::new();
@@ -707,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lettercase_sensitivity_query() {
+    fn test_lettercase_sensitivity_query() -> TestResult {
         let config_data = "---
 default: block
 rules:
@@ -727,9 +760,9 @@ rules:
         type: int
         range: [1, 75]
 ";
-        let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{config_data}").unwrap();
-        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+        let mut config_file = NamedTempFile::new()?;
+        write!(config_file, "{config_data}")?;
+        let config = Config::new_from_file(&config_file.path().to_string_lossy())?;
 
         let mut req = Request {
             verb: HttpVerb::Get,
@@ -755,10 +788,11 @@ rules:
             "Velocity": 75,
         }));
         assert!(config.is_valid(&req));
+        Ok(())
     }
 
     #[test]
-    fn test_get_schema() {
+    fn test_get_schema() -> TestResult {
         let config_data = "---
 default: block
 rules:
@@ -777,9 +811,9 @@ rules:
         type: int
         range: [1, 600]
 ";
-        let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{config_data}").unwrap();
-        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+        let mut config_file = NamedTempFile::new()?;
+        write!(config_file, "{config_data}")?;
+        let config = Config::new_from_file(&config_file.path().to_string_lossy())?;
 
         assert!(!config.is_valid(&Request {
             verb: HttpVerb::Post,
@@ -839,10 +873,12 @@ rules:
             rule.default = ConfigMode::Block;
         }
         assert!(!config.is_valid(&req));
+
+        Ok(())
     }
 
     #[test]
-    fn test_post_schema() {
+    fn test_post_schema() -> TestResult {
         let config_data = "---
 default: block
 rules:
@@ -864,9 +900,9 @@ rules:
         type: int
         range: [1, 75]
 ";
-        let mut config_file = NamedTempFile::new().unwrap();
-        write!(config_file, "{config_data}").unwrap();
-        let config = Config::new_from_file(&config_file.path().to_string_lossy()).unwrap();
+        let mut config_file = NamedTempFile::new()?;
+        write!(config_file, "{config_data}")?;
+        let config = Config::new_from_file(&config_file.path().to_string_lossy())?;
 
         assert!(!config.is_valid(&Request {
             verb: HttpVerb::Get,
@@ -912,17 +948,26 @@ rules:
             "Other": 0,
         }));
         assert!(!config.is_valid(&req));
+
+        Ok(())
     }
 
     #[test]
-    fn test_query_parsing() {
+    fn test_query_parsing() -> TestResult {
         let get_example = "GET /api/cameras/rgb?Width=800&Height=600&Base64=true HTTP/1.1\r\nHost: 127.0.0.1:50352\r\nUser-Agent: curl/8.7.1\r\nAccept: */*\r\n\r\n";
 
-        let req = Request::new(get_example.as_ref()).unwrap();
+        let req = Request::new(get_example.as_ref())?;
         assert_eq!(req.uri, "/api/cameras/rgb");
         assert!(req.query.is_some());
-        let params = req.query.unwrap();
+        let params = req.query.expect("Failed to parse query parameters");
         assert_eq!(params.len(), 3);
-        assert_eq!(params.get("Width").unwrap(), &Some("800".to_string()));
+        assert_eq!(
+            params
+                .get("Width")
+                .expect("Query string should have Width parameter"),
+            &Some("800".to_string())
+        );
+
+        Ok(())
     }
 }

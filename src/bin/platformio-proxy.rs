@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Usage: platformio-proxy MODE ADDR [FILE]");
         process::exit(1);
     }
-    let mode = env::args_os().nth(1).unwrap();
+    let mode = env::args_os().nth(1).expect("MODE argument is required");
     let mode = if mode == "s" {
         Mode::Server
     } else if mode == "c" {
@@ -53,15 +53,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         process::exit(1);
     };
 
-    let addr: std::net::SocketAddr = env::args_os().nth(2).unwrap().to_str().unwrap().parse()?;
+    let addr: std::net::SocketAddr = env::args_os()
+        .nth(2)
+        .expect("ADDR argument is required")
+        .to_str()
+        .expect("ADDR should be valid unicode")
+        .parse()?;
 
     match mode {
         Mode::Server => {
-            if env::args_os().len() < 4 {
-                println!("Error: FILE required in server mode");
-                process::exit(1);
-            }
-            let build_file = PathBuf::from(env::args_os().nth(3).unwrap());
+            let path = match env::args_os().nth(3) {
+                Some(p) => p,
+                None => {
+                    println!("Error: FILE required in server mode");
+                    process::exit(1);
+                }
+            };
+            let build_file = PathBuf::from(path);
             serv(addr, build_file)
         }
         Mode::Client => client(addr),

@@ -91,17 +91,23 @@ impl Request {
                 return Err(format!("unexpected protocol specifier {word}").into());
             }
         }
-        if verb.is_none() {
-            return Err("no request verb".into());
-        }
-        if uri.is_none() {
-            return Err("no request URI".into());
-        }
+        let verb = match verb {
+            Some(v) => v,
+            None => {
+                return Err("no request verb".into());
+            }
+        };
+        let uri = match uri {
+            Some(u) => u,
+            None => {
+                return Err("no request URI".into());
+            }
+        };
         if !protocol_match {
             return Err("no valid protocol string".into());
         }
         let body = if body_start < blob.len() {
-            if verb != Some(HttpVerb::Post) {
+            if verb != HttpVerb::Post {
                 warn!("Request has body, but verb does not allow it. Ignoring the body.");
                 None
             } else {
@@ -110,11 +116,7 @@ impl Request {
         } else {
             None
         };
-        Ok(Request {
-            verb: verb.unwrap(),
-            uri: uri.unwrap(),
-            body,
-        })
+        Ok(Request { verb, uri, body })
     }
 }
 
@@ -185,7 +187,9 @@ fn wrap_output(out: &str) -> String {
 }
 
 async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
-    let ingress_peer_addr = ingress.peer_addr().unwrap();
+    let ingress_peer_addr = ingress
+        .peer_addr()
+        .expect("Ingress address should be valid IPv4 or IPv6 socket address");
     debug!("handling RPC at {ingress_peer_addr}");
     let prefix = format!("{ingress_peer_addr}");
 
@@ -194,7 +198,13 @@ async fn handle_request(config: Arc<Config>, mut ingress: TcpStream) {
     let forbidden_response = "HTTP/1.1 403 Forbidden\r\n\r\n".as_bytes();
 
     loop {
-        let n = ingress.read(&mut buf).await.unwrap();
+        let n = match ingress.read(&mut buf).await {
+            Ok(s) => s,
+            Err(err) => {
+                error!("{prefix}: error on read: {err}");
+                return;
+            }
+        };
         if n == 0 {
             warn!("{prefix}: read 0 bytes; exiting...");
             return;
@@ -311,6 +321,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::{Config, HttpVerb, Request, RequestRule};
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     #[test]
     fn test_empty_default() {
         let config = Config::new();
@@ -327,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_rules() {
+    fn test_simple_rules() -> TestResult {
         let mut config = Config::new();
         config.rules.push(RequestRule {
             verb: HttpVerb::Get,
@@ -343,12 +355,14 @@ mod tests {
 
         let rule = config.find_rule(&req);
         assert!(rule.is_some());
-        let result = rule.unwrap().run(&req);
+        let result = rule.expect("Request should have a matching rule").run(&req);
         assert!(result.is_ok());
         // "20" should appear in the year of any date string for next 74 years
-        assert!(result.unwrap().contains("20"));
+        assert!(result?.contains("20"));
 
         req.verb = HttpVerb::Post;
         assert_eq!(config.find_rule(&req), None);
+
+        Ok(())
     }
 }
