@@ -1659,8 +1659,10 @@ mod tests {
     use super::AddOn;
     use super::HSAPIClient;
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     #[test]
-    fn list_no_rules() {
+    fn list_no_rules() -> TestResult {
         let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
         let path = format!("/deployment/{wdid}/rules");
         let _m = mock("GET", path.as_str())
@@ -1671,13 +1673,15 @@ mod tests {
 
         let mut ac = HSAPIClient::new();
         ac.cached_api_token = Some("fake".to_string());
-        let ruleset = ac.get_access_rules(wdid).unwrap();
+        let ruleset = ac.get_access_rules(wdid)?;
 
-        assert_eq!(ruleset.rules.len(), 0)
+        assert_eq!(ruleset.rules.len(), 0);
+
+        Ok(())
     }
 
     #[test]
-    fn get_mistyproxy_config() {
+    fn get_mistyproxy_config() -> TestResult {
         let wdid = "68a1be97-9365-4007-b726-14c56bd69eef";
         let path = format!("/deployment/{wdid}");
         let addr = "192.168.1.7";
@@ -1697,15 +1701,22 @@ mod tests {
 
         let mut ac = HSAPIClient::new();
         ac.cached_api_token = Some("fake".to_string());
-        let addonsc = ac.get_addon_config(wdid, &AddOn::MistyProxy).unwrap();
+        let addonsc = ac.get_addon_config(wdid, &AddOn::MistyProxy)?;
 
-        assert!(addonsc.as_object().unwrap().contains_key("ip"));
-        let returned_addr = addonsc["ip"].as_str().unwrap();
+        assert!(addonsc
+            .as_object()
+            .expect("Add-on configuration should be map (object)")
+            .contains_key("ip"));
+        let returned_addr = addonsc["ip"]
+            .as_str()
+            .expect("ip element of mistyproxy configuration should be string");
         assert_eq!(addr, returned_addr);
+
+        Ok(())
     }
 
     #[test]
-    fn register_new() {
+    fn register_new() -> TestResult {
         let expected_new_wdids = [
             "68a1be97-9365-4007-b726-14c56bd69eef",
             "2d6039bc-7c83-4d46-8567-c8df4711c386",
@@ -1735,7 +1746,7 @@ mod tests {
         let mut ac = HSAPIClient::new();
         ac.cached_api_token = Some("fake".to_string());
         ac.local_config = Some(mgmt::Config::new());
-        let res = ac.register_new(true).unwrap();
+        let res = ac.register_new(true)?;
         assert_eq!(res, expected_new_wdids[0]);
 
         let res = ac.register_new(true);
@@ -1743,7 +1754,12 @@ mod tests {
 
         let res = ac.register_new(false);
         assert!(res.is_ok());
-        assert_eq!(res.unwrap(), expected_new_wdids[1]);
-        assert_eq!(ac.local_config.unwrap().wdeployments.len(), 2);
+        assert_eq!(res?, expected_new_wdids[1]);
+        let local_config = ac
+            .local_config
+            .expect("local_config of client object should not be None");
+        assert_eq!(local_config.wdeployments.len(), 2);
+
+        Ok(())
     }
 }

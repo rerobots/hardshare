@@ -64,9 +64,9 @@ pub fn stream_websocket(
         let (_, framed) = match client.ws(url).connect().await {
             Ok(c) => c,
             Err(err) => {
-                err_notify
-                    .send(format!("failed to open WebSocket: {err}"))
-                    .unwrap();
+                if let Err(err_from_send) = err_notify.send(format!("failed to open WebSocket: {err}")) {
+		    error!("caught error ({err_from_send}) while trying to send notification about error: {err}");
+		}
                 System::current().stop_with_code(1);
                 return;
             }
@@ -239,8 +239,12 @@ fn video_capture(
             match image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_vec(width, height, data) {
                 Some(img) => {
                     let mut jpg: Vec<u8> = Vec::new();
-                    img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
-                        .unwrap();
+                    if let Err(err) =
+                        img.write_to(&mut Cursor::new(&mut jpg), image::ImageFormat::Jpeg)
+                    {
+                        error!("ImageBuffer.write_to: {err}");
+                        continue;
+                    }
 
                     let b64data = base64_engine::STANDARD.encode(jpg);
                     if let Err(err) = wsclient_addr
@@ -322,9 +326,13 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
         match msg {
             Ok(Frame::Text(txt)) => {
                 if txt == "START" {
-                    self.capture.send(CaptureCommand::Start).unwrap();
+                    if let Err(err) = self.capture.send(CaptureCommand::Start) {
+                        error!("caught while trying to send CaptureCommand::Start: {err}");
+                    }
                 } else if txt == "STOP" {
-                    self.capture.send(CaptureCommand::Stop).unwrap();
+                    if let Err(err) = self.capture.send(CaptureCommand::Stop) {
+                        error!("caught while trying to send CaptureCommand::Stop: {err}");
+                    }
                 } else {
                     warn!("unrecognized WebSocket message: {txt:?}");
                 }
@@ -348,7 +356,9 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
         debug!("closing WebSocket");
-        self.capture.send(CaptureCommand::Quit).unwrap();
+        if let Err(err) = self.capture.send(CaptureCommand::Quit) {
+            error!("caught while closing WebSocket: {err}");
+        }
         self.ws_sink.close();
         ctx.stop()
     }

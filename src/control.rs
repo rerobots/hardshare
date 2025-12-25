@@ -99,19 +99,36 @@ impl CurrentInstance {
 
     fn generate_local_name(&mut self, base_name: &str) -> String {
         let random_suffix: String = rand::random::<u16>().to_string();
-        let mut local_name = self.local_name.lock().unwrap();
-        *local_name = Some(base_name.to_string() + &random_suffix);
-        local_name.as_ref().unwrap().clone()
+        let mut local_name = self
+            .local_name
+            .lock()
+            .expect("Local container name lock can be held");
+        let name = base_name.to_string() + &random_suffix;
+        *local_name = Some(name.clone());
+        name
     }
 
-    fn get_local_name(&self) -> Option<String> {
-        let local_name = self.local_name.lock().unwrap();
-        local_name.clone()
+    fn get_local_name(&self) -> Result<String, &str> {
+        let local_name = self
+            .local_name
+            .lock()
+            .expect("Local container name lock can be held");
+        local_name
+            .clone()
+            .ok_or("Local container name is undefined")
     }
 
     fn handle_response(&mut self, res: &CWorkerCommand) -> Result<(), String> {
-        let message_id: String = res.message_id.clone().unwrap();
-        let mut responses = self.responses.lock().unwrap();
+        let message_id: String = match res.message_id.clone() {
+            Some(mi) => mi,
+            None => {
+                return Err("missing message_id".to_string());
+            }
+        };
+        let mut responses = self
+            .responses
+            .lock()
+            .expect("Lock on responses table can be held");
         if !responses.contains_key(&message_id) {
             return Err(format!("unknown message {message_id}"));
         }
@@ -124,36 +141,47 @@ impl CurrentInstance {
 
     fn send_status(&self) {
         if let Some(main_actor_addr) = &self.main_actor_addr {
-            let status = self.status.lock().unwrap();
+            let status = self
+                .status
+                .lock()
+                .expect("Instance status lock can be held");
             match &*status {
                 Some(s) => {
-                    let hostkey = {
-                        let tunnel = self.tunnel.lock().unwrap();
-                        (*tunnel).as_ref().map(|t| t.container_addr.hostkey.clone())
-                    };
-
-                    main_actor_addr.do_send(api::ClientWorkerMessage {
-                        mtype: CWorkerMessageType::WsSend,
-                        body: Some(
-                            serde_json::to_string(&if hostkey.is_some()
-                                && (*s == InstanceStatus::Ready || *s == InstanceStatus::Init)
-                            {
-                                json!({
-                                    "v": 0,
-                                    "cmd": "INSTANCE_STATUS",
-                                    "s": s.to_string(),
-                                    "h": hostkey.unwrap(),
-                                })
-                            } else {
-                                json!({
-                                    "v": 0,
-                                    "cmd": "INSTANCE_STATUS",
-                                    "s": s.to_string(),
-                                })
-                            })
-                            .unwrap(),
-                        ),
+                    let mut msg = json!({
+                    "v": 0,
+                    "cmd": "INSTANCE_STATUS",
+                    "s": s.to_string(),
                     });
+
+                    if *s != InstanceStatus::Ready && *s != InstanceStatus::Init {
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
+                            mtype: CWorkerMessageType::WsSend,
+                            body: Some(
+                                serde_json::to_string(&msg)
+                                    .expect("Instance status message can be serialized to JSON"),
+                            ),
+                        });
+                    } else {
+                        let hostkey = {
+                            let tunnel =
+                                self.tunnel.lock().expect("Lock on tunnel info can be held");
+                            (*tunnel).as_ref().map(|t| t.container_addr.hostkey.clone())
+                        };
+
+                        main_actor_addr.do_send(api::ClientWorkerMessage {
+                            mtype: CWorkerMessageType::WsSend,
+                            body: Some(
+                                serde_json::to_string(&match hostkey {
+                                    Some(h) => {
+                                        msg["h"] = h.into();
+                                        msg
+                                    }
+                                    None => msg,
+                                })
+                                .expect("Instance status message can be serialized to JSON"),
+                            ),
+                        });
+                    }
                 }
                 None => {
                     error!("called when no active instance");
@@ -170,7 +198,10 @@ impl CurrentInstance {
         if let Some(main_actor_addr) = &self.main_actor_addr {
             let message_id = {
                 let mut message_id: String;
-                let mut responses = self.responses.lock().unwrap();
+                let mut responses = self
+                    .responses
+                    .lock()
+                    .expect("Lock on responses table can be held");
                 loop {
                     message_id = rand::random::<u32>().to_string();
                     if !responses.contains_key(&message_id) {
@@ -180,7 +211,10 @@ impl CurrentInstance {
                 }
                 message_id
             };
-            let status = self.status.lock().unwrap();
+            let status = self
+                .status
+                .lock()
+                .expect("Instance status lock can be held");
             match &*status {
                 Some(s) => {
                     if *s != InstanceStatus::Init && *s != InstanceStatus::Ready {
@@ -197,7 +231,7 @@ impl CurrentInstance {
                                     "mi": message_id,
                                     "proxy": proxy_mode,
                                 }))
-                                .unwrap(),
+                                .expect("SSH tunnel creation message can be serialized to JSON"),
                             ),
                         });
                         Ok(message_id)
@@ -217,7 +251,10 @@ impl CurrentInstance {
         public_key: &str,
         repo_args: Option<RepoInfo>,
     ) -> Result<(thread::JoinHandle<()>, Arc<AtomicBool>), &str> {
-        let mut status = self.status.lock().unwrap();
+        let mut status = self
+            .status
+            .lock()
+            .expect("Instance status lock can be held");
         match *status {
             Some(_) => {
                 return Err("already current instance, cannot INIT new instance");
@@ -248,20 +285,34 @@ impl CurrentInstance {
     }
 
     fn exists(&self) -> bool {
-        self.status.lock().unwrap().is_some()
+        self.status
+            .lock()
+            .expect("Instance status lock can be held")
+            .is_some()
     }
 
     fn status(&self) -> Option<InstanceStatus> {
-        (*self.status.lock().unwrap()).as_ref().cloned()
+        (*self
+            .status
+            .lock()
+            .expect("Instance status lock can be held"))
+        .as_ref()
+        .cloned()
     }
 
     fn declare_status(&mut self, new_status: InstanceStatus) {
-        let mut x = self.status.lock().unwrap();
+        let mut x = self
+            .status
+            .lock()
+            .expect("Instance status lock can be held");
         *x = Some(new_status);
     }
 
     fn clear_status(&mut self) {
-        let mut x = self.status.lock().unwrap();
+        let mut x = self
+            .status
+            .lock()
+            .expect("Instance status lock can be held");
         if *x != Some(InstanceStatus::Fault) {
             *x = None;
         }
@@ -426,7 +477,10 @@ impl CurrentInstance {
         while now.elapsed() <= max_duration {
             std::thread::sleep(st);
             {
-                let responses = self.responses.lock().unwrap();
+                let responses = self
+                    .responses
+                    .lock()
+                    .expect("Lock on responses table can be held");
                 if let Some(res) = &responses[&message_id] {
                     let ti = res.tunnelinfo.clone().unwrap();
                     info!(
@@ -468,7 +522,7 @@ impl CurrentInstance {
         info!("tunnel process args: {tunnel_process_args:?}");
         let tunnel_process = Command::new("ssh").args(tunnel_process_args).spawn()?;
 
-        let mut tunnel = self.tunnel.lock().unwrap();
+        let mut tunnel = self.tunnel.lock().expect("Lock on tunnel info can be held");
         *tunnel = Some(SshTunnel {
             proc: tunnel_process,
             container_addr,
@@ -572,7 +626,10 @@ impl CurrentInstance {
     }
 
     fn terminate(&mut self) -> Result<(), String> {
-        let mut status = self.status.lock().unwrap();
+        let mut status = self
+            .status
+            .lock()
+            .expect("Instance status lock can be held");
         match &*status {
             Some(s) => {
                 if s == &InstanceStatus::Terminating {
@@ -607,14 +664,14 @@ impl CurrentInstance {
                         "req": "INSTANCE_DESTROY",
                         "st": "DONE",
                     }))
-                    .unwrap(),
+                    .expect("Instance destroy ACK message can be serialized to JSON"),
                 ),
             });
         }
     }
 
     fn stop_tunnel(&self) {
-        let mut tunnel_ref = self.tunnel.lock().unwrap();
+        let mut tunnel_ref = self.tunnel.lock().expect("Lock on tunnel info can be held");
         if let Some(tunnel) = tunnel_ref.as_mut() {
             debug!("killing ssh tunnel process: {:?}", tunnel.proc);
             if let Err(err) = tunnel.proc.kill() {
@@ -656,7 +713,9 @@ impl CurrentInstance {
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
 
-        let name = instance.get_local_name().unwrap();
+        let name = instance
+            .get_local_name()
+            .expect("Container name should be known during destroy process");
         if let Err(err) = Self::destroy_container(&instance.wdeployment, &name) {
             error!("Deployment fault! Caught from destroy_container(): {err}");
             instance.declare_status(InstanceStatus::Fault);
@@ -1156,6 +1215,8 @@ mod tests {
     use super::{ConnType, CurrentInstance};
     use crate::mgmt::WDeployment;
 
+    type TestResult = Result<(), Box<dyn std::error::Error>>;
+
     fn create_example_wdeployment() -> WDeployment {
         serde_json::from_str(
             r#"
@@ -1190,7 +1251,7 @@ mod tests {
     }
 
     #[test]
-    fn cannot_init_when_busy() {
+    fn cannot_init_when_busy() -> TestResult {
         let wdeployment = create_example_proxy_wdeployment();
         let instance_ids = [
             "e5fcf112-7af2-4d9f-93ce-b93f0da9144d",
@@ -1199,7 +1260,7 @@ mod tests {
         let mut current_instance = CurrentInstance::new(&Arc::new(wdeployment.clone()), None);
         let result = current_instance.init(instance_ids[0], ConnType::SshTun, "", None);
         assert!(result.is_ok());
-        let (thread_handle, abort_launch) = result.unwrap();
+        let (thread_handle, abort_launch) = result?;
 
         assert!(current_instance.exists());
         assert!(current_instance
@@ -1207,21 +1268,26 @@ mod tests {
             .is_err());
 
         abort_launch.store(true, atomic::Ordering::Relaxed);
-        thread_handle.join().unwrap();
-        let name = current_instance.get_local_name().unwrap();
+        thread_handle
+            .join()
+            .expect("Instance init thread should be join-able");
+        let name = current_instance.get_local_name()?;
         if let Err(err) = CurrentInstance::destroy_container(&wdeployment, &name) {
             panic!("{}", err);
         }
+
+        Ok(())
     }
 
     #[test]
-    fn generated_local_name_random() {
+    fn generated_local_name_random() -> TestResult {
         let wdeployment = create_example_wdeployment();
         let mut instance = CurrentInstance::new(&Arc::new(wdeployment), None);
         let first = instance.generate_local_name("base");
-        let first_as_stored = instance.get_local_name().unwrap();
+        let first_as_stored = instance.get_local_name()?;
         assert_eq!(first, first_as_stored);
         let second = instance.generate_local_name("base");
         assert_ne!(first, second);
+        Ok(())
     }
 }
