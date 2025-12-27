@@ -535,9 +535,13 @@ impl HSAPIClient {
                     serde_json::from_slice(resp.body().await?.as_ref())?;
                 let has_addon = payload["supported_addons"]
                     .as_array()
-                    .unwrap()
+                    .expect("supported_addons should be array")
                     .iter()
-                    .any(|x| x.as_str().unwrap() == addon.to_string());
+                    .any(|x| {
+                        x.as_str()
+                            .expect("Elements of supported_addons should be strings")
+                            == addon.to_string()
+                    });
                 if !has_addon {
                     error(format!("add-on {addon} is not enabled"))
                 } else {
@@ -576,9 +580,13 @@ impl HSAPIClient {
                     serde_json::from_slice(resp.body().await?.as_ref())?;
                 let mut supported_addons: Vec<String> = payload["supported_addons"]
                     .as_array()
-                    .unwrap()
+                    .expect("supported_addons should be array")
                     .iter()
-                    .map(|x| String::from(x.as_str().unwrap()))
+                    .map(|x| {
+                        x.as_str()
+                            .expect("Elements of supported_addons should be strings")
+                            .to_string()
+                    })
                     .collect();
                 let this_addon = addon.to_string();
                 match supported_addons.iter().position(|x| x == &this_addon) {
@@ -669,9 +677,13 @@ impl HSAPIClient {
                 let this_addon = addon.to_string();
                 let mut supported_addons: Vec<String> = payload["supported_addons"]
                     .as_array()
-                    .unwrap()
+                    .expect("supported_addons should be array")
                     .iter()
-                    .map(|x| String::from(x.as_str().unwrap()))
+                    .map(|x| {
+                        x.as_str()
+                            .expect("Elements of supported_addons should be strings")
+                            .to_string()
+                    })
                     .collect();
                 if !supported_addons.contains(&this_addon) {
                     supported_addons.push(this_addon.clone());
