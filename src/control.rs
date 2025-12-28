@@ -323,7 +323,9 @@ impl CurrentInstance {
         name: &str,
         timeout: u64,
     ) -> Result<String, String> {
-        let execname = cprovider.get_execname().unwrap();
+        let execname = cprovider
+            .get_execname()
+            .expect("Container provider should have executable");
         let max_duration = std::time::Duration::from_secs(timeout);
         let sleep_time = std::time::Duration::from_secs(2);
         let now = std::time::Instant::now();
