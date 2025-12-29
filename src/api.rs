@@ -14,7 +14,7 @@
 
 use std::collections::HashMap;
 use std::process;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -192,6 +192,10 @@ async fn get_access_rules_a(
             resp.status()
         ))
     }
+}
+
+fn get_client_lock(ac: &Arc<Mutex<HSAPIClient>>) -> MutexGuard<'_, HSAPIClient> {
+    ac.lock().expect("Lock on API client object can be held")
 }
 
 impl HSAPIClient {
@@ -593,9 +597,12 @@ impl HSAPIClient {
                     Some(j) => {
                         supported_addons.remove(j);
                         let mut update_payload: HashMap<String, serde_json::Value> = HashMap::new();
-                        if payload.as_object().unwrap().contains_key("addons_config") {
-                            let mut addons_config = payload["addons_config"].take();
-                            addons_config.as_object_mut().unwrap().remove(&this_addon);
+                        let mut addons_config = payload["addons_config"].take();
+                        if addons_config != serde_json::Value::Null {
+                            addons_config
+                                .as_object_mut()
+                                .expect("addons_config should be map (object)")
+                                .remove(&this_addon);
                             update_payload.insert("addons_config".into(), addons_config);
                         }
                         update_payload.insert("supported_addons".into(), supported_addons.into());
@@ -690,8 +697,8 @@ impl HSAPIClient {
                 }
                 let mut update_payload: HashMap<String, serde_json::Value> = HashMap::new();
                 update_payload.insert("supported_addons".into(), supported_addons.into());
-                if payload.as_object().unwrap().contains_key("addons_config") {
-                    let addons_config = payload["addons_config"].take();
+                let addons_config = payload["addons_config"].take();
+                if addons_config != serde_json::Value::Null {
                     update_payload.insert("addons_config".into(), addons_config);
                 }
                 if let Some(this_addon_config) = config {
@@ -699,7 +706,7 @@ impl HSAPIClient {
                         Some(addonsc) => {
                             addonsc
                                 .as_object_mut()
-                                .unwrap()
+                                .expect("addons_config should be map (object)")
                                 .insert(this_addon, this_addon_config);
                         }
                         None => {
@@ -772,11 +779,20 @@ impl HSAPIClient {
         let url;
         let wd;
         {
-            let ac_inner = ac.lock().unwrap();
-            authheader = format!("Bearer {}", &ac_inner.cached_api_token.as_ref().unwrap());
+            let ac_inner = get_client_lock(ac);
+            authheader = format!(
+                "Bearer {}",
+                &ac_inner
+                    .cached_api_token
+                    .as_ref()
+                    .ok_or("API token should be available")?
+            );
             url = format!("{}/hardshare/ad/{}", &ac_inner.origin, wdid);
 
-            let local_config = &mut ac_inner.local_config.clone().unwrap();
+            let local_config = &mut ac_inner
+                .local_config
+                .clone()
+                .ok_or("Local configuration should exist")?;
             let wd_index = mgmt::find_id_prefix(local_config, Some(&wdid))?;
             local_config.wdeployments[wd_index].ssh_key = Some(local_config.ssh_key.clone());
             wd = Arc::new(local_config.wdeployments[wd_index].clone());
@@ -788,9 +804,7 @@ impl HSAPIClient {
             wsclient_addr: None,
         });
 
-        let addr = open_websocket(&url, &authheader, &main_actor_addr, None)
-            .await
-            .unwrap();
+        let addr = open_websocket(&url, &authheader, &main_actor_addr, None).await?;
         main_actor_addr.do_send(NewWS(Some(addr)));
 
         let ma_addr_for_cworker = main_actor_addr.clone();
@@ -802,7 +816,7 @@ impl HSAPIClient {
     async fn http_post_reload_config(
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
-        let mut ac_inner = ac.lock().unwrap();
+        let mut ac_inner = get_client_lock(&ac);
         match ac_inner.reload_config() {
             Ok(()) => actix_web::HttpResponse::Ok().finish(),
             Err(err) => {
@@ -818,7 +832,7 @@ impl HSAPIClient {
     ) -> actix_web::HttpResponse {
         let wdid_expanded;
         {
-            let mut ac_inner = ac.lock().unwrap();
+            let mut ac_inner = get_client_lock(&ac);
             wdid_expanded = match &ac_inner.local_config {
                 Some(local_config) => {
                     let wd_index = match mgmt::find_id_prefix(local_config, Some(wdid.as_str())) {
@@ -853,7 +867,7 @@ impl HSAPIClient {
         };
 
         {
-            let mut ac_inner = ac.lock().unwrap();
+            let mut ac_inner = get_client_lock(&ac);
             if let Some(wdid_tab) = &mut ac_inner.wdid_tab {
                 wdid_tab.insert(wdid_expanded.clone(), addr);
             }
@@ -866,7 +880,7 @@ impl HSAPIClient {
         wdid: actix_web::web::Path<String>,
         ac: actix_web::web::Data<Arc<Mutex<HSAPIClient>>>,
     ) -> actix_web::HttpResponse {
-        let mut ac_inner = ac.lock().unwrap();
+        let mut ac_inner = get_client_lock(&ac);
         if let Some(wdid_tab) = &mut ac_inner.wdid_tab {
             match wdid_tab.remove(&*wdid) {
                 Some(addr) => {
@@ -890,7 +904,7 @@ impl HSAPIClient {
         let mut daemon_status = DaemonStatus {
             ad_deployments: vec![],
         };
-        let ac_inner = ac.lock().unwrap();
+        let ac_inner = get_client_lock(&ac);
         if let Some(wdid_tab) = &ac_inner.wdid_tab {
             for k in wdid_tab.keys() {
                 daemon_status.ad_deployments.push(k.clone());
@@ -955,7 +969,7 @@ impl HSAPIClient {
             let mut wdid_tab = HashMap::new();
             wdid_tab.insert(wdid.clone(), addr.clone());
             {
-                let mut ac_inner = ac.lock().unwrap();
+                let mut ac_inner = get_client_lock(&ac);
                 ac_inner.wdid_tab = Some(wdid_tab);
             }
 
