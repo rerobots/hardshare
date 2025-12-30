@@ -323,9 +323,7 @@ impl CurrentInstance {
         name: &str,
         timeout: u64,
     ) -> Result<String, String> {
-        let execname = cprovider
-            .get_execname()
-            .expect("Container provider should have executable");
+        let execname = cprovider.get_execname()?;
         let max_duration = std::time::Duration::from_secs(timeout);
         let sleep_time = std::time::Duration::from_secs(2);
         let now = std::time::Instant::now();
@@ -361,7 +359,7 @@ impl CurrentInstance {
     }
 
     fn get_container_sshport(cprovider: &CProvider, name: &str) -> Result<Port, String> {
-        let execname = cprovider.get_execname().unwrap();
+        let execname = cprovider.get_execname()?;
         let mut run_command = Command::new(execname);
         let run_command = run_command.args(["port", name, "22"]);
         let command_result = match run_command.output() {
@@ -386,7 +384,7 @@ impl CurrentInstance {
         name: &str,
         timeout: u64,
     ) -> Result<String, String> {
-        let execname = cprovider.get_execname().unwrap();
+        let execname = cprovider.get_execname()?;
         let hostkey_filename = "ssh_host_ecdsa_key.pub";
         let hostkey_contained_path = String::from(name) + ":/etc/ssh/" + hostkey_filename;
         let max_duration = std::time::Duration::from_secs(timeout);
@@ -560,7 +558,13 @@ impl CurrentInstance {
         let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
 
         if let Some(repo_info) = repo_args {
-            let cprovider_execname = instance.wdeployment.cprovider.get_execname().unwrap();
+            let cprovider_execname = match instance.wdeployment.cprovider.get_execname() {
+                Ok(exec) => exec,
+                Err(err) => {
+                    error!("{err}");
+                    return;
+                }
+            };
             let status = Command::new(&cprovider_execname)
                 .args([
                     "exec",
@@ -742,7 +746,7 @@ impl CurrentInstance {
             || cprovider == CProvider::DockerRootless
             || cprovider == CProvider::Podman
         {
-            let cprovider_execname = cprovider.get_execname().unwrap();
+            let cprovider_execname = cprovider.get_execname()?;
             let image = match &wdeployment.image {
                 Some(img) => img.clone(),
                 None => {
@@ -916,7 +920,7 @@ impl CurrentInstance {
             || wdeployment.cprovider == CProvider::DockerRootless
             || wdeployment.cprovider == CProvider::Podman
         {
-            let cprovider_execname = wdeployment.cprovider.get_execname().unwrap();
+            let cprovider_execname = wdeployment.cprovider.get_execname()?;
             let mut run_command = Command::new(cprovider_execname);
             let run_command = run_command.args(["rm", "-f", name]).stdout(Stdio::null());
             match run_command.status() {
@@ -924,7 +928,7 @@ impl CurrentInstance {
                     if !s.success() {
                         return Err(Error::new(format!(
                             "exit code from {}: {:?}",
-                            wdeployment.cprovider.get_execname().unwrap(),
+                            wdeployment.cprovider.get_execname()?,
                             s.code()
                         )));
                     }

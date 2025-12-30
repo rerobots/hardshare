@@ -961,7 +961,9 @@ impl HSAPIClient {
             let addr = match HSAPIClient::ad(&ac, wdid.clone()).await {
                 Ok(a) => a,
                 Err(err) => {
-                    err_notify.send(format!("{err}")).unwrap();
+                    if let Err(err_from_send) = err_notify.send(format!("{err}")) {
+                        error!("caught error ({err_from_send}) while trying to send notification about error: {err}");
+                    }
                     System::current().stop_with_code(1);
                     return;
                 }
@@ -999,9 +1001,10 @@ impl HSAPIClient {
             manip = match manip.bind(bindaddr) {
                 Ok(s) => s,
                 Err(err) => {
-                    err_notify
-                        .send(format!("failed to bind to {bindaddr}; {err}"))
-                        .unwrap();
+                    if let Err(err_from_send) = err_notify
+                        .send(format!("failed to bind to {bindaddr}; {err}")) {
+                            error!("caught error ({err_from_send}) while trying to send notification about error: {err}");
+                        }
                     System::current().stop_with_code(1);
                     return;
                 }
@@ -1009,9 +1012,10 @@ impl HSAPIClient {
             match manip.run().await {
                 Ok(()) => (),
                 Err(err) => {
-                    err_notify
-                        .send(format!("failed to start listener: {err}"))
-                        .unwrap();
+                    if let Err(err_from_send) = err_notify
+                        .send(format!("failed to start listener: {err}")) {
+                            error!("caught error ({err_from_send}) while trying to send notification about error: {err}");
+                        }
                     System::current().stop_with_code(1);
                 }
             }
@@ -1066,7 +1070,12 @@ impl HSAPIClient {
         };
 
         let url = format!("{}/hardshare/register", self.origin);
-        let authheader = format!("Bearer {}", self.cached_api_token.as_ref().unwrap());
+        let authheader = format!(
+            "Bearer {}",
+            self.cached_api_token
+                .as_ref()
+                .ok_or("API token should be available")?
+        );
 
         let sys = System::new();
         let res = actix::SystemRunner::block_on(&sys, async {
@@ -1078,8 +1087,18 @@ impl HSAPIClient {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
                 let mut new_wd = HashMap::new();
-                new_wd.insert("id".into(), json!(payload["id"].as_str().unwrap()));
-                new_wd.insert("owner".into(), json!(payload["owner"].as_str().unwrap()));
+                new_wd.insert(
+                    "id".into(),
+                    json!(payload["id"]
+                        .as_str()
+                        .expect("In hardshare/register response, id should be string")),
+                );
+                new_wd.insert(
+                    "owner".into(),
+                    json!(payload["owner"]
+                        .as_str()
+                        .expect("In hardshare/register response, owner should be string")),
+                );
                 Ok(new_wd)
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
@@ -1098,7 +1117,12 @@ impl HSAPIClient {
         #[cfg(not(test))]
         mgmt::modify_local(local_config)?;
 
-        Ok(local_config.wdeployments.last().unwrap().id.clone())
+        Ok(local_config
+            .wdeployments
+            .last()
+            .ok_or("wdeployments array should be nonempty")?
+            .id
+            .clone())
     }
 
     pub fn declare_existing(&mut self, wdid: &str) -> Result<(), Box<dyn std::error::Error>> {

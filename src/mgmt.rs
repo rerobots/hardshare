@@ -58,13 +58,13 @@ pub enum CProvider {
 }
 
 impl CProvider {
-    pub fn get_execname(&self) -> Option<String> {
+    pub fn get_execname(&self) -> Result<String, &str> {
         if self == &Self::DockerRootless {
-            Some("docker".into())
+            Ok("docker".into())
         } else if self == &Self::Proxy {
-            None
+            Err("Container provider should have executable")
         } else {
-            Some(self.to_string())
+            Ok(self.to_string())
         }
     }
 }
