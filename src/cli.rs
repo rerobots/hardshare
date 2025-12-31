@@ -1553,8 +1553,12 @@ mod tests {
     fn list_config_json() {
         let td = tempdir().expect("temporary directory should be created");
         let base_path = td.path().join(".rerobots");
-        let lconf = mgmt::get_local_config_bp(&base_path, true, false)
-            .expect(&format!("Local config can be defined at {td:?}"));
+        let lconf = match mgmt::get_local_config_bp(&base_path, true, false) {
+            Ok(lc) => lc,
+            Err(err) => {
+                panic!("Error while creating local config at {td:?}: {err}");
+            }
+        };
 
         let mut buf: Vec<u8> = vec![];
         print_config_w(&mut buf, &lconf, &None, PrintingFormat::Json, true)

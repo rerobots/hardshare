@@ -1103,7 +1103,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(parse_error_message(payload)))
+                error(parse_error_message(payload))
             } else {
                 error(format!("server indicated error: {}", resp.status()))
             }
@@ -1148,13 +1148,22 @@ impl HSAPIClient {
             if resp.status() == 200 {
                 let body = resp.body().await?;
                 let parsed_body: serde_json::Value = serde_json::from_slice(body.as_ref())?;
-                for wd in parsed_body["wdeployments"].as_array().unwrap().iter() {
-                    if wd["id"].as_str().unwrap() == wdid {
+                for wd in parsed_body["wdeployments"]
+                    .as_array()
+                    .expect("In hardshare/list response, wdeployments should be array")
+                    .iter()
+                {
+                    let response_wdid = wd["id"]
+                        .as_str()
+                        .expect("In hardshare/list response, id should be string");
+                    if response_wdid == wdid {
                         let mut matched_wd: HashMap<String, serde_json::Value> = HashMap::new();
-                        matched_wd.insert("id".into(), json!(wd["id"].as_str().unwrap()));
+                        matched_wd.insert("id".into(), json!(response_wdid));
                         matched_wd.insert(
                             "owner".into(),
-                            json!(parsed_body["owner"].as_str().unwrap()),
+                            json!(parsed_body["owner"]
+                                .as_str()
+                                .expect("In hardshare/list response, owner should be string")),
                         );
                         return Ok(Some(matched_wd));
                     }
@@ -1163,7 +1172,7 @@ impl HSAPIClient {
             } else if resp.status() == 400 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                error(String::from(parse_error_message(payload)))
+                error(parse_error_message(payload))
             } else {
                 error(format!(
                     "error contacting core API server: {}",
@@ -1216,16 +1225,19 @@ impl HSAPIClient {
             if resp.status() == 200 {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
-                Ok(payload["id"].as_str().unwrap().to_string())
+                Ok(payload["id"]
+                    .as_str()
+                    .expect("In hardshare/cam response, id should be string")
+                    .to_string())
             } else {
                 let mut err = format!("server indicated error: status {}", resp.status());
-                if resp.headers().contains_key("content-length")
-                    && resp.headers().get("content-length").unwrap() != "0"
-                {
-                    err += &format!(
-                        "; body: {}",
-                        String::from_utf8_lossy(resp.body().await?.as_ref())
-                    );
+                if let Some(content_length) = resp.headers().get("content-length") {
+                    if content_length != "0" {
+                        err += &format!(
+                            "; body: {}",
+                            String::from_utf8_lossy(resp.body().await?.as_ref())
+                        );
+                    }
                 }
                 error(err)
             }
@@ -1280,11 +1292,16 @@ impl HSAPIClient {
                 }
                 let entry = entry.path();
 
-                if entry.extension().unwrap() == "pid" {
-                    let file_stem = entry.file_stem().unwrap();
+                if entry
+                    .extension()
+                    .ok_or("Camera PID file name should have extension")?
+                    == "pid"
+                {
+                    let file_stem = entry
+                        .file_stem()
+                        .ok_or("Camera PID file name should have stem")?;
                     stopped_via_pids.push(file_stem.to_string_lossy().to_string());
-                    let pid = String::from_utf8(std::fs::read(&entry).unwrap())
-                        .unwrap()
+                    let pid = String::from_utf8(std::fs::read(&entry)?)?
                         .trim()
                         .to_string();
 
@@ -1301,7 +1318,7 @@ impl HSAPIClient {
                                 let msg = format!(
                                     "failed to terminate local process {} for camera {}: {}",
                                     pid,
-                                    stopped_via_pids.last().unwrap(),
+                                    stopped_via_pids[stopped_via_pids.len() - 1],
                                     r
                                 );
                                 if !force {
@@ -1315,7 +1332,7 @@ impl HSAPIClient {
                             let msg = format!(
                                 "failed to terminate local process {} for camera {}: {}",
                                 pid,
-                                stopped_via_pids.last().unwrap(),
+                                stopped_via_pids[stopped_via_pids.len() - 1],
                                 err
                             );
                             if !force {
@@ -1347,7 +1364,9 @@ impl HSAPIClient {
                 let payload: serde_json::Value =
                     serde_json::from_slice(resp.body().await?.as_ref())?;
 
-                let hscameras = payload.as_object().unwrap();
+                let hscameras = payload
+                    .as_object()
+                    .expect("hardshare/cam response should be JSON object");
                 debug!("{hscameras:?}");
                 for (hscamera_id, assoc) in hscameras.iter() {
                     debug!("{hscamera_id:?}: {assoc:?}");
@@ -1358,9 +1377,9 @@ impl HSAPIClient {
 
                         let assoc: Vec<String> = assoc
                             .as_array()
-                            .unwrap()
+                            .expect("In hardshare/cam response, each camera should have array of associated deployments")
                             .iter()
-                            .map(|x| x.as_str().unwrap().to_string())
+                            .map(|x| x.as_str().expect("In hardshare/cam response, elements of array should be string").to_string())
                             .collect();
 
                         if !nonempty_intersection(&local_wdeployments, &assoc) {
@@ -1496,7 +1515,11 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                     return;
                 }
             };
-            debug!("received: {}", serde_json::to_string(&payload).unwrap());
+            debug!(
+                "received: {}",
+                serde_json::to_string(&payload)
+                    .expect("Received instance commands can serialized to JSON")
+            );
 
             let message_ver = match payload["v"].as_i64() {
                 Some(v) => v,
@@ -1518,23 +1541,20 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                 }
             };
 
+            let id = payload["id"].as_str().expect("id should be string");
+            let message_id = payload["mi"].as_str().expect("mi should be string");
+
             let m = match cmd {
                 "INSTANCE_LAUNCH" => CWorkerCommand::launch_instance(
-                    payload["id"].as_str().unwrap(),
-                    payload["mi"].as_str().unwrap(),
+                    id,
+                    message_id,
                     control::ConnType::SshTun,
-                    payload["pr"].as_str().unwrap(),
+                    payload["pr"].as_str().expect("pr should be string"),
                     payload["repo"].as_str(),
                     payload["repo_path"].as_str(),
                 ),
-                "INSTANCE_STATUS" => CWorkerCommand::get_status(
-                    payload["id"].as_str().unwrap(),
-                    payload["mi"].as_str().unwrap(),
-                ),
-                "INSTANCE_DESTROY" => CWorkerCommand::destroy_instance(
-                    payload["id"].as_str().unwrap(),
-                    payload["mi"].as_str().unwrap(),
-                ),
+                "INSTANCE_STATUS" => CWorkerCommand::get_status(id, message_id),
+                "INSTANCE_DESTROY" => CWorkerCommand::destroy_instance(id, message_id),
                 "CREATE_SSHTUN_DONE" => {
                     let tunnelinfo: TunnelInfo = match serde_json::from_slice(txt.as_ref()) {
                         Ok(x) => {
@@ -1546,11 +1566,7 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
                             return;
                         }
                     };
-                    CWorkerCommand::create_sshtun_done(
-                        payload["id"].as_str().unwrap(),
-                        payload["mi"].as_str().unwrap(),
-                        &tunnelinfo,
-                    )
+                    CWorkerCommand::create_sshtun_done(id, message_id, &tunnelinfo)
                 }
                 _ => {
                     error!("unknown command: {cmd}");
@@ -1578,9 +1594,13 @@ impl StreamHandler<Result<Frame, WsProtocolError>> for WSClient {
         let sys = System::new();
         sys.runtime().spawn(async move {
             main_actor_addr.do_send(NewWS(None));
-            let addr = open_websocket(&url, &authheader, &main_actor_addr, None)
-                .await
-                .unwrap();
+            let addr = match open_websocket(&url, &authheader, &main_actor_addr, None).await {
+                Ok(a) => a,
+                Err(err) => {
+                    error!("caught while trying to open WebSocket: {err:?}");
+                    return;
+                }
+            };
             main_actor_addr.do_send(NewWS(Some(addr)));
         });
 
@@ -1663,14 +1683,21 @@ impl Handler<ClientWorkerMessage> for MainActor {
     fn handle(&mut self, msg: ClientWorkerMessage, _ctx: &mut Context<Self>) {
         debug!("received client worker message: {msg:?}");
         match msg.mtype {
-            control::CWorkerMessageType::WsSend => match &self.wsclient_addr {
-                Some(wa) => {
-                    wa.do_send(WSSend(msg.body.unwrap()));
+            control::CWorkerMessageType::WsSend => {
+                let body = match msg.body {
+                    Some(b) => b,
+                    None => {
+                        error!("missing body in CWorkerMessageType::WsSend message");
+                        return;
+                    }
+                };
+                match &self.wsclient_addr {
+                    Some(wa) => wa.do_send(WSSend(body)),
+                    None => {
+                        error!("received WsSend when no WSClient");
+                    }
                 }
-                None => {
-                    error!("received WsSend when no WSClient");
-                }
-            },
+            }
         }
     }
 }
@@ -1683,7 +1710,9 @@ impl Handler<ClientCommand> for MainActor {
     type Result = ();
 
     fn handle(&mut self, msg: ClientCommand, _ctx: &mut Context<Self>) {
-        self.worker_req.send(msg.0).unwrap();
+        if let Err(err) = self.worker_req.send(msg.0) {
+            error!("caught error while trying to send to worker: {err}");
+        }
     }
 }
 

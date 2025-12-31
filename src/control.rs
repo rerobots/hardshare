@@ -435,7 +435,10 @@ impl CurrentInstance {
             .args(cargs[1..].iter())
             .stdout(Stdio::piped())
             .spawn()?;
-        let stdout = child.stdout.as_mut().unwrap();
+        let stdout = child
+            .stdout
+            .as_mut()
+            .ok_or("stdout of child process should be captured")?;
         let max_duration = std::time::Duration::from_secs(timeout);
         let sleep_time = std::time::Duration::from_secs(1);
         let now = std::time::Instant::now();
@@ -482,7 +485,10 @@ impl CurrentInstance {
                     .lock()
                     .expect("Lock on responses table can be held");
                 if let Some(res) = &responses[&message_id] {
-                    let ti = res.tunnelinfo.clone().unwrap();
+                    let ti = res
+                        .tunnelinfo
+                        .clone()
+                        .ok_or("response does not include tunnel info")?;
                     info!(
                         "opened public ssh tunnel at {}:{} with host key \"{}\"",
                         ti.ipv4, ti.port, ti.hostkey
@@ -493,10 +499,12 @@ impl CurrentInstance {
             }
             info!("waiting for sshtun creation...");
         }
-        if tunnelinfo.is_none() {
-            return Err("failed to create sshtun within time limit".into());
-        }
-        let tunnelinfo = tunnelinfo.unwrap();
+        let tunnelinfo = match tunnelinfo {
+            Some(ti) => ti,
+            None => {
+                return Err("failed to create sshtun within time limit".into());
+            }
+        };
 
         let tunnel_process_args = [
             "-o",
@@ -555,7 +563,15 @@ impl CurrentInstance {
             return;
         }
 
-        let tunnelkey_path = instance.wdeployment.ssh_key.clone().unwrap();
+        let tunnelkey_path = match instance.wdeployment.ssh_key.clone() {
+            Some(sk) => sk,
+            None => {
+                error!("missing key for SSH tunnel");
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+        };
 
         if let Some(repo_info) = repo_args {
             let cprovider_execname = match instance.wdeployment.cprovider.get_execname() {
@@ -834,8 +850,7 @@ impl CurrentInstance {
 
             let mkdir_result = Command::new(&cprovider_execname)
                 .args(["exec", name, "/bin/mkdir", "-p", "/root/.ssh"])
-                .status()
-                .unwrap();
+                .status()?;
             if !mkdir_result.success() {
                 return Err(Error::new(format!(
                     "mkdir command failed: {mkdir_result:?}"
@@ -845,11 +860,13 @@ impl CurrentInstance {
             let cp_result = Command::new(&cprovider_execname)
                 .args([
                     "cp",
-                    public_key_file.path().to_str().unwrap(),
+                    public_key_file
+                        .path()
+                        .to_str()
+                        .expect("Public key path should be valid unicode"),
                     &(name.to_string() + ":/root/.ssh/authorized_keys"),
                 ])
-                .status()
-                .unwrap();
+                .status()?;
             if !cp_result.success() {
                 return Err(Error::new(format!("cp command failed: {cp_result:?}")));
             }
@@ -862,8 +879,7 @@ impl CurrentInstance {
                     "0:0",
                     "/root/.ssh/authorized_keys",
                 ])
-                .status()
-                .unwrap();
+                .status()?;
             if !chown_result.success() {
                 return Err(Error::new(format!(
                     "chown command failed: {chown_result:?}"
@@ -974,8 +990,10 @@ pub fn cworker(
             CWorkerCommandType::InstanceLaunch => {
                 match current_instance.init(
                     &req.instance_id,
-                    req.conntype.unwrap(),
-                    &req.publickey.unwrap(),
+                    req.conntype
+                        .expect("Instance launch message should declare connection type"),
+                    &req.publickey
+                        .expect("Instance launch message should have public key"),
                     req.repo_args,
                 ) {
                     Ok(_) => {
@@ -987,7 +1005,7 @@ pub fn cworker(
                                     "cmd": "ACK",
                                     "mi": req.message_id,
                                 }))
-                                .unwrap(),
+                                .expect("Instance Launch ACK message can be serialized to JSON"),
                             ),
                         });
                     }
@@ -1004,7 +1022,7 @@ pub fn cworker(
                                     "cmd": "NACK",
                                     "mi": req.message_id,
                                 }))
-                                .unwrap(),
+                                .expect("Instance Launch NACK message can be serialized to JSON"),
                             ),
                         });
                     }
@@ -1012,7 +1030,13 @@ pub fn cworker(
             }
             CWorkerCommandType::InstanceDestroy => {
                 if current_instance.exists() {
-                    let status = current_instance.status().unwrap();
+                    let status = match current_instance.status() {
+                        Some(s) => s,
+                        None => {
+                            warn!("destroy request received when instance status is undefined");
+                            continue;
+                        }
+                    };
                     if status == InstanceStatus::Terminating {
                         // Already terminating; ACK but no action
                         warn!("destroy request received when already terminating");
@@ -1026,7 +1050,7 @@ pub fn cworker(
                                     "cmd": "NACK",
                                     "mi": req.message_id,
                                 }))
-                                .unwrap(),
+                                .expect("Instance Destroy NACK message can be serialized to JSON"),
                             ),
                         });
                         continue;
@@ -1039,7 +1063,7 @@ pub fn cworker(
                                 "cmd": "ACK",
                                 "mi": req.message_id,
                             }))
-                            .unwrap(),
+                            .expect("Instance Destroy ACK message can be serialized to JSON"),
                         ),
                     });
                     if status != InstanceStatus::Terminating {
@@ -1060,7 +1084,7 @@ pub fn cworker(
                                 "cmd": "NACK",
                                 "mi": req.message_id,
                             }))
-                            .unwrap(),
+                            .expect("Instance Destroy NACK message can be serialized to JSON"),
                         ),
                     });
                 }
@@ -1077,7 +1101,7 @@ pub fn cworker(
                                     "s": status.to_string(),
                                     "mi": req.message_id,
                                 }))
-                                .unwrap(),
+                                .expect("Status ACK message can be serialized to JSON"),
                             ),
                         });
                     }
@@ -1091,7 +1115,7 @@ pub fn cworker(
                                     "cmd": "NACK",
                                     "mi": req.message_id,
                                 }))
-                                .unwrap(),
+                                .expect("Status NACK message can be serialized to JSON"),
                             ),
                         });
                     }
@@ -1237,7 +1261,7 @@ mod tests {
                 "container_name": "rrc"
             }"#,
         )
-        .unwrap()
+        .expect("WDeployment structure can be deserialized from JSON")
     }
 
     fn create_example_proxy_wdeployment() -> WDeployment {
@@ -1253,7 +1277,7 @@ mod tests {
                 "container_name": "rrc"
             }"#,
         )
-        .unwrap()
+        .expect("WDeployment structure can be deserialized from JSON")
     }
 
     #[test]
