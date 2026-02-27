@@ -21,14 +21,24 @@ enum Mode {
     Client,
 }
 
+const COMMAND_UPLOAD: u8 = 0;
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Build {
     platformio_ini: Vec<u8>,
     blob: Vec<u8>,
 }
 
-fn serv(addr: std::net::SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
-    let header_len = 9;
+fn do_upload(build: Build, host_platformio_ini: &str) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+fn serv(
+    addr: std::net::SocketAddr,
+    host_ini_file: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut header_len = 2;
+    let host_platformio_ini = String::from_utf8(std::fs::read(&host_ini_file)?)?;
     let listener = TcpListener::bind(addr)?;
     println!("{}", listener.local_addr()?);
     for stream_result in listener.incoming() {
@@ -51,16 +61,26 @@ fn serv(addr: std::net::SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
             warn!("Unknown version: {version}");
             continue;
         }
-        let ini_size = u8vec_to_usize(&raw_read[1..5]);
-        let exe_size = u8vec_to_usize(&raw_read[5..9]);
-        let b = Build {
-            platformio_ini: raw_read
-                .drain(header_len..(header_len + ini_size))
-                .collect(),
-            blob: raw_read
-                .drain(header_len..(header_len + exe_size))
-                .collect(),
-        };
+        match raw_read[1] {
+            COMMAND_UPLOAD => {
+                header_len += 8;
+                let ini_size = u8vec_to_usize(&raw_read[2..6]);
+                let exe_size = u8vec_to_usize(&raw_read[6..10]);
+                let b = Build {
+                    platformio_ini: raw_read
+                        .drain(header_len..(header_len + ini_size))
+                        .collect(),
+                    blob: raw_read
+                        .drain(header_len..(header_len + exe_size))
+                        .collect(),
+                };
+                do_upload(b, &host_platformio_ini)?;
+            }
+            _ => {
+                warn!("unknown command: {}", raw_read[1]);
+                continue;
+            }
+        }
     }
     Ok(())
 }
@@ -92,7 +112,7 @@ fn client(
     let exe_data = std::fs::read(&exe_file)?;
     let mut stream = TcpStream::connect(addr)?;
 
-    let mut header: Vec<u8> = vec![0];
+    let mut header: Vec<u8> = vec![0, COMMAND_UPLOAD];
     header.append(&mut usize_to_u8vec(ini_data.len())?);
     header.append(&mut usize_to_u8vec(exe_data.len())?);
 
@@ -104,8 +124,8 @@ fn client(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if env::args_os().len() != 3 && env::args_os().len() != 5 {
-        eprintln!("Usage: platformio-proxy MODE ADDR [INI EXE]");
+    if env::args_os().len() != 4 && env::args_os().len() != 5 {
+        eprintln!("Usage: platformio-proxy MODE ADDR INI [EXE]");
         process::exit(1);
     }
     let mode = env::args_os().nth(1).expect("MODE argument is required");
@@ -125,15 +145,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("ADDR should be valid unicode")
         .parse()?;
 
+    let ini_file = match env::args_os().nth(3) {
+        Some(p) => PathBuf::from(p),
+        None => {
+            eprintln!("Error: platformio.ini required");
+            process::exit(1);
+        }
+    };
+
     match mode {
         Mode::Client => {
-            let ini_file = match env::args_os().nth(3) {
-                Some(p) => PathBuf::from(p),
-                None => {
-                    eprintln!("Error: platformio.ini required in client mode");
-                    process::exit(1);
-                }
-            };
             let exe_file = match env::args_os().nth(4) {
                 Some(p) => PathBuf::from(p),
                 None => {
@@ -143,6 +164,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             client(addr, ini_file, exe_file)
         }
-        Mode::Server => serv(addr),
+        Mode::Server => serv(addr, ini_file),
     }
 }
