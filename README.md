@@ -36,6 +36,9 @@ Summary:
 Building and Testing
 --------------------
 
+Read https://docs.rerobots.net/hardshare/develop for details about working with
+the source code. Below is a summary.
+
 This tool is implemented in [Rust](https://www.rust-lang.org/), and releases are
 posted to the crate registry at <https://crates.io/crates/hardshare>. To build,
 
