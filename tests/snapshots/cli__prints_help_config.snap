@@ -1,7 +1,7 @@
 ---
 source: tests/cli.rs
-assertion_line: 56
-expression: "String::from_utf8(output.stdout).unwrap()"
+assertion_line: 61
+expression: "String::from_utf8(output.stdout)?"
 ---
 hardshare-config 
 Manage local and remote configuration
@@ -16,6 +16,9 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
+        --add-env <VAR>
+            add environment variable definition, of the form `NAME=VALUE`
+
         --add-init-inside <PROGRAM>
             add program to be executed inside container during initialization
 
@@ -48,6 +51,7 @@ OPTIONS:
         --rm-raw-device <PATH>
             remove device previously marked for inclusion in container
 
+        --rm-env <VAR>                    remove environment variable
         --rm-init-inside <PROGRAM>
             remove program from list of commands to execute inside; for example,
             copy-and-paste value shown in `hardshare list` here

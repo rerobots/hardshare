@@ -103,6 +103,7 @@ pub struct WDeployment {
     pub cprovider: CProvider,
     pub cargs: Vec<String>,
     pub container_name: String,
+    pub env: HashMap<String, String>,
     pub init_inside: Vec<String>,
     pub terminate: Vec<String>,
     pub monitor: Option<String>,
@@ -160,6 +161,24 @@ impl WDeployment {
             "rrc"
         }
         .into();
+
+        let env = if h.contains_key("env") {
+            h["env"]
+                .as_object()
+                .expect("In config file, env should be map of strings to strings")
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        v.as_str()
+                            .expect("In config file, env values should be strings")
+                            .to_string(),
+                    )
+                })
+                .collect()
+        } else {
+            HashMap::new()
+        };
 
         let init_inside: Vec<String> = if h.contains_key("init_inside") {
             h["init_inside"]
@@ -238,6 +257,7 @@ impl WDeployment {
             cprovider,
             cargs,
             container_name,
+            env,
             image,
             init_inside,
             terminate,
@@ -622,6 +642,7 @@ mod tests {
                         "owner": "scott",
                         "cprovider": "proxy",
                         "cargs": [],
+                        "env": {},
                         "image": null,
                         "terminate": [],
                         "init_inside": [],
@@ -632,6 +653,7 @@ mod tests {
                         "owner": "bilbo",
                         "cprovider": "podman",
                         "cargs": [],
+                        "env": {},
                         "image": "rerobots/hs-generic",
                         "terminate": [],
                         "init_inside": [],

@@ -1255,6 +1255,7 @@ mod tests {
                 "owner": "bilbo",
                 "cprovider": "podman",
                 "cargs": [],
+                "env": {},
                 "image": "rerobots/hs-generic",
                 "terminate": [],
                 "init_inside": [],
@@ -1272,6 +1273,7 @@ mod tests {
                 "owner": "frodo",
                 "cprovider": "proxy",
                 "cargs": ["rrhttp", "127.0.0.1:8080"],
+                "env": {},
                 "init_inside": [],
                 "terminate": [],
                 "container_name": "rrc"

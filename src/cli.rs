@@ -183,6 +183,12 @@ fn print_config_w<T: Write>(
                 wd.cprovider,
                 wd.cargs.join(", "),
             )?;
+            if !wd.env.is_empty() {
+                writeln!(f, "\tenv:")?;
+                for (k, v) in wd.env.iter() {
+                    writeln!(f, "\t\t{k}: {v}")?;
+                }
+            }
             if wd.cprovider == CProvider::Docker
                 || wd.cprovider == CProvider::DockerRootless
                 || wd.cprovider == CProvider::Podman
@@ -712,6 +718,35 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
             return match ac.register_hook_emails(&local_config.wdeployments[wd_index].id, addr) {
                 Ok(()) => Ok(()),
                 Err(err) => CliError::new_std(err, 1),
+            };
+        } else if let Some(envspec) = matches.value_of("add_env_var") {
+            let sep = match envspec.find("=") {
+                Some(k) => k,
+                None => {
+                    return CliError::new(
+                        "environment variable definition must have the form NAME=VALUE",
+                        1,
+                    );
+                }
+            };
+            local_config.wdeployments[wd_index]
+                .env
+                .insert(envspec[..sep].to_string(), envspec[(sep + 1)..].to_string());
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
+        } else if let Some(name) = matches.value_of("rm_env_var") {
+            if local_config.wdeployments[wd_index]
+                .env
+                .remove(name)
+                .is_none()
+            {
+                return CliError::new(format!("Environment variable {name} does not exist"), 1);
+            }
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
             };
         } else {
             let errmessage = "Use `hardshare config` with a switch. To get a help message, enter\n\n    hardshare help config";
@@ -1335,7 +1370,15 @@ pub fn main() -> Result<(), CliError> {
                     .arg(Arg::with_name("hook_emails")
                         .long("hook-emails")
                         .value_name("ADDRESSES")
-                        .help("specify email addresses to receive alerts; use `-` to indicate none"))
+                         .help("specify email addresses to receive alerts; use `-` to indicate none"))
+                    .arg(Arg::with_name("add_env_var")
+                         .long("add-env")
+                         .value_name("VAR")
+                         .help("add environment variable definition, of the form `NAME=VALUE`"))
+                    .arg(Arg::with_name("rm_env_var")
+                         .long("rm-env")
+                         .value_name("VAR")
+                         .help("remove environment variable"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))
