@@ -697,7 +697,7 @@ impl CurrentInstance {
         if let Some(tunnel) = tunnel_ref.as_mut() {
             debug!("killing ssh tunnel process: {:?}", tunnel.proc);
             if let Err(err) = tunnel.proc.kill() {
-                warn!("tunnel kill: : {err}");
+                warn!("tunnel kill: {err}");
             }
             match tunnel.proc.wait() {
                 Ok(s) => {
@@ -714,7 +714,7 @@ impl CurrentInstance {
                 if let Some(subprocess) = tunnel.container_addr.subprocess.as_mut() {
                     debug!("killing proxy process: {subprocess:?}");
                     if let Err(err) = subprocess.kill() {
-                        warn!("proxy kill: : {err}");
+                        warn!("proxy kill: {err}");
                     }
                     match subprocess.wait() {
                         Ok(s) => {
