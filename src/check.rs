@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
 use crate::mgmt::{self, CProvider, Config, WDeployment};
@@ -297,6 +298,7 @@ pub fn config(
     if let Err(err) = control::CurrentInstance::launch_container(
         &local_config.wdeployments[wd_index],
         cname,
+        HashMap::new(),
         "checkkey",
     ) {
         let mut msg = format!("caught while creating test container: {err}");
@@ -412,7 +414,9 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
 
     info!("simulating instance launch ...");
     let cname = "check";
-    if let Err(err) = control::CurrentInstance::launch_container(&wdeployment, cname, "checkkey") {
+    if let Err(err) =
+        control::CurrentInstance::launch_container(&wdeployment, cname, HashMap::new(), "checkkey")
+    {
         let msg = format!("caught while creating test container: {err}");
         if fail_fast {
             return Err(Error::new(&msg));

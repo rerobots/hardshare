@@ -546,16 +546,21 @@ impl CurrentInstance {
     ) {
         let base_name = instance.wdeployment.container_name.clone();
         let name = instance.generate_local_name(&base_name);
-        let container_addr = match Self::launch_container(&instance.wdeployment, &name, public_key)
-        {
-            Ok(ca) => ca,
-            Err(err) => {
-                error!("{err}");
-                instance.declare_status(InstanceStatus::InitFail);
-                instance.send_status();
-                return;
-            }
-        };
+        let mut env = HashMap::new();
+        env.insert(
+            "REROBOTS_INSTANCE".to_string(),
+            instance.id.clone().expect("Instance ID should be defined"),
+        );
+        let container_addr =
+            match Self::launch_container(&instance.wdeployment, &name, env, public_key) {
+                Ok(ca) => ca,
+                Err(err) => {
+                    error!("{err}");
+                    instance.declare_status(InstanceStatus::InitFail);
+                    instance.send_status();
+                    return;
+                }
+            };
         if abort_launch.load(atomic::Ordering::Relaxed) {
             error!("received request to abort launch");
             instance.declare_status(InstanceStatus::InitFail);
@@ -751,6 +756,7 @@ impl CurrentInstance {
     pub fn launch_container(
         wdeployment: &WDeployment,
         name: &str,
+        env: HashMap<String, String>,
         public_key: &str,
     ) -> Result<ContainerAddress, Box<dyn std::error::Error>> {
         let cprovider = wdeployment.cprovider.clone();
@@ -770,6 +776,9 @@ impl CurrentInstance {
                 }
             };
 
+            let mut envspec = wdeployment.env.clone();
+            envspec.extend(env);
+
             let mut run_command = Command::new(&cprovider_execname);
             let mut run_command = run_command.args([
                 "run",
@@ -781,6 +790,10 @@ impl CurrentInstance {
                 "--device=/dev/net/tun:/dev/net/tun",
                 "--cap-add=NET_ADMIN",
             ]);
+            if !envspec.is_empty() {
+                run_command =
+                    run_command.args(envspec.iter().map(|(k, v)| format!("--env={k}={v}")));
+            }
             if cprovider != CProvider::Docker {
                 run_command = run_command.args(["--cap-add=CAP_SYS_CHROOT"]);
             }
@@ -802,6 +815,21 @@ impl CurrentInstance {
                 return Err(Error::new(format!(
                     "run command failed: {command_result:?}"
                 )));
+            }
+
+            for (k, v) in envspec.iter() {
+                let env_result = Command::new(&cprovider_execname)
+                    .args([
+                        "exec",
+                        name,
+                        "/bin/sh",
+                        "-c",
+                        &format!("echo '{k}={v}' >> /etc/environment"),
+                    ])
+                    .status()?;
+                if !env_result.success() {
+                    return Err(Error::new(format!("env command failed: {env_result:?}")));
+                }
             }
 
             ip = if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
