@@ -189,6 +189,12 @@ fn print_config_w<T: Write>(
                     writeln!(f, "\t\t{k}: {v}")?;
                 }
             }
+            if !wd.services.is_empty() {
+                writeln!(f, "\tservices:")?;
+                for (k, v) in wd.services.iter() {
+                    writeln!(f, "\t\t{k}: {v}")?;
+                }
+            }
             if wd.cprovider == CProvider::Docker
                 || wd.cprovider == CProvider::DockerRootless
                 || wd.cprovider == CProvider::Podman
@@ -743,6 +749,36 @@ fn config_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
                 .is_none()
             {
                 return CliError::new(format!("Environment variable {name} does not exist"), 1);
+            }
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
+        } else if let Some(servspec) = matches.value_of("add_serv") {
+            let sep = match servspec.find("=") {
+                Some(k) => k,
+                None => {
+                    return CliError::new(
+                        "service specification must have the form NAME=COMMAND",
+                        1,
+                    );
+                }
+            };
+            local_config.wdeployments[wd_index].services.insert(
+                servspec[..sep].to_string(),
+                servspec[(sep + 1)..].to_string(),
+            );
+            return match mgmt::modify_local(&local_config) {
+                Err(err) => CliError::new_std(err, 1),
+                Ok(()) => Ok(()),
+            };
+        } else if let Some(name) = matches.value_of("rm_serv") {
+            if local_config.wdeployments[wd_index]
+                .services
+                .remove(name)
+                .is_none()
+            {
+                return CliError::new(format!("Service {name} does not exist"), 1);
             }
             return match mgmt::modify_local(&local_config) {
                 Err(err) => CliError::new_std(err, 1),
@@ -1379,6 +1415,14 @@ pub fn main() -> Result<(), CliError> {
                          .long("rm-env")
                          .value_name("VAR")
                          .help("remove environment variable"))
+                    .arg(Arg::with_name("add_serv")
+                         .long("add-service")
+                         .value_name("SPEC")
+                         .help("add a service to instances, of the form `NAME=COMMAND`, where COMMAND is a command-line style invocation"))
+                    .arg(Arg::with_name("rm_serv")
+                         .long("rm-service")
+                         .value_name("NAME")
+                         .help("remove a service"))
                     .arg(Arg::with_name("id_prefix")
                          .value_name("ID")
                          .help("id of workspace deployment for configuration changes (can be unique prefix); this argument is not required if there is only 1 workspace deployment")))

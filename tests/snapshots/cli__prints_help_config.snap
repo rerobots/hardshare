@@ -22,6 +22,9 @@ OPTIONS:
         --add-init-inside <PROGRAM>
             add program to be executed inside container during initialization
 
+        --add-service <SPEC>
+            add a service to instances, of the form `NAME=COMMAND`, where
+            COMMAND is a command-line style invocation
         --add-terminate-prog <PROGRAM>
             add program to list of commands to execute
 
@@ -55,6 +58,7 @@ OPTIONS:
         --rm-init-inside <PROGRAM>
             remove program from list of commands to execute inside; for example,
             copy-and-paste value shown in `hardshare list` here
+        --rm-service <NAME>               remove a service
         --rm-terminate-prog <PROGRAM>
             remove program from list of commands to execute; for example, copy-
             and-paste value shown in `hardshare list` here

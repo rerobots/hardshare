@@ -105,6 +105,7 @@ pub struct WDeployment {
     pub container_name: String,
     pub env: HashMap<String, String>,
     pub init_inside: Vec<String>,
+    pub services: HashMap<String, String>,
     pub terminate: Vec<String>,
     pub monitor: Option<String>,
 
@@ -195,6 +196,24 @@ impl WDeployment {
             vec![]
         };
 
+        let services = if h.contains_key("services") {
+            h["services"]
+                .as_object()
+                .expect("In config file, services should be map of strings to strings")
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        v.as_str()
+                            .expect("In config file, service values should be strings")
+                            .to_string(),
+                    )
+                })
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
         let terminate: Vec<String> = if h.contains_key("terminate") {
             h["terminate"]
                 .as_array()
@@ -260,6 +279,7 @@ impl WDeployment {
             env,
             image,
             init_inside,
+            services,
             terminate,
             monitor,
             url,
@@ -644,6 +664,7 @@ mod tests {
                         "cargs": [],
                         "env": {},
                         "image": null,
+                        "services": {},
                         "terminate": [],
                         "init_inside": [],
                         "container_name": "rrc"
@@ -655,6 +676,7 @@ mod tests {
                         "cargs": [],
                         "env": {},
                         "image": "rerobots/hs-generic",
+                        "services": {},
                         "terminate": [],
                         "init_inside": [],
                         "container_name": "rrc"

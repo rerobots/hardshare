@@ -1285,6 +1285,7 @@ mod tests {
                 "cargs": [],
                 "env": {},
                 "image": "rerobots/hs-generic",
+                "services": {},
                 "terminate": [],
                 "init_inside": [],
                 "container_name": "rrc"
@@ -1303,6 +1304,7 @@ mod tests {
                 "cargs": ["rrhttp", "127.0.0.1:8080"],
                 "env": {},
                 "init_inside": [],
+                "services": {},
                 "terminate": [],
                 "container_name": "rrc"
             }"#,
