@@ -78,6 +78,7 @@ pub struct CurrentInstance {
     local_name: Arc<Mutex<Option<String>>>,
     main_actor_addr: Option<Addr<api::MainActor>>,
     responses: Arc<Mutex<HashMap<String, Option<CWorkerCommand>>>>,
+    services: Arc<Mutex<HashMap<String, std::process::Child>>>,
     tunnel: Arc<Mutex<Option<SshTunnel>>>,
 }
 
@@ -93,6 +94,7 @@ impl CurrentInstance {
             local_name: Arc::new(Mutex::new(None)),
             main_actor_addr: main_actor_addr.cloned(),
             responses: Arc::new(Mutex::new(HashMap::new())),
+            services: Arc::new(Mutex::new(HashMap::new())),
             tunnel: Arc::new(Mutex::new(None)),
         }
     }
