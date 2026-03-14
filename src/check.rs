@@ -299,6 +299,7 @@ pub fn config(
         &local_config.wdeployments[wd_index],
         cname,
         HashMap::new(),
+        &mut HashMap::new(),
         "checkkey",
     ) {
         let mut msg = format!("caught while creating test container: {err}");
@@ -414,9 +415,13 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
 
     info!("simulating instance launch ...");
     let cname = "check";
-    if let Err(err) =
-        control::CurrentInstance::launch_container(&wdeployment, cname, HashMap::new(), "checkkey")
-    {
+    if let Err(err) = control::CurrentInstance::launch_container(
+        &wdeployment,
+        cname,
+        HashMap::new(),
+        &mut HashMap::new(),
+        "checkkey",
+    ) {
         let msg = format!("caught while creating test container: {err}");
         if fail_fast {
             return Err(Error::new(&msg));

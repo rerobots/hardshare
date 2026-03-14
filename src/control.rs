@@ -426,13 +426,10 @@ impl CurrentInstance {
         Err("host key not found".into())
     }
 
-    fn start_proxy(
+    fn start_service(
         cargs: &[String],
         timeout: u64,
-    ) -> Result<(std::process::Child, Port), Box<dyn std::error::Error>> {
-        if cargs[0] != "rrhttp" {
-            return Err("only rrhttp proxy supported".into());
-        }
+    ) -> Result<(std::process::Child, String), Box<dyn std::error::Error>> {
         let mut child = Command::new(&cargs[0])
             .args(cargs[1..].iter())
             .stdout(Stdio::piped())
@@ -451,9 +448,7 @@ impl CurrentInstance {
             for b in buf.iter().take(n) {
                 if *b == 0x0a {
                     let line = String::from_utf8(acc)?;
-                    let parts: Vec<&str> = line.split(':').collect();
-                    let port = Port::from_str(parts[1])?;
-                    return Ok((child, port));
+                    return Ok((child, line));
                 }
                 acc.push(*b);
             }
@@ -553,16 +548,19 @@ impl CurrentInstance {
             "REROBOTS_INSTANCE".to_string(),
             instance.id.clone().expect("Instance ID should be defined"),
         );
-        let container_addr =
-            match Self::launch_container(&instance.wdeployment, &name, env, public_key) {
-                Ok(ca) => ca,
-                Err(err) => {
-                    error!("{err}");
-                    instance.declare_status(InstanceStatus::InitFail);
-                    instance.send_status();
-                    return;
-                }
-            };
+        let launch_result = {
+            let mut services = instance.services.lock().expect("Services lock can be held");
+            Self::launch_container(&instance.wdeployment, &name, env, &mut services, public_key)
+        };
+        let container_addr = match launch_result {
+            Ok(ca) => ca,
+            Err(err) => {
+                error!("{err}");
+                instance.declare_status(InstanceStatus::InitFail);
+                instance.send_status();
+                return;
+            }
+        };
         if abort_launch.load(atomic::Ordering::Relaxed) {
             error!("received request to abort launch");
             instance.declare_status(InstanceStatus::InitFail);
@@ -699,6 +697,25 @@ impl CurrentInstance {
         }
     }
 
+    fn stop_services(&self) {
+        let mut services = self.services.lock().expect("Lock on services can be held");
+        for process in services.values_mut() {
+            if let Err(err) = process.kill() {
+                warn!("service kill: {err}");
+            }
+            match process.wait() {
+                Ok(s) => {
+                    if !s.success() {
+                        warn!("exit code: {:?}", s.code());
+                    }
+                }
+                Err(err) => {
+                    error!("{err}");
+                }
+            }
+        }
+    }
+
     fn stop_tunnel(&self) {
         let mut tunnel_ref = self.tunnel.lock().expect("Lock on tunnel info can be held");
         if let Some(tunnel) = tunnel_ref.as_mut() {
@@ -741,6 +758,7 @@ impl CurrentInstance {
 
     fn destroy(mut instance: CurrentInstance) {
         instance.stop_tunnel();
+        instance.stop_services();
 
         let name = instance
             .get_local_name()
@@ -759,6 +777,7 @@ impl CurrentInstance {
         wdeployment: &WDeployment,
         name: &str,
         env: HashMap<String, String>,
+        services: &mut HashMap<String, std::process::Child>,
         public_key: &str,
     ) -> Result<ContainerAddress, Box<dyn std::error::Error>> {
         let cprovider = wdeployment.cprovider.clone();
@@ -780,6 +799,15 @@ impl CurrentInstance {
 
             let mut envspec = wdeployment.env.clone();
             envspec.extend(env);
+
+            for (name, command) in wdeployment.services.iter() {
+                let command_parts: Vec<String> =
+                    command.split_whitespace().map(|x| x.to_string()).collect();
+                let (service_process, connection_info) =
+                    CurrentInstance::start_service(&command_parts, 10)?;
+                envspec.insert(name.clone(), connection_info);
+                services.insert(name.clone(), service_process);
+            }
 
             let mut run_command = Command::new(&cprovider_execname);
             let mut run_command = run_command.args([
@@ -941,9 +969,11 @@ impl CurrentInstance {
         } else if cprovider == CProvider::Lxd {
             return Err(Error::new("lxd cprovider not implemented yet"));
         } else if cprovider == CProvider::Proxy {
-            let res = CurrentInstance::start_proxy(&wdeployment.cargs, 5)?;
-            port = res.1;
-            ip = "127.0.0.1".into();
+            let res = CurrentInstance::start_service(&wdeployment.cargs, 5)?;
+            let addr = res.1;
+            let parts: Vec<&str> = addr.split(':').collect();
+            ip = parts[0].to_string();
+            port = Port::from_str(parts[1])?;
             hostkey = "".into();
             subprocess = Some(res.0);
         } else {
