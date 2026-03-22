@@ -5,11 +5,15 @@
 //     upload_protocol = custom
 //     upload_command = platformio-proxy $PROJECT_CONFIG $SOURCE
 
+use std::convert::TryFrom;
 use std::env;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process;
+use std::process::{Command, Stdio};
+
+use tempfile::NamedTempFile;
 
 #[macro_use]
 extern crate log;
@@ -21,6 +25,34 @@ enum Mode {
     Client,
 }
 
+#[derive(Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+enum Runtime {
+    Docker,
+    Podman,
+}
+
+impl TryFrom<String> for Runtime {
+    type Error = &'static str;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "docker" => Ok(Self::Docker),
+            "podman" => Ok(Self::Podman),
+            _ => Err("runtime must be one of the following: docker, podman"),
+        }
+    }
+}
+
+impl std::fmt::Display for Runtime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Docker => write!(f, "docker"),
+            Self::Podman => write!(f, "podman"),
+        }
+    }
+}
+
 const COMMAND_UPLOAD: u8 = 0;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,15 +61,55 @@ struct Build {
     blob: Vec<u8>,
 }
 
-fn do_upload(build: Build, host_platformio_ini: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn do_upload(
+    runtime: &Runtime,
+    build: Build,
+    host_platformio_ini: &str,
+    build_path: &str,
+    img: &str,
+    device: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let host_ini_temp = NamedTempFile::new()?;
+    let host_build_temp = NamedTempFile::new()?;
+
+    std::fs::write(host_ini_temp.path(), host_platformio_ini)?;
+    std::fs::write(host_build_temp.path(), build.blob)?;
+    let mut proc = Command::new(runtime.to_string())
+        .args([
+            "run",
+            "--rm",
+            "-it",
+            "-v",
+            &format!("{}:/root/platformio.ini:ro", host_ini_temp.path().display()),
+            "-v",
+            &format!("{}:{}:ro", host_build_temp.path().display(), build_path),
+            &format!("--device={device}:{device}"),
+            img,
+            "bash",
+            "-ic",
+            "cd $HOME && pio run -t nobuild -t upload",
+        ])
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let stdout = proc
+        .stdout
+        .as_mut()
+        .ok_or("stdout of upload process should be captured")?;
+    let mut buf = vec![];
+    let nb = stdout.read_to_end(&mut buf)?;
+    let x = String::from_utf8_lossy(&buf[..nb]);
+    println!("{}", x);
     Ok(())
 }
 
 fn serv(
     addr: std::net::SocketAddr,
     host_ini_file: PathBuf,
+    runtime: Runtime,
+    build_path: &str,
+    img: &str,
+    device: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut header_len = 2;
     let host_platformio_ini = String::from_utf8(std::fs::read(&host_ini_file)?)?;
     let listener = TcpListener::bind(addr)?;
     println!("{}", listener.local_addr()?);
@@ -50,6 +122,7 @@ fn serv(
             }
         };
 
+        let mut header_len = 2;
         let mut raw_read: Vec<u8> = vec![];
         let raw_read_count = stream.read_to_end(&mut raw_read)?;
         if raw_read_count < header_len {
@@ -74,7 +147,7 @@ fn serv(
                         .drain(header_len..(header_len + exe_size))
                         .collect(),
                 };
-                do_upload(b, &host_platformio_ini)?;
+                do_upload(&runtime, b, &host_platformio_ini, build_path, img, device)?;
             }
             _ => {
                 warn!("unknown command: {}", raw_read[1]);
@@ -124,8 +197,8 @@ fn client(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if env::args_os().len() != 4 && env::args_os().len() != 5 {
-        eprintln!("Usage: platformio-proxy MODE ADDR INI [EXE]");
+    if env::args_os().len() != 5 && env::args_os().len() != 8 {
+        eprintln!("Usage: platformio-proxy MODE ADDR INI [EXE] [RUNTIME BUILDPATH IMG DEV]");
         process::exit(1);
     }
     let mode = env::args_os().nth(1).expect("MODE argument is required");
@@ -164,6 +237,68 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             client(addr, ini_file, exe_file)
         }
-        Mode::Server => serv(addr, ini_file),
+        Mode::Server => {
+            let arg = match env::args_os().nth(4) {
+                Some(p) => match p.into_string() {
+                    Ok(s) => s,
+                    Err(err) => {
+                        eprintln!("Error: unrecognized format of runtime: {err:?}");
+                        process::exit(1);
+                    }
+                },
+                None => {
+                    eprintln!("Error: runtime required in server mode");
+                    process::exit(1);
+                }
+            };
+            let runtime = match Runtime::try_from(arg) {
+                Ok(r) => r,
+                Err(err) => {
+                    eprintln!("Error: {err}");
+                    process::exit(1);
+                }
+            };
+
+            let build_path = match env::args_os().nth(5) {
+                Some(p) => match p.into_string() {
+                    Ok(s) => s,
+                    Err(err) => {
+                        eprintln!("Error: unrecognized format of build path: {err:?}");
+                        process::exit(1);
+                    }
+                },
+                None => {
+                    eprintln!("Error: build path required in server mode");
+                    process::exit(1);
+                }
+            };
+            let img = match env::args_os().nth(6) {
+                Some(p) => match p.into_string() {
+                    Ok(s) => s,
+                    Err(err) => {
+                        eprintln!("Error: unrecognized format of image name: {err:?}");
+                        process::exit(1);
+                    }
+                },
+                None => {
+                    eprintln!("Error: image name required in server mode");
+                    process::exit(1);
+                }
+            };
+            let device = match env::args_os().nth(7) {
+                Some(p) => match p.into_string() {
+                    Ok(s) => s,
+                    Err(err) => {
+                        eprintln!("Error: unrecognized format of device file name: {err:?}");
+                        process::exit(1);
+                    }
+                },
+                None => {
+                    eprintln!("Error: device name required in server mode");
+                    process::exit(1);
+                }
+            };
+            serv(addr, ini_file, runtime, &build_path, &img, &device)
+        }
     }
 }
