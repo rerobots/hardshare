@@ -3,7 +3,7 @@
 // platformio-proxy safely moves firmware from inside containers to attached devices.
 //
 //     upload_protocol = custom
-//     upload_command = platformio-proxy $PROJECT_CONFIG $SOURCE
+//     upload_command = platformio-proxy c $REROBOTS_PLATFORMIO $PROJECT_CONFIG $PROGPATH
 
 use std::convert::TryFrom;
 use std::env;
