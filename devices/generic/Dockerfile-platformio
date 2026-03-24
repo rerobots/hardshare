@@ -39,7 +39,20 @@ RUN . $HOME/.cargo/env \
     && cd hardshare \
     && export CMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && cargo build --bin platformio-proxy --release --locked \
-    && mv target/release/platformio-proxy /usr/local/bin/ \
+    && mv target/release/platformio-proxy /usr/local/bin/
+
+RUN mkdir -p /usr/local/lib/rerobots
+COPY rerobots_pio.py /usr/local/lib/rerobots/pio.py
+
+# Requires instances with environment variable
+# PLATFORMIO_EXTRA_SCRIPTS=/usr/local/lib/rerobots/pio.py
+# cf. https://docs.platformio.org/en/latest/envvars.html
+#RUN cd hardshare \
+#    && mkdir -p /usr/local/lib/rerobots \
+#    && cp integrations/platformio/rerobots_pio.py /usr/local/lib/rerobots/pio.py
+
+RUN . $HOME/.cargo/env \
+    && cd hardshare \
     && cargo clean \
     && cd .. && rm -rf hardshare
 
