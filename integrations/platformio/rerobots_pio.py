@@ -11,6 +11,6 @@ if 'REROBOTS_PLATFORMIO' in os.environ:
     env.Replace(UPLOAD_PORT='/dev/null')
 
     def rrserial_cb(*args, **kwargs):
-        env.Execute('pio device monitor -p socket://$REROBOTS_SERIAL')
+        env.Execute('pio device monitor -p socket://' + os.environ['REROBOTS_SERIAL'])
 
     env.AddCustomTarget("rrserial", None, rrserial_cb)
