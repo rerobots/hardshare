@@ -1,6 +1,6 @@
 # Base image with packages required for PlatformIO (https://platformio.org/)
 #
-#     docker build -t rerobots/hs-generic-platformio:latest -f Dockerfile-platformio .
+#     docker build -t rerobots/hs-generic-platformio:latest -f devices/generic/Dockerfile-platformio .
 #
 #
 # SCL <scott@rerobots.net>
@@ -34,9 +34,12 @@ RUN test `uname -m` = x86_64 && DEBIAN_FRONTEND=noninteractive apt-get install -
     libjpeg-dev \
     nasm
 
-RUN git clone --depth=1 https://github.com/rerobots/hardshare.git
+RUN mkdir -p hardshare
+COPY Cargo.toml Cargo.lock /root/hardshare/
+COPY src /root/hardshare/src/
+COPY integrations/platformio /root/hardshare/integrations/platformio/
 RUN . $HOME/.cargo/env \
-    && cd hardshare \
+    && cd /root/hardshare \
     && export CMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && cargo build --bin platformio-proxy --release --locked \
     && mv target/release/platformio-proxy /usr/local/bin/
@@ -44,12 +47,12 @@ RUN . $HOME/.cargo/env \
 # Requires instances with environment variable
 # PLATFORMIO_EXTRA_SCRIPTS=/usr/local/lib/rerobots/pio.py
 # cf. https://docs.platformio.org/en/latest/envvars.html
-RUN cd hardshare \
+RUN cd /root/hardshare \
     && mkdir -p /usr/local/lib/rerobots \
     && cp integrations/platformio/rerobots_pio.py /usr/local/lib/rerobots/pio.py
 
 RUN . $HOME/.cargo/env \
-    && cd hardshare \
+    && cd /root/hardshare \
     && cargo clean \
     && cd .. && rm -rf hardshare
 
