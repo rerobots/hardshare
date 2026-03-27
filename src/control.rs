@@ -847,21 +847,6 @@ impl CurrentInstance {
                 )));
             }
 
-            for (k, v) in envspec.iter() {
-                let env_result = Command::new(&cprovider_execname)
-                    .args([
-                        "exec",
-                        name,
-                        "/bin/sh",
-                        "-c",
-                        &format!("echo '{k}={v}' >> /etc/environment"),
-                    ])
-                    .status()?;
-                if !env_result.success() {
-                    return Err(Error::new(format!("env command failed: {env_result:?}")));
-                }
-            }
-
             ip = if cprovider == CProvider::Podman || cprovider == CProvider::DockerRootless {
                 "127.0.0.1".into()
             } else {
@@ -905,6 +890,21 @@ impl CurrentInstance {
                     )));
                 }
             };
+
+            for (k, v) in envspec.iter() {
+                let env_result = Command::new(&cprovider_execname)
+                    .args([
+                        "exec",
+                        name,
+                        "/bin/sh",
+                        "-c",
+                        &format!("echo '{k}={v}' >> /etc/environment"),
+                    ])
+                    .status()?;
+                if !env_result.success() {
+                    return Err(Error::new(format!("env command failed: {env_result:?}")));
+                }
+            }
 
             let mkdir_result = Command::new(&cprovider_execname)
                 .args(["exec", name, "/bin/mkdir", "-p", "/root/.ssh"])
