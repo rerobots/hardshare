@@ -699,14 +699,14 @@ impl CurrentInstance {
 
     fn stop_services(&self) {
         let mut services = self.services.lock().expect("Lock on services can be held");
-        for process in services.values_mut() {
+        for (envname, process) in services.iter_mut() {
             if let Err(err) = process.kill() {
                 warn!("service kill: {err}");
             }
             match process.wait() {
                 Ok(s) => {
                     if !s.success() {
-                        warn!("exit code: {:?}", s.code());
+                        warn!("exit code of service {envname}: {:?}", s.code());
                     }
                 }
                 Err(err) => {

@@ -89,8 +89,13 @@ fn do_upload(
             "-ic",
             "cd $HOME && pio run -t nobuild -t upload",
         ])
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()?;
+
+    proc.wait()?;
+
     let stdout = proc
         .stdout
         .as_mut()
@@ -98,7 +103,17 @@ fn do_upload(
     let mut buf = vec![];
     let nb = stdout.read_to_end(&mut buf)?;
     let x = String::from_utf8_lossy(&buf[..nb]);
-    println!("{}", x);
+    info!("stdout: {}", x);
+
+    let stderr = proc
+        .stderr
+        .as_mut()
+        .ok_or("stderr of upload process should be captured")?;
+    let mut buf = vec![];
+    let nb = stderr.read_to_end(&mut buf)?;
+    let x = String::from_utf8_lossy(&buf[..nb]);
+    info!("stderr: {}", x);
+
     Ok(())
 }
 
@@ -197,6 +212,8 @@ fn client(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     if env::args_os().len() != 5 && env::args_os().len() != 8 {
         eprintln!("Usage: platformio-proxy MODE ADDR INI [EXE] [RUNTIME BUILDPATH IMG DEV]");
         process::exit(1);
