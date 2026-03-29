@@ -78,16 +78,16 @@ fn do_upload(
         .args([
             "run",
             "--rm",
-            "-it",
+            "-t",
             "-v",
             &format!("{}:/root/platformio.ini:ro", host_ini_temp.path().display()),
             "-v",
-            &format!("{}:{}:ro", host_build_temp.path().display(), build_path),
+            &format!("{}:{}:rw", host_build_temp.path().display(), build_path),
             &format!("--device={device}:{device}"),
             img,
             "bash",
-            "-ic",
-            "cd $HOME && pio run -t nobuild -t upload",
+            "-c",
+            "cd $HOME && source /root/.platformio/penv/bin/activate && pio run -t nobuild -t upload",
         ])
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
