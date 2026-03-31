@@ -61,7 +61,8 @@ struct Build {
     blob: Vec<u8>,
 }
 
-fn do_upload(
+fn do_upload<W: Write>(
+    mut stream: W,
     runtime: &Runtime,
     build: Build,
     host_platformio_ini: &str,
@@ -103,7 +104,8 @@ fn do_upload(
     let mut buf = vec![];
     let nb = stdout.read_to_end(&mut buf)?;
     let x = String::from_utf8_lossy(&buf[..nb]);
-    info!("stdout: {}", x);
+    info!("stdout: {}", &x);
+    stream.write_all(x.as_bytes())?;
 
     let stderr = proc
         .stderr
@@ -113,7 +115,30 @@ fn do_upload(
     let nb = stderr.read_to_end(&mut buf)?;
     let x = String::from_utf8_lossy(&buf[..nb]);
     info!("stderr: {}", x);
+    stream.write_all(x.as_bytes())?;
 
+    Ok(())
+}
+
+fn extend_at_least<R: Read>(
+    target: usize,
+    buf: &mut Vec<u8>,
+    reader: &mut R,
+) -> Result<(), String> {
+    let mut part = [0; 128];
+    while buf.len() < target {
+        let nb = match reader.read(&mut part) {
+            Ok(nb) => nb,
+            Err(err) => match err.kind() {
+                std::io::ErrorKind::Interrupted => continue,
+                _ => return Err(err.to_string()),
+            },
+        };
+        if nb == 0 {
+            return Err("Insufficient data".to_string());
+        }
+        buf.extend_from_slice(&part[..nb]);
+    }
     Ok(())
 }
 
@@ -137,35 +162,51 @@ fn serv(
             }
         };
 
-        let mut header_len = 2;
-        let mut raw_read: Vec<u8> = vec![];
-        let raw_read_count = stream.read_to_end(&mut raw_read)?;
-        if raw_read_count < header_len {
-            warn!("Header is too small");
+        let mut header_len: usize = 2;
+        let mut msg = vec![];
+        if let Err(e) = extend_at_least(2, &mut msg, &mut stream) {
+            warn!("{e}");
             continue;
         }
-        let version = raw_read[0];
+        let version = msg[0];
         if version != 0 {
             warn!("Unknown version: {version}");
             continue;
         }
-        match raw_read[1] {
+        match msg[1] {
             COMMAND_UPLOAD => {
+                debug!("Received upload command");
                 header_len += 8;
-                let ini_size = u8vec_to_usize(&raw_read[2..6]);
-                let exe_size = u8vec_to_usize(&raw_read[6..10]);
+                if let Err(e) = extend_at_least(header_len, &mut msg, &mut stream) {
+                    warn!("{e}");
+                    continue;
+                }
+
+                let ini_size = u8vec_to_usize(&msg[2..6]);
+                let exe_size = u8vec_to_usize(&msg[6..10]);
+                if let Err(e) =
+                    extend_at_least(header_len + ini_size + exe_size, &mut msg, &mut stream)
+                {
+                    warn!("{e}");
+                    continue;
+                }
+
                 let b = Build {
-                    platformio_ini: raw_read
-                        .drain(header_len..(header_len + ini_size))
-                        .collect(),
-                    blob: raw_read
-                        .drain(header_len..(header_len + exe_size))
-                        .collect(),
+                    platformio_ini: msg.drain(header_len..(header_len + ini_size)).collect(),
+                    blob: msg.drain(header_len..(header_len + exe_size)).collect(),
                 };
-                do_upload(&runtime, b, &host_platformio_ini, build_path, img, device)?;
+                do_upload(
+                    stream,
+                    &runtime,
+                    b,
+                    &host_platformio_ini,
+                    build_path,
+                    img,
+                    device,
+                )?;
             }
             _ => {
-                warn!("unknown command: {}", raw_read[1]);
+                warn!("unknown command: {}", msg[1]);
                 continue;
             }
         }
@@ -207,6 +248,11 @@ fn client(
     stream.write_all(&header)?;
     stream.write_all(&ini_data)?;
     stream.write_all(&exe_data)?;
+
+    let mut buf = vec![];
+    let nb = stream.read_to_end(&mut buf)?;
+    let x = String::from_utf8_lossy(&buf[..nb]);
+    println!("{x}");
 
     Ok(())
 }
