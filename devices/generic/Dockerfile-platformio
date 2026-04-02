@@ -30,9 +30,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup.sh \
     && sh rustup.sh -y
 
-RUN test `uname -m` = x86_64 && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    libjpeg-dev \
-    nasm
+RUN if test `uname -m` = x86_64; then \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        libjpeg-dev \
+        nasm \
+    ;fi
 
 RUN mkdir -p hardshare
 COPY Cargo.toml Cargo.lock /root/hardshare/
