@@ -8,7 +8,7 @@
 use std::convert::TryFrom;
 use std::env;
 use std::io::prelude::*;
-use std::net::{TcpListener, TcpStream};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process;
 use std::process::{Command, Stdio};
@@ -19,6 +19,8 @@ use tempfile::NamedTempFile;
 extern crate log;
 
 use serde::{Deserialize, Serialize};
+
+use rerobots::platformio::{proxy_client, COMMAND_UPLOAD};
 
 enum Mode {
     Server,
@@ -52,8 +54,6 @@ impl std::fmt::Display for Runtime {
         }
     }
 }
-
-const COMMAND_UPLOAD: u8 = 0;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Build {
@@ -214,47 +214,12 @@ fn serv(
     Ok(())
 }
 
-fn usize_to_u8vec(x: usize) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    // Ignore bits beyond 32
-    Ok(vec![
-        (x & 0xff).try_into()?,
-        ((x >> 8) & 0xff).try_into()?,
-        ((x >> 16) & 0xff).try_into()?,
-        ((x >> 24) & 0xff).try_into()?,
-    ])
-}
-
 fn u8vec_to_usize(v: &[u8]) -> usize {
     let mut x: usize = 0;
     for (index, k) in v.iter().enumerate() {
         x |= (*k as usize) << (index * 8);
     }
     x
-}
-
-fn client(
-    addr: std::net::SocketAddr,
-    ini_file: PathBuf,
-    exe_file: PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let ini_data = std::fs::read(&ini_file)?;
-    let exe_data = std::fs::read(&exe_file)?;
-    let mut stream = TcpStream::connect(addr)?;
-
-    let mut header: Vec<u8> = vec![0, COMMAND_UPLOAD];
-    header.append(&mut usize_to_u8vec(ini_data.len())?);
-    header.append(&mut usize_to_u8vec(exe_data.len())?);
-
-    stream.write_all(&header)?;
-    stream.write_all(&ini_data)?;
-    stream.write_all(&exe_data)?;
-
-    let mut buf = vec![];
-    let nb = stream.read_to_end(&mut buf)?;
-    let x = String::from_utf8_lossy(&buf[..nb]);
-    println!("{x}");
-
-    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -298,7 +263,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     process::exit(1);
                 }
             };
-            client(addr, ini_file, exe_file)
+            proxy_client(addr, ini_file, exe_file)
         }
         Mode::Server => {
             let arg = match env::args_os().nth(4) {

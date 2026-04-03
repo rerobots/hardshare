@@ -1941,9 +1941,9 @@ dependencies = [
 
 [[package]]
 name = "openssl-probe"
-version = "0.1.6"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
+checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "openssl-src"
@@ -2269,14 +2269,13 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "rerobots"
-version = "0.12.2"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64611e43eb21049ff85abfd0025cc08c50f68aa53e7d696944709b1274b4acd0"
+checksum = "186d04b6ac1ccb2636ea2f528c8f55762edcacff4103cf1a71ab83dd0ef22c73"
 dependencies = [
  "actix",
  "awc",
  "chrono",
- "env_logger 0.11.8",
  "jwt",
  "log",
  "openssl",
