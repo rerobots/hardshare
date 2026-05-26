@@ -70,6 +70,11 @@ struct SshTunnel {
     container_addr: ContainerAddress,
 }
 
+pub struct ServiceInfo {
+    connection: String,
+    proc: std::process::Child,
+}
+
 #[derive(Clone)]
 pub struct CurrentInstance {
     wdeployment: Arc<WDeployment>,
@@ -78,7 +83,7 @@ pub struct CurrentInstance {
     local_name: Arc<Mutex<Option<String>>>,
     main_actor_addr: Option<Addr<api::MainActor>>,
     responses: Arc<Mutex<HashMap<String, Option<CWorkerCommand>>>>,
-    services: Arc<Mutex<HashMap<String, std::process::Child>>>,
+    services: Arc<Mutex<HashMap<String, ServiceInfo>>>,
     tunnel: Arc<Mutex<Option<SshTunnel>>>,
 }
 
@@ -699,11 +704,11 @@ impl CurrentInstance {
 
     fn stop_services(&self) {
         let mut services = self.services.lock().expect("Lock on services can be held");
-        for (envname, process) in services.iter_mut() {
-            if let Err(err) = process.kill() {
+        for (envname, info) in services.iter_mut() {
+            if let Err(err) = info.proc.kill() {
                 warn!("service kill: {err}");
             }
-            match process.wait() {
+            match info.proc.wait() {
                 Ok(s) => {
                     if !s.success() {
                         warn!("exit code of service {envname}: {:?}", s.code());
@@ -777,7 +782,7 @@ impl CurrentInstance {
         wdeployment: &WDeployment,
         name: &str,
         env: HashMap<String, String>,
-        services: &mut HashMap<String, std::process::Child>,
+        services: &mut HashMap<String, ServiceInfo>,
         public_key: &str,
     ) -> Result<ContainerAddress, Box<dyn std::error::Error>> {
         let cprovider = wdeployment.cprovider.clone();
@@ -805,8 +810,14 @@ impl CurrentInstance {
                     command.split_whitespace().map(|x| x.to_string()).collect();
                 let (service_process, connection_info) =
                     CurrentInstance::start_service(&command_parts, 10)?;
-                envspec.insert(name.clone(), connection_info);
-                services.insert(name.clone(), service_process);
+                envspec.insert(name.clone(), connection_info.clone());
+                services.insert(
+                    name.clone(),
+                    ServiceInfo {
+                        connection: connection_info,
+                        proc: service_process,
+                    },
+                );
             }
 
             let mut run_command = Command::new(&cprovider_execname);
