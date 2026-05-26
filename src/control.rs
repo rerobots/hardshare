@@ -150,9 +150,9 @@ impl CurrentInstance {
             match &*status {
                 Some(s) => {
                     let mut msg = json!({
-                    "v": 0,
-                    "cmd": "INSTANCE_STATUS",
-                    "s": s.to_string(),
+                        "v": 0,
+                        "cmd": "INSTANCE_STATUS",
+                        "s": s.to_string(),
                     });
 
                     if *s != InstanceStatus::Ready && *s != InstanceStatus::Init {
