@@ -169,6 +169,16 @@ impl CurrentInstance {
                             ),
                         });
                     } else {
+                        if *s == InstanceStatus::Ready {
+                            let service_connections: HashMap<String, String> = {
+                                let s = self.services.lock().expect("Services lock can be held");
+                                HashMap::from_iter(
+                                    s.iter().map(|(k, v)| (k.clone(), v.connection.clone())),
+                                )
+                            };
+                            msg["r"] = json!(service_connections);
+                        }
+
                         let hostkey = {
                             let tunnel =
                                 self.tunnel.lock().expect("Lock on tunnel info can be held");
