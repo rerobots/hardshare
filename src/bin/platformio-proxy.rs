@@ -104,7 +104,7 @@ fn do_upload<W: Write>(
     let mut buf = vec![];
     let nb = stdout.read_to_end(&mut buf)?;
     let x = String::from_utf8_lossy(&buf[..nb]);
-    info!("stdout: {}", &x);
+    info!("stdout: {}", x);
     stream.write_all(x.as_bytes())?;
 
     let stderr = proc

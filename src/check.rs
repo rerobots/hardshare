@@ -287,7 +287,7 @@ pub fn config(
     if let Err(err) = check_cprovider(&local_config.wdeployments[wd_index]) {
         return Err(Error::new(format!(
             "{}\nIs {} installed correctly?",
-            err, &local_config.wdeployments[wd_index].cprovider
+            err, local_config.wdeployments[wd_index].cprovider
         )));
     }
 
@@ -375,7 +375,7 @@ pub fn all_configurations(
             remote_config.as_ref(),
             fail_fast,
         ) {
-            let msg = format!("{}: {}", &wd.id, err);
+            let msg = format!("{}: {}", wd.id, err);
             if fail_fast {
                 return Err(Error::new(&msg));
             }
@@ -409,7 +409,7 @@ pub fn defaults(check_camera: bool, fail_fast: bool) -> Result<(), Box<dyn std::
     if let Err(err) = check_cprovider(&wdeployment) {
         return Err(Error::new(format!(
             "{}\nIs {} installed correctly?",
-            err, &wdeployment.cprovider
+            err, wdeployment.cprovider
         )));
     }
 

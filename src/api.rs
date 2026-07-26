@@ -782,12 +782,12 @@ impl HSAPIClient {
             let ac_inner = get_client_lock(ac);
             authheader = format!(
                 "Bearer {}",
-                &ac_inner
+                ac_inner
                     .cached_api_token
                     .as_ref()
                     .ok_or("API token should be available")?
             );
-            url = format!("{}/hardshare/ad/{}", &ac_inner.origin, wdid);
+            url = format!("{}/hardshare/ad/{}", ac_inner.origin, wdid);
 
             let local_config = &mut ac_inner
                 .local_config

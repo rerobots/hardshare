@@ -1051,7 +1051,7 @@ fn dissolve_subcommand(matches: &clap::ArgMatches) -> Result<(), CliError> {
 
     confirm(&format!(
         "Do you want to dissolve {}? This action cannot be undone. [y/N] ",
-        &local_config.wdeployments[wd_index].id,
+        local_config.wdeployments[wd_index].id,
     ))?;
 
     let mut ac = api::HSAPIClient::new();

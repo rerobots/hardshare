@@ -1151,7 +1151,7 @@ pub fn cworker(
                         if let Err(err) = current_instance.terminate() {
                             error!(
                                 "terminate request for instance {} failed: {}",
-                                &req.instance_id, err
+                                req.instance_id, err
                             );
                         }
                     }
