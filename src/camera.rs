@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::mpsc;
+use std::sync::atomic::{self, AtomicBool};
+use std::sync::{mpsc, Arc};
 use std::time::Duration;
 
 use actix::io::SinkWrite;
@@ -99,14 +100,49 @@ enum CaptureCommand {
     Quit,  // Return from (close) the thread
 }
 
+// Wrap to make this blocking instead of using a callback
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn initialize_nokhwa() -> Result<(), std::string::String> {
+    use nokhwa::nokhwa_initialize;
+
+    let nokhwa_initialized = Arc::new(AtomicBool::new(false));
+    let nokhwa_initialized_clone = nokhwa_initialized.clone();
+
+    let init_result = Arc::new(AtomicBool::new(false));
+    let init_result_clone = init_result.clone();
+
+    nokhwa_initialize(move |x| {
+        init_result_clone.store(x, atomic::Ordering::Relaxed);
+        nokhwa_initialized_clone.store(true, atomic::Ordering::Relaxed);
+    });
+
+    while !nokhwa_initialized.load(atomic::Ordering::Relaxed) {
+        std::thread::sleep(Duration::from_millis(300));
+        // TODO: add timeout
+    }
+
+    match init_result.load(atomic::Ordering::Relaxed) {
+        true => Ok(()),
+        false => Err("nokhwa_initialize() failed".into()),
+    }
+}
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn verify_capture_ability(
     camera_path: &str,
     dimensions: Option<CameraDimensions>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use openpnp_capture::{Device, Format, Stream};
+    use nokhwa::{
+        native_api_backend,
+        pixel_format::RgbFormat,
+        query,
+        utils::{CameraIndex, RequestedFormat, RequestedFormatType, Resolution},
+        Camera,
+    };
 
-    let camera_index: usize = match camera_path.parse() {
+    initialize_nokhwa()?;
+
+    let camera_index: u32 = match camera_path.parse() {
         Ok(c) => c,
         Err(err) => {
             return Err(CheckError::new(format!(
@@ -114,38 +150,40 @@ fn verify_capture_ability(
             )));
         }
     };
-    debug!("enumerating camera devices");
-    let devices = Device::enumerate();
+    debug!("starting camera backend");
+    let backend = native_api_backend().ok_or("nokhwa::native_api_backend() failed")?;
 
-    debug!("opening camera {camera_index}");
-    if camera_index > devices.len() - 1 {
+    debug!("enumerating camera devices");
+    let devices = query(backend)?;
+
+    if camera_index as usize > devices.len() - 1 {
         return Err(CheckError::new(format!(
             "camera index is out of range: {camera_index}"
         )));
     }
-    let dev = match Device::new(devices[camera_index]) {
-        Some(d) => d,
-        None => {
-            return Err(CheckError::new("failed to open camera device"));
+
+    debug!("opening camera {camera_index}");
+    let camera_index = CameraIndex::Index(camera_index);
+    let format = match dimensions {
+        Some(d) => {
+            let resolution = Resolution::new(d.width, d.height);
+            RequestedFormat::new::<RgbFormat>(RequestedFormatType::HighestResolution(resolution))
+        }
+        None => RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestResolution),
+    };
+
+    let mut dev = match Camera::new(camera_index, format) {
+        Ok(d) => d,
+        Err(err) => {
+            return Err(CheckError::new(format!(
+                "failed to open camera device: {err}"
+            )));
         }
     };
 
-    let (mut width, mut height) = match dimensions {
-        Some(d) => (d.width, d.height),
-        None => (1280, 720),
-    };
-    let format = Format::default().width(width).height(height);
-
-    let stream = match Stream::new(&dev, &format) {
-        Some(s) => s,
-        None => {
-            return Err(CheckError::new("failed to create camera stream"));
-        }
-    };
-    if stream.format().width != width || stream.format().height != height {
-        (width, height) = (stream.format().width, stream.format().height);
-        warn!("requested format not feasible; falling back to ({width}, {height})");
-    }
+    dev.open_stream()?;
+    dev.frame()?;
+    dev.stop_stream()?;
 
     Ok(())
 }
@@ -159,62 +197,60 @@ fn video_capture(
 ) {
     use std::io::Cursor;
 
-    use openpnp_capture::{Device, Format, Stream};
+    use nokhwa::{
+        pixel_format::RgbFormat,
+        utils::{CameraIndex, RequestedFormat, RequestedFormatType, Resolution},
+        Camera,
+    };
 
-    let camera_index: usize = match camera_path.parse() {
+    let camera_index = CameraIndex::Index(match camera_path.parse() {
         Ok(c) => c,
         Err(err) => {
             error!("error parsing camera index: {err}");
             return;
         }
-    };
-    debug!("enumerating camera devices");
-    let devices = Device::enumerate();
+    });
 
-    debug!("opening camera {camera_index}");
-    let dev = match Device::new(devices[camera_index]) {
-        Some(d) => d,
-        None => {
-            error!("failed to open camera device");
+    let (width, height) = match dimensions {
+        Some(d) => (d.width, d.height),
+        None => (1280, 720),
+    };
+
+    let resolution = Resolution::new(width, height);
+    let format =
+        RequestedFormat::new::<RgbFormat>(RequestedFormatType::HighestResolution(resolution));
+
+    let mut dev = match Camera::new(camera_index, format) {
+        Ok(d) => d,
+        Err(err) => {
+            error!("failed to open camera device: {err}");
             return;
         }
     };
 
-    let (mut width, mut height) = match dimensions {
-        Some(d) => (d.width, d.height),
-        None => (1280, 720),
-    };
-    let mut buf_capacity: usize = (width as usize) * (height as usize) * 3;
-    let mut format = Format::default().width(width).height(height);
-    let mut stream = None;
+    let mut streaming = false;
 
     loop {
         match cap_command.try_recv() {
             Ok(m) => {
                 if m == CaptureCommand::Start {
                     debug!("received start request");
-                    if stream.is_none() {
-                        let s = match Stream::new(&dev, &format) {
-                            Some(s) => s,
-                            None => {
-                                error!("failed to create camera stream");
-                                return;
-                            }
-                        };
-                        if s.format().width != width || s.format().height != height {
-                            (width, height) = (s.format().width, s.format().height);
-                            buf_capacity = (width as usize) * (height as usize) * 3;
-                            format = Format::default().width(width).height(height);
-                            warn!(
-                                "requested format not feasible; falling back to ({width}, {height})"
-                            );
+                    if !streaming {
+                        if let Err(err) = dev.open_stream() {
+                            error!("error starting camera stream: {err}");
+                            return;
                         }
-
-                        stream = Some(s);
+                        streaming = true;
                     }
                 } else if m == CaptureCommand::Stop {
                     debug!("received stop request");
-                    stream = None;
+                    if streaming {
+                        if let Err(err) = dev.stop_stream() {
+                            error!("error stopping camera stream: {err}");
+                            return;
+                        }
+                        streaming = false;
+                    }
                 } else {
                     // CaptureCommand::Quit
                     return;
@@ -228,15 +264,20 @@ fn video_capture(
             }
         }
 
-        if let Some(s) = &mut stream {
-            s.advance();
-            let mut data = vec![0; buf_capacity];
-            if let Err(err) = s.read(&mut data) {
-                error!("error reading camera stream: {err}");
-                return;
-            }
-
-            match image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_vec(width, height, data) {
+        if streaming {
+            let frame = match dev.frame() {
+                Ok(f) => f,
+                Err(err) => {
+                    error!("error capturing frame: {err}");
+                    streaming = false;
+                    continue;
+                }
+            };
+            match image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_vec(
+                width,
+                height,
+                Vec::from(frame.buffer()),
+            ) {
                 Some(img) => {
                     let mut jpg: Vec<u8> = Vec::new();
                     if let Err(err) =
