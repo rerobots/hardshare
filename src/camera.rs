@@ -203,6 +203,11 @@ fn video_capture(
         Camera,
     };
 
+    if let Err(err) = initialize_nokhwa() {
+        error!("{err}");
+        return;
+    }
+
     let camera_index = CameraIndex::Index(match camera_path.parse() {
         Ok(c) => c,
         Err(err) => {
